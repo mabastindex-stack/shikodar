@@ -178,6 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final isCompany = role == AccountRole.company;
     final isComplex = role == AccountRole.complex;
     final isBusiness = isAgency || isCompany || isComplex;
+    final isAdmin = role == AccountRole.admin;
     final myComplex = _myProjects.isNotEmpty ? _myProjects.first : null;
 
     return Scaffold(
@@ -211,7 +212,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  isComplex ? 'profile_page.badge_complex_verified'.tr() : (isCompany ? 'profile_page.badge_developer'.tr() : (isAgency ? 'profile_page.badge_enterprise'.tr() : 'profile_page.badge_client'.tr())),
+                  isComplex
+                      ? 'profile_page.badge_complex_verified'.tr()
+                      : (isCompany
+                          ? 'profile_page.badge_developer'.tr()
+                          : (isAgency
+                              ? 'profile_page.badge_enterprise'.tr()
+                              : (isAdmin ? 'profile_page.badge_admin'.tr() : 'profile_page.badge_client'.tr()))),
                   style: TextStyle(color: isBusiness ? AppColors.ink : palette.textSecondary, fontSize: 11, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -272,32 +279,36 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
-                    _becomeBusinessCard(
-                      context,
-                      palette,
-                      role: AccountRole.agency,
-                      icon: Icons.storefront_rounded,
-                      title: 'profile_page.become_agency_title'.tr(),
-                      subtitle: 'profile_page.become_agency_subtitle'.tr(),
-                    ),
-                    const SizedBox(height: 12),
-                    _becomeBusinessCard(
-                      context,
-                      palette,
-                      role: AccountRole.company,
-                      icon: Icons.apartment_rounded,
-                      title: 'profile_page.become_company_title'.tr(),
-                      subtitle: 'profile_page.become_company_subtitle'.tr(),
-                    ),
-                    const SizedBox(height: 12),
-                    _becomeBusinessCard(
-                      context,
-                      palette,
-                      role: AccountRole.complex,
-                      icon: Icons.location_city_rounded,
-                      title: 'profile_page.become_complex_title'.tr(),
-                      subtitle: 'auth.complex_benefit'.tr(),
-                    ),
+                    if (isAdmin)
+                      _adminNoticeCard(palette)
+                    else ...[
+                      _becomeBusinessCard(
+                        context,
+                        palette,
+                        role: AccountRole.agency,
+                        icon: Icons.storefront_rounded,
+                        title: 'profile_page.become_agency_title'.tr(),
+                        subtitle: 'profile_page.become_agency_subtitle'.tr(),
+                      ),
+                      const SizedBox(height: 12),
+                      _becomeBusinessCard(
+                        context,
+                        palette,
+                        role: AccountRole.company,
+                        icon: Icons.apartment_rounded,
+                        title: 'profile_page.become_company_title'.tr(),
+                        subtitle: 'profile_page.become_company_subtitle'.tr(),
+                      ),
+                      const SizedBox(height: 12),
+                      _becomeBusinessCard(
+                        context,
+                        palette,
+                        role: AccountRole.complex,
+                        icon: Icons.location_city_rounded,
+                        title: 'profile_page.become_complex_title'.tr(),
+                        subtitle: 'auth.complex_benefit'.tr(),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     _sectionCard(palette, delay: 100, children: [
                       _tile(palette, Icons.favorite_border_rounded, 'nav.favorites'.tr(), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoritesScreen())), isLast: true),
@@ -809,6 +820,43 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   /// account. Agency/company/complex accounts are admin-created only (they
   /// never self-register), so this opens a contact sheet instead of a
   /// sign-up form.
+  /// Shown instead of the "become a business" upsell cards when the
+  /// signed-in account is an admin — administration happens entirely in
+  /// the separate web panel (see EnsureRole/AdminPanelProvider on the
+  /// backend), so the mobile app has nothing for this role to do beyond
+  /// browsing as any visitor would.
+  Widget _adminNoticeCard(AppPalette palette) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(13)),
+            child: Icon(Icons.admin_panel_settings_outlined, color: palette.textSecondary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('profile_page.admin_notice_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text('profile_page.admin_notice_subtitle'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate(delay: 60.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
+  }
+
   Widget _becomeBusinessCard(
     BuildContext context,
     AppPalette palette, {
