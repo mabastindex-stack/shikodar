@@ -9,6 +9,7 @@ import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../auth/screens/server_settings_screen.dart';
 import '../../feedback/screens/feedback_screen.dart';
+import '../../home/screens/favorites_screen.dart';
 
 /// Everything that used to live at the bottom of the profile page — language,
 /// appearance, server config, feedback, logout — now lives one tap away
@@ -69,6 +70,7 @@ class SettingsScreen extends StatelessWidget {
               await context.read<AuthRepository>().logout();
               if (!context.mounted) return;
               context.read<UserSession>().logOut();
+              FavoritesStore.clear();
               navigator.popUntil((route) => route.isFirst);
             },
             child: Text('settings_page.logout_dialog_title'.tr(), style: TextStyle(color: palette.error, fontWeight: FontWeight.w700)),

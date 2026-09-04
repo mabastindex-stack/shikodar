@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
@@ -13,6 +14,7 @@ import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
 import '../../admin/screens/admin_login_screen.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
 import 'register_screen.dart';
 import 'server_settings_screen.dart';
@@ -77,6 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
       if (!mounted) return;
       context.read<UserSession>().logIn(result.role, name: result.name);
+      FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       // Reached by pushing from the profile tab's guest prompt, on top of
       // the guest HomeShell already showing — pop back to it (now
       // reactively showing the logged-in profile) instead of building a

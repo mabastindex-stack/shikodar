@@ -6,8 +6,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
@@ -170,7 +172,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                                 valueListenable: FavoritesStore.ids,
                                 builder: (_, ids, __) => _circleBtn(
                                   ids.contains(listing.id) ? Icons.favorite : Icons.favorite_border,
-                                  () => FavoritesStore.toggle(listing.id),
+                                  () => FavoritesStore.toggle(context.read<FavoriteRepository>(), type: 'listing', id: listing.id),
                                   color: ids.contains(listing.id) ? AppColors.error : AppColors.ink,
                                 ),
                               ),

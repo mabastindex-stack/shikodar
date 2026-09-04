@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -155,7 +156,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             valueListenable: FavoritesStore.ids,
                             builder: (_, ids, __) {
                               final fav = ids.contains(project.id);
-                              return _circleBtn(fav ? Icons.favorite : Icons.favorite_border, () => FavoritesStore.toggle(project.id), color: fav ? palette.error : AppColors.ink);
+                              return _circleBtn(fav ? Icons.favorite : Icons.favorite_border, () => FavoritesStore.toggle(context.read<FavoriteRepository>(), type: 'project', id: project.id), color: fav ? palette.error : AppColors.ink);
                             },
                           ),
                         ],

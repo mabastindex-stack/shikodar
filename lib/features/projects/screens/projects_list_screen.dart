@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -181,7 +182,7 @@ class _ProjectCard extends StatelessWidget {
                             color: Colors.white,
                             shape: const CircleBorder(),
                             child: InkWell(
-                              onTap: () => FavoritesStore.toggle(project.id),
+                              onTap: () => FavoritesStore.toggle(context.read<FavoriteRepository>(), type: 'project', id: project.id),
                               customBorder: const CircleBorder(),
                               child: SizedBox(
                                 width: 34,

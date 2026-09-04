@@ -16,4 +16,16 @@ class FavoriteRepository {
       throw ApiException.fromDioException(e);
     }
   }
+
+  /// The signed-in user's favorited listing/project ids, for seeding
+  /// [FavoritesStore] — a plain set since callers only need membership.
+  Future<Set<String>> fetchIds() async {
+    try {
+      final response = await _client.dio.get('/favorites');
+      final data = response.data as List;
+      return data.map((json) => json['favoritable_id'].toString()).toSet();
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
 }

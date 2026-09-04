@@ -5,9 +5,11 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../core/models/listing.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -142,7 +144,7 @@ class _ListingCardState extends State<ListingCard> {
                                       ? Icons.favorite_rounded
                                       : Icons.favorite_border_rounded,
                                   color: favorite ? palette.error : AppColors.ink,
-                                  onTap: () => FavoritesStore.toggle(listing.id),
+                                  onTap: () => FavoritesStore.toggle(context.read<FavoriteRepository>(), type: 'listing', id: listing.id),
                                 );
                               },
                             ),

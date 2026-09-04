@@ -8,12 +8,14 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -66,6 +68,7 @@ class _OtpScreenState extends State<OtpScreen> {
       if (!mounted) return;
 
       context.read<UserSession>().logIn(result.role, name: result.name);
+      FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       if (result.role == AccountRole.complex) {
         context.read<BusinessProfileStore>().setParentCompany(widget.parentCompanyName);
       }
