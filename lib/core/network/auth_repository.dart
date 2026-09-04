@@ -76,6 +76,25 @@ class AuthRepository {
     }
   }
 
+  /// Called once at app startup. If a token was saved from a previous
+  /// session, confirms it's still valid via /auth/me and rebuilds the
+  /// AuthResult from it; clears the stored token and returns null if the
+  /// token is missing, expired, or revoked.
+  Future<AuthResult?> restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null) return null;
+    try {
+      final response = await _client.dio.get('/auth/me');
+      final role = _roleFromString(response.data['role'] as String);
+      final name = response.data['name'] as String? ?? '';
+      return AuthResult(role: role, token: token, name: name);
+    } on DioException {
+      await prefs.remove('auth_token');
+      return null;
+    }
+  }
+
   Future<void> logout() async {
     try {
       await _client.dio.post('/auth/logout');

@@ -3,11 +3,16 @@ import 'dart:math' as math;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/network/auth_repository.dart';
+import '../../../core/network/favorite_repository.dart';
+import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../../home/screens/home_shell.dart';
 import 'onboarding_screen.dart';
 
@@ -38,9 +43,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late final Animation<double> _dividerReveal;
   late final Animation<double> _taglineReveal;
 
+  /// Kicked off immediately so it resolves alongside (not after) the splash
+  /// animation delay below — a previously signed-in user shouldn't have to
+  /// log in again every time the app restarts.
+  late final Future<AuthResult?> _restoreSessionFuture;
+
   @override
   void initState() {
     super.initState();
+    _restoreSessionFuture = context.read<AuthRepository>().restoreSession();
     _entrance = AnimationController(
       vsync: this,
       duration: AppMotion.splashEntrance,
@@ -112,6 +123,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       if (!mounted) return;
       final prefs = await SharedPreferences.getInstance();
       final seenOnboarding = prefs.getBool(_hasSeenOnboardingKey) ?? false;
+      final restored = await _restoreSessionFuture;
+      if (!mounted) return;
+      if (restored != null) {
+        context.read<UserSession>().logIn(restored.role, name: restored.name);
+        FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
+      }
       if (!mounted) return;
       await _exit.forward();
       if (!mounted) return;
