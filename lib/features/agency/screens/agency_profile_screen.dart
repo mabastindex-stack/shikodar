@@ -8,8 +8,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
-import '../../../core/mock/mock_data.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/session/business_profile_store.dart';
+import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../home/widgets/listing_card.dart';
@@ -55,6 +56,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
   Timer? _carouselTimer;
   int _coverIndex = 0;
   int _tab = 0; // 0 listings, 1 reels, 2 reviews, 3 about
+  List<Listing> _listings = [];
 
   bool get _isPremiumTier => widget.agency.tier == PackageTier.premium || widget.agency.tier == PackageTier.enterprise;
 
@@ -70,6 +72,9 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
         setState(() => _coverIndex = (_coverIndex + 1) % _coverPhotos.length);
       });
     }
+    context.read<ListingRepository>().fetchAll().then((listings) {
+      if (mounted) setState(() => _listings = listings.where((l) => l.agency.id == widget.agency.id).toList());
+    });
   }
 
   @override
@@ -85,7 +90,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
   Widget build(BuildContext context) {
     final palette = context.palette;
     final a = widget.agency;
-    final listings = MockData.listings.where((l) => l.agency.id == a.id).toList();
+    final listings = _listings;
     final foundedYear = DateTime.now().year - a.yearsActive;
 
     return Scaffold(
@@ -435,7 +440,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     final palette = context.palette;
     // "My own" agency's about section is owner-editable from the Profile
     // tab (EditBusinessProfileScreen) — reflect those edits live here.
-    final isMine = a.id == MockData.agencyShiko.id;
+    final isMine = a.id == context.watch<UserSession>().agencyId;
     final store = isMine ? context.watch<BusinessProfileStore>() : null;
     final bio = store?.bio ?? a.bio;
     final specialties = store?.specialties.toList() ?? a.specialties;

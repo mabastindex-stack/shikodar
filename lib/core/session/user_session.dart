@@ -29,6 +29,11 @@ class UserSession extends ChangeNotifier {
   /// placeholder.
   String? name;
 
+  /// The signed-in account's own agency id, if it's a business account —
+  /// lets a public profile page (AgencyProfileScreen/DeveloperProfileScreen)
+  /// recognize when it's showing the signed-in user's own business.
+  String? agencyId;
+
   bool get isAgency => role == AccountRole.agency;
   bool get isCompany => role == AccountRole.company;
   bool get isComplex => role == AccountRole.complex;
@@ -40,10 +45,11 @@ class UserSession extends ChangeNotifier {
   }
 
   /// Successful login/registration — called from `LoginScreen`/`OtpScreen`.
-  void logIn(AccountRole newRole, {String? name}) {
+  void logIn(AccountRole newRole, {String? name, String? agencyId}) {
     role = newRole;
     isLoggedIn = true;
     this.name = name;
+    this.agencyId = agencyId;
     notifyListeners();
   }
 
@@ -51,6 +57,7 @@ class UserSession extends ChangeNotifier {
     role = AccountRole.client;
     isLoggedIn = false;
     name = null;
+    agencyId = null;
     notifyListeners();
   }
 

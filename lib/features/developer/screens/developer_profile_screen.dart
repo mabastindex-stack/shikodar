@@ -6,10 +6,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
 import '../../../core/session/business_profile_store.dart';
+import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../projects/screens/project_detail_screen.dart';
@@ -273,7 +273,7 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> with Ti
   Widget _timeline(AppPalette palette) {
     // "My own" company's timeline is owner-editable from the Profile tab
     // (EditBusinessProfileScreen) — reflect those edits live here.
-    final isMine = widget.agency.id == MockData.agencyShiko.id;
+    final isMine = widget.agency.id == context.watch<UserSession>().agencyId;
     final milestones = isMine ? context.watch<BusinessProfileStore>().milestones : const <Milestone>[];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),

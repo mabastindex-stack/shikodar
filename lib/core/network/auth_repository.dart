@@ -9,7 +9,14 @@ class AuthResult {
   final AccountRole role;
   final String token;
   final String name;
-  const AuthResult({required this.role, required this.token, required this.name});
+
+  /// Null for a client (never has an agency) or if the signed-in business
+  /// account's agency somehow failed to load. Lets a business owner's own
+  /// public profile page (AgencyProfileScreen/DeveloperProfileScreen) know
+  /// it's looking at itself, without hardcoding any particular agency id.
+  final String? agencyId;
+
+  const AuthResult({required this.role, required this.token, required this.name, this.agencyId});
 }
 
 /// Wraps the Laravel API's /auth/* endpoints. Persists the bearer token
@@ -88,7 +95,8 @@ class AuthRepository {
       final response = await _client.dio.get('/auth/me');
       final role = _roleFromString(response.data['role'] as String);
       final name = response.data['name'] as String? ?? '';
-      return AuthResult(role: role, token: token, name: name);
+      final agencyId = response.data['agency']?['id']?.toString();
+      return AuthResult(role: role, token: token, name: name, agencyId: agencyId);
     } on DioException {
       await prefs.remove('auth_token');
       return null;
@@ -109,11 +117,12 @@ class AuthRepository {
     final token = data['token'] as String;
     final role = _roleFromString(data['user']['role'] as String);
     final name = data['user']['name'] as String? ?? '';
+    final agencyId = data['user']['agency']?['id']?.toString();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
 
-    return AuthResult(role: role, token: token, name: name);
+    return AuthResult(role: role, token: token, name: name, agencyId: agencyId);
   }
 
   AccountRole _roleFromString(String value) => AccountRole.values.firstWhere(

@@ -126,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       final restored = await _restoreSessionFuture;
       if (!mounted) return;
       if (restored != null) {
-        context.read<UserSession>().logIn(restored.role, name: restored.name);
+        context.read<UserSession>().logIn(restored.role, name: restored.name, agencyId: restored.agencyId);
         FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       }
       if (!mounted) return;
