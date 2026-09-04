@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/session/admin_store.dart';
+import '../../../core/network/home_placement_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -23,6 +23,7 @@ class _HeroBannerState extends State<HeroBanner>
   late final AnimationController _kenBurns;
   Timer? _timer;
   int _index = 0;
+  List<String> _heroPhotos = [];
 
   @override
   void initState() {
@@ -31,11 +32,12 @@ class _HeroBannerState extends State<HeroBanner>
       vsync: this,
       duration: const Duration(seconds: 9),
     )..repeat(reverse: true);
+    context.read<HomePlacementRepository>().fetchHeroPhotos().then((photos) {
+      if (mounted) setState(() => _heroPhotos = photos);
+    });
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) return;
-      final count = context.read<AdminStore>().heroPhotos.length;
-      if (count == 0) return;
-      setState(() => _index = (_index + 1) % count);
+      if (!mounted || _heroPhotos.isEmpty) return;
+      setState(() => _index = (_index + 1) % _heroPhotos.length);
     });
   }
 
@@ -50,7 +52,7 @@ class _HeroBannerState extends State<HeroBanner>
   Widget build(BuildContext context) {
     final palette = context.palette;
     final reduceMotion = AppMotion.reduce(context);
-    final heroPhotos = context.watch<AdminStore>().heroPhotos;
+    final heroPhotos = _heroPhotos;
     final index = heroPhotos.isEmpty ? 0 : _index % heroPhotos.length;
 
     if (heroPhotos.isEmpty) return const SizedBox.shrink();

@@ -2,14 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import '../../../core/session/admin_store.dart';
+import '../../../core/network/home_placement_repository.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
 
 /// Continuously, smoothly auto-scrolling logo marquee — driven by a single
 /// AnimationController translating the row (no per-frame jumpTo jitter).
-/// The logo list itself lives in `AdminStore.sponsorLogos`, editable from
-/// the admin panel's home-placements screen.
+/// The logo list itself is admin-curated, editable only from the separate
+/// web admin panel.
 class PartnerLogosRow extends StatefulWidget {
   const PartnerLogosRow({super.key});
 
@@ -20,6 +20,15 @@ class PartnerLogosRow extends StatefulWidget {
 class _PartnerLogosRowState extends State<PartnerLogosRow> with SingleTickerProviderStateMixin {
   static const _itemExtent = 84.0; // 72 badge + 12 gap
   late final AnimationController _controller = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
+  List<String> _logos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<HomePlacementRepository>().fetchSponsorLogos().then((logos) {
+      if (mounted) setState(() => _logos = logos);
+    });
+  }
 
   @override
   void dispose() {
@@ -29,7 +38,7 @@ class _PartnerLogosRowState extends State<PartnerLogosRow> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final logos = context.watch<AdminStore>().sponsorLogos;
+    final logos = _logos;
     if (logos.isEmpty) return const SizedBox.shrink();
     final setWidth = _itemExtent * logos.length;
     // Duration scales with content so the marquee speed stays constant

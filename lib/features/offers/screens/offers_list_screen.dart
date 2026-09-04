@@ -91,57 +91,6 @@ IconData iconFromName(String name) {
 /// enough to tell cards apart at a glance without introducing a second hue.
 const _offerAccents = [AppColors.emeraldDark, AppColors.gold, AppColors.emerald];
 
-/// Seed data for [AdminStore.offers] — admin can add/edit/delete from here on;
-/// this list is only ever read once, at store construction.
-const defaultOffers = [
-  Offer(
-    id: 'o1',
-    icon: Icons.card_giftcard_rounded,
-    title: 'داشکاندنی ٢٠٪ بۆ پاکێجی Premium',
-    preview: 'کاتی زێڕینی گۆڕینی پاکێج — داشکاندنی تایبەت بۆ ماوەیەکی سنووردار.',
-    intro: 'پاداشتێک بۆ دەلال و عقاراتە چالاکەکانی شکۆدار.',
-    highlights: [
-      'داشکاندنی ٢٠٪ بۆ گۆڕان بۆ Premium یان Enterprise',
-      'چالاکە بۆ یەک مانگی یەکەم بەبێ گۆڕانکاری تایبەتمەندی',
-      'پەیوەندی بکە پێش کۆتایی مانگ بۆ وەرگرتنی',
-    ],
-    audience: 'هەموو عقاراتەکان',
-    validUntil: '٣٠ ی ئەم مانگە',
-    imageUrl: 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=900&q=80',
-    isNew: true,
-  ),
-  Offer(
-    id: 'o2',
-    icon: Icons.vpn_key_rounded,
-    title: 'بەخێرهاتنی ئەندامانی نوێ',
-    preview: 'مانگێک بەخۆڕایی بۆ هەر عقاراتێکی نوێ کە تۆمار دەبێت.',
-    intro: 'پاڵپشتیکردنی دەلالانی نوێی بازاڕی کەرکوک.',
-    highlights: [
-      'مانگێکی تەواوی بەخۆڕایی بە هەموو تایبەتمەندی Business',
-      'تایبەتە بۆ عقاراتی نوێی تۆمارکراو لە ٣٠ ڕۆژی ڕابردوو',
-      'خۆکار چالاک دەبێت دوای تۆمارکردنی هەژمار',
-    ],
-    audience: 'عقاراتی نوێ',
-    validUntil: 'بەردەوامە',
-    imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=900&q=80',
-  ),
-  Offer(
-    id: 'o3',
-    icon: Icons.video_camera_back_rounded,
-    title: 'ڕیلی بەخۆڕایی زیاتر',
-    preview: 'بۆ ماوەی ئەم هەفتەیە، ٥ ڕیلی زیادە بەخۆڕایی وەربگرە.',
-    intro: 'هاندانی بەکارهێنانی زیاتری بەشی ڕیلز.',
-    highlights: [
-      '٥ ڕیلی زیادەی بەخۆڕایی سەرباری سنووری پاکێجەکەت',
-      'بۆ عقاراتی ئاستی Business و سەرەوەتر',
-      'ئەم ئۆفەرە تەنها بۆ ئەم هەفتەیە بەردەوامە',
-    ],
-    audience: 'Business و سەرەوەتر',
-    validUntil: 'کۆتایی ئەم هەفتەیە',
-    imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=900&q=80',
-  ),
-];
-
 class OffersListScreen extends StatefulWidget {
   const OffersListScreen({super.key});
 

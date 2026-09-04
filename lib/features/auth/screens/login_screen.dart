@@ -13,7 +13,6 @@ import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
-import '../../admin/screens/admin_login_screen.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
 import 'register_screen.dart';
@@ -242,8 +241,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   TextButton(
                                     // Self-registration is client-only from
                                     // here on — agency/company/complex
-                                    // accounts are created by the admin (see
-                                    // CreateAgencyContractScreen), so this
+                                    // accounts are created by an admin from
+                                    // the separate web admin panel, so this
                                     // link ignores whatever role is selected
                                     // above (that selector is for signing
                                     // in to an existing account of any role).
@@ -268,27 +267,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   'auth.business_signup_note'.tr(),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(color: palette.textMuted, fontSize: 10.5),
-                                ),
-                              ),
-                              Center(
-                                child: TextButton.icon(
-                                  onPressed: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const AdminLoginScreen(),
-                                    ),
-                                  ),
-                                  icon: Icon(
-                                    Icons.admin_panel_settings_outlined,
-                                    size: 15,
-                                    color: palette.textMuted,
-                                  ),
-                                  label: Text(
-                                    'auth.admin_login'.tr(),
-                                    style: TextStyle(
-                                      color: palette.textMuted,
-                                      fontSize: 11.5,
-                                    ),
-                                  ),
                                 ),
                               ),
                             ],

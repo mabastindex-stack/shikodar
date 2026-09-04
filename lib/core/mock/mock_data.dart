@@ -4,9 +4,9 @@ import '../models/listing.dart';
 /// API is connected. Swap ListingRepository's implementation for a real Dio
 /// call and delete this file once the backend is live.
 class MockData {
-  // Not `final` — AdminStore.updateAgency reassigns these when the admin
-  // edits the seed agencies, so every place that references the singleton
-  // directly (listings, projects created before the edit) reflects it too.
+  // Not `final` — these placeholder Agency values are referenced directly
+  // as fallbacks in a few places (see Project.fromJson), so keeping them
+  // mutable leaves room to sync them if that ever needs to change at runtime.
   static Agency agencyShiko = Agency(
     id: '1',
     name: 'کۆمپانیای شکۆ',

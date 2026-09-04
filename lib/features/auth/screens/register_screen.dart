@@ -59,8 +59,8 @@ String _kirkukZoneLabel(String zone) {
 }
 
 /// Client self-registration only — agency/company/complex accounts are
-/// always admin-created (see `CreateAgencyContractScreen`), so this screen
-/// never needs to branch on account role.
+/// always created by an admin from the separate web admin panel, so this
+/// screen never needs to branch on account role.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 

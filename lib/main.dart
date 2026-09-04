@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'core/network/api_client.dart';
 import 'core/network/auth_repository.dart';
 import 'core/network/favorite_repository.dart';
+import 'core/network/home_placement_repository.dart';
 import 'core/network/listing_repository.dart';
 import 'core/network/offer_repository.dart';
 import 'core/network/project_repository.dart';
@@ -15,7 +16,6 @@ import 'core/network/upload_repository.dart';
 import 'core/theme/app_fonts.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
-import 'core/session/admin_store.dart';
 import 'core/session/business_profile_store.dart';
 import 'core/session/user_session.dart';
 import 'features/auth/screens/splash_screen.dart';
@@ -32,6 +32,7 @@ Future<void> main() async {
   final offerRepository = OfferRepository(apiClient);
   final favoriteRepository = FavoriteRepository(apiClient);
   final uploadRepository = UploadRepository(apiClient);
+  final homePlacementRepository = HomePlacementRepository(apiClient);
 
   runApp(
     EasyLocalization(
@@ -54,10 +55,10 @@ Future<void> main() async {
           Provider<OfferRepository>.value(value: offerRepository),
           Provider<FavoriteRepository>.value(value: favoriteRepository),
           Provider<UploadRepository>.value(value: uploadRepository),
+          Provider<HomePlacementRepository>.value(value: homePlacementRepository),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => UserSession()),
           ChangeNotifierProvider(create: (_) => BusinessProfileStore()),
-          ChangeNotifierProvider(create: (_) => AdminStore()),
         ],
         child: const SikodarApp(),
       ),
