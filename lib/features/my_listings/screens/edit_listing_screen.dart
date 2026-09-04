@@ -1,15 +1,17 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_palette.dart';
 
 /// A focused edit form for the fields an owner can realistically change
 /// after publishing — title, price, zone, negotiable — without re-building
 /// the full media-upload pipeline (that stays deferred, per the package/
-/// offer-gated publishing plan). Saves in place into MockData.listings so
-/// every screen that reads it (home feed, search, the owner's own profile
-/// grid) reflects the edit immediately.
+/// offer-gated publishing plan). Saves via the real API so every screen
+/// that reads this listing (home feed, search, the owner's own profile
+/// grid) reflects the edit on next fetch.
 class EditListingScreen extends StatefulWidget {
   const EditListingScreen({super.key, required this.listing});
 
@@ -24,6 +26,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
   late final _priceController = TextEditingController(text: widget.listing.price.toStringAsFixed(0));
   late final _zoneController = TextEditingController(text: widget.listing.zone);
   late bool _negotiable = widget.listing.negotiable;
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -33,7 +36,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final title = _titleController.text.trim();
     final price = double.tryParse(_priceController.text.trim());
     if (title.isEmpty || price == null) {
@@ -42,15 +45,24 @@ class _EditListingScreenState extends State<EditListingScreen> {
       );
       return;
     }
-    final updated = widget.listing.copyWith(
-      title: title,
-      price: price,
-      zone: _zoneController.text.trim(),
-      negotiable: _negotiable,
-    );
-    final index = MockData.listings.indexWhere((l) => l.id == widget.listing.id);
-    if (index != -1) MockData.listings[index] = updated;
-    Navigator.pop(context, true);
+
+    final listingRepository = context.read<ListingRepository>();
+    setState(() => _isSaving = true);
+    try {
+      await listingRepository.update(widget.listing.id, {
+        'title': title,
+        'price': price,
+        'zone': _zoneController.text.trim(),
+        'negotiable': _negotiable,
+      });
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -62,7 +74,9 @@ class _EditListingScreenState extends State<EditListingScreen> {
         backgroundColor: palette.background,
         title: Text('my_listings.edit_title'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
-          TextButton(onPressed: _save, child: Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
+          _isSaving
+              ? const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4)))
+              : TextButton(onPressed: _save, child: Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
         ],
       ),
       body: ListView(

@@ -9,9 +9,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+
 import '../../../core/mock/kirkuk_neighborhoods.dart';
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -109,14 +111,17 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
   late final AnimatedMapController _animatedMapController = AnimatedMapController(vsync: this);
 
   // Used only by the search-filter's zone picker (a handful of names tied to
-  // MockData's own `zone` field) — unrelated to the real-neighbourhood map
+  // Listing's own `zone` field) — unrelated to the real-neighbourhood map
   // layer below, which covers the whole city regardless of listing data.
-  late final Map<String, LatLng> _zoneCenters = _computeZoneCenters();
+  // Populated once listings are fetched (see _loadListings) — empty until
+  // then, so the zone picker just has nothing to zoom to yet.
+  Map<String, LatLng> _zoneCenters = {};
 
   // The real, citywide neighbourhood layer — points, their organic outlines
   // (sized off how close their nearest neighbour is, so dense clusters get
   // smaller shapes and sparse ones get bigger, roughly tiling instead of
-  // piling on top of each other), and which ones count as "major".
+  // piling on top of each other), and which ones count as "major". None of
+  // this depends on listing data, so it's ready immediately.
   late final List<LatLng> _nbPoints = kirkukNeighborhoods.map((n) => LatLng(n.lat, n.lng)).toList();
   late final List<double> _nbNearestDist = _computeNearestDistances();
   late final List<List<LatLng>> _nbPolygons = [
@@ -126,7 +131,33 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
     for (var i = 0; i < kirkukNeighborhoods.length; i++)
       if (kirkukNeighborhoods[i].major) i,
   ];
-  late final List<int> _nbUnitCounts = _computeNeighborhoodCounts();
+  // Per-neighbourhood listing counts — starts all-zero and fills in once
+  // listings are fetched.
+  List<int> _nbUnitCounts = List<int>.filled(kirkukNeighborhoods.length, 0);
+
+  List<Listing> _allListings = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
+
+  Future<void> _loadListings() async {
+    try {
+      final listings = await context.read<ListingRepository>().fetchAll();
+      if (!mounted) return;
+      setState(() {
+        _allListings = listings;
+        _zoneCenters = _computeZoneCenters();
+        _nbUnitCounts = _computeNeighborhoodCounts();
+      });
+    } catch (_) {
+      // The map itself (tiles + neighbourhood outlines) still works without
+      // listing data — just leave the pins/counts empty rather than
+      // blocking the whole screen on this one call.
+    }
+  }
 
   @override
   void dispose() {
@@ -136,7 +167,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
 
   bool get _filtersActive => _purpose != null || _type != 'all' || _zone != 'هەموو';
 
-  List<Listing> get _filtered => MockData.listings.where((l) {
+  List<Listing> get _filtered => _allListings.where((l) {
         if (_purpose != null && l.purpose != _purpose) return false;
         if (_type != 'all' && l.type.name != _type) return false;
         if (_zone != 'هەموو' && l.zone != _zone) return false;
@@ -145,7 +176,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
 
   Map<String, LatLng> _computeZoneCenters() {
     final sums = <String, List<double>>{}; // [latSum, lngSum, count]
-    for (final l in MockData.listings) {
+    for (final l in _allListings) {
       if (l.lat == null || l.lng == null) continue;
       final cur = sums.putIfAbsent(l.zone, () => [0, 0, 0]);
       cur[0] += l.lat!;
@@ -189,13 +220,13 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
     });
   }
 
-  /// How many mock listings sit closest to each neighbourhood point (capped
-  /// at 3km so far-flung listings don't get claimed by an unrelated
+  /// How many listings sit closest to each neighbourhood point (capped at
+  /// 3km so far-flung listings don't get claimed by an unrelated
   /// neighbourhood) — shown as the little count badge on its bubble.
   List<int> _computeNeighborhoodCounts() {
     const distance = Distance();
     final counts = List<int>.filled(_nbPoints.length, 0);
-    for (final l in MockData.listings) {
+    for (final l in _allListings) {
       if (l.lat == null || l.lng == null) continue;
       final p = LatLng(l.lat!, l.lng!);
       var bestIndex = -1;

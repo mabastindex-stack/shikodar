@@ -1,6 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_palette.dart';
 
 /// The Project equivalent of EditListingScreen — the fields a company can
@@ -20,6 +23,7 @@ class _EditProjectScreenState extends State<EditProjectScreen> {
   late final _priceFromController = TextEditingController(text: widget.project.priceFrom.toStringAsFixed(0));
   late final _priceToController = TextEditingController(text: widget.project.priceTo.toStringAsFixed(0));
   late final _descriptionController = TextEditingController(text: widget.project.description);
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -31,7 +35,7 @@ class _EditProjectScreenState extends State<EditProjectScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final name = _nameController.text.trim();
     final priceFrom = double.tryParse(_priceFromController.text.trim());
     final priceTo = double.tryParse(_priceToController.text.trim());
@@ -41,16 +45,25 @@ class _EditProjectScreenState extends State<EditProjectScreen> {
       );
       return;
     }
-    final updated = widget.project.copyWith(
-      name: name,
-      zone: _zoneController.text.trim(),
-      priceFrom: priceFrom,
-      priceTo: priceTo,
-      description: _descriptionController.text.trim(),
-    );
-    final index = mockProjects.indexWhere((p) => p.id == widget.project.id);
-    if (index != -1) mockProjects[index] = updated;
-    Navigator.pop(context, true);
+
+    final projectRepository = context.read<ProjectRepository>();
+    setState(() => _isSaving = true);
+    try {
+      await projectRepository.update(widget.project.id, {
+        'name': name,
+        'zone': _zoneController.text.trim(),
+        'price_from': priceFrom,
+        'price_to': priceTo,
+        'description': _descriptionController.text.trim(),
+      });
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -62,7 +75,9 @@ class _EditProjectScreenState extends State<EditProjectScreen> {
         backgroundColor: palette.background,
         title: Text('my_projects.edit_title'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
-          TextButton(onPressed: _save, child: Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
+          _isSaving
+              ? const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4)))
+              : TextButton(onPressed: _save, child: Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
         ],
       ),
       body: ListView(

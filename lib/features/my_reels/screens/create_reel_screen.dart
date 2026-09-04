@@ -4,10 +4,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/listing_repository.dart';
+import '../../../core/network/reel_repository.dart';
+import '../../../core/network/upload_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
@@ -28,14 +32,17 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
   File? _video;
   VideoPlayerController? _preview;
   Listing? _listing;
+  List<Listing> _myListings = [];
+  bool _isSubmitting = false;
 
   bool get _isEditing => widget.existing != null;
-
-  List<Listing> get _myListings => MockData.listings.where((l) => l.agency.id == MockData.agencyShiko.id).toList();
 
   @override
   void initState() {
     super.initState();
+    context.read<ListingRepository>().fetchMine().then((listings) {
+      if (mounted) setState(() => _myListings = listings);
+    });
     final existing = widget.existing;
     if (existing != null) {
       _listing = existing.listing;
@@ -134,7 +141,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     if (result != null) setState(() => _listing = result);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final existing = widget.existing;
     if (_video == null && existing == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_reels.select_video_error'.tr()), behavior: SnackBarBehavior.floating));
@@ -144,20 +151,41 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_reels.select_listing_error'.tr()), behavior: SnackBarBehavior.floating));
       return;
     }
-    final reel = Reel(
-      id: existing?.id ?? 'r_${DateTime.now().millisecondsSinceEpoch}',
-      videoUrl: _video?.path ?? existing!.videoUrl,
-      thumbnailUrl: _listing!.imageUrls.isNotEmpty ? _listing!.imageUrls.first : '',
-      listing: _listing!,
-      duration: _preview?.value.duration ?? existing?.duration ?? const Duration(seconds: 30),
-    );
-    if (existing != null) {
-      final index = MockData.reels.indexWhere((r) => r.id == existing.id);
-      if (index != -1) MockData.reels[index] = reel;
-    } else {
-      MockData.reels.insert(0, reel);
+
+    final uploadRepository = context.read<UploadRepository>();
+    final reelRepository = context.read<ReelRepository>();
+    final thumbnailUrl = _listing!.imageUrls.isNotEmpty ? _listing!.imageUrls.first : null;
+    final durationSeconds = _preview?.value.duration.inSeconds ?? existing?.duration.inSeconds;
+
+    setState(() => _isSubmitting = true);
+    try {
+      final videoUrl = _video != null ? await uploadRepository.upload(_video!.path) : null;
+
+      if (existing != null) {
+        await reelRepository.update(
+          existing.id,
+          listingId: _listing!.id,
+          videoUrl: videoUrl,
+          thumbnailUrl: thumbnailUrl,
+          durationSeconds: durationSeconds,
+        );
+      } else {
+        await reelRepository.create(
+          listingId: _listing!.id,
+          videoUrl: videoUrl!,
+          thumbnailUrl: thumbnailUrl,
+          durationSeconds: durationSeconds,
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
-    Navigator.pop(context, true);
   }
 
   @override
@@ -169,7 +197,9 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         backgroundColor: palette.background,
         title: Text(_isEditing ? 'my_reels.edit_reel_title'.tr() : 'my_reels.new_reel_fab'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
-          TextButton(onPressed: _submit, child: Text('my_reels.publish_action'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
+          _isSubmitting
+              ? Padding(padding: const EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: palette.primary)))
+              : TextButton(onPressed: _submit, child: Text('my_reels.publish_action'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
         ],
       ),
       body: ListView(

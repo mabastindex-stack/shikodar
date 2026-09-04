@@ -2,8 +2,9 @@ import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/reel_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../widgets/reel_filter_sheet.dart';
@@ -27,8 +28,20 @@ class _ReelsScreenState extends State<ReelsScreen> {
   int _activeIndex = 0;
   bool _muted = false;
   String _query = '';
+  List<Reel> _allReels = [];
+  bool _isLoading = true;
 
   GlobalKey<ReelVideoPlayerState> _keyFor(int i) => _playerKeys.putIfAbsent(i, () => GlobalKey<ReelVideoPlayerState>());
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ReelRepository>().fetchAll().then((reels) {
+      if (mounted) setState(() { _allReels = reels; _isLoading = false; });
+    }).catchError((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
+  }
 
   void _resetToTop() {
     _activeIndex = 0;
@@ -60,7 +73,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final reels = MockData.reels.where((r) {
+    final reels = _allReels.where((r) {
       if (_purpose != null && r.listing.purpose != _purpose) return false;
       if (_type != 'all' && r.listing.type.name != _type) return false;
       if (_query.isNotEmpty) {
@@ -75,7 +88,9 @@ class _ReelsScreenState extends State<ReelsScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          if (reels.isEmpty)
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          else if (reels.isEmpty)
             Center(child: Text('common.no_results'.tr(), style: const TextStyle(color: AppColors.textSecondary)))
           else
             PageView.builder(

@@ -4,6 +4,7 @@ import 'listing.dart';
 enum ProjectStatus { underConstruction, completed }
 
 class UnitType {
+  final String? id;
   final String name;
   final double priceFrom;
   final String area;
@@ -12,6 +13,7 @@ class UnitType {
   final ListingType type;
   final ListingPurpose purpose;
   const UnitType({
+    this.id,
     required this.name,
     required this.priceFrom,
     required this.area,
@@ -20,6 +22,20 @@ class UnitType {
     required this.type,
     required this.purpose,
   });
+
+  factory UnitType.fromJson(Map<String, dynamic> json) => UnitType(
+        id: json['id']?.toString(),
+        name: json['name'] ?? '',
+        priceFrom: (json['price_from'] as num?)?.toDouble() ?? 0,
+        area: json['area'] ?? '',
+        images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        description: json['description'] ?? '',
+        type: ListingType.values.firstWhere(
+          (t) => t.name == json['type'],
+          orElse: () => ListingType.house,
+        ),
+        purpose: (json['purpose'] == 'sale') ? ListingPurpose.sale : ListingPurpose.rent,
+      );
 }
 
 class Project {
@@ -59,6 +75,29 @@ class Project {
     required this.completionInfo,
     required this.specs,
   });
+
+  factory Project.fromJson(Map<String, dynamic> json) => Project(
+        id: json['id'].toString(),
+        name: json['name'] ?? '',
+        zone: json['zone'] ?? '',
+        images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        videoUrl: json['video_url'] ?? '',
+        priceFrom: (json['price_from'] as num?)?.toDouble() ?? 0,
+        priceTo: (json['price_to'] as num?)?.toDouble() ?? 0,
+        status: json['status'] == 'completed' ? ProjectStatus.completed : ProjectStatus.underConstruction,
+        description: json['description'] ?? '',
+        highlights: (json['highlights'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        amenities: (json['amenities'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        unitTypes: (json['unit_types'] as List?)?.map((e) => UnitType.fromJson(e)).toList() ?? const [],
+        agencyName: (json['agency'] is Map) ? (json['agency']['name'] ?? '') : '',
+        agency: Agency.fromJson(json['agency'] ?? const {}),
+        paymentPlan: json['payment_plan'] ?? '',
+        completionInfo: json['completion_info'] ?? '',
+        specs: (json['specs'] as List?)
+                ?.map((e) => (e['label']?.toString() ?? '', e['value']?.toString() ?? ''))
+                .toList() ??
+            const [],
+      );
 
   Project copyWith({String? name, String? zone, double? priceFrom, double? priceTo, String? description}) => Project(
         id: id,

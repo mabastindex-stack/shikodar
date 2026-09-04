@@ -4,7 +4,10 @@ import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/auth_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -78,6 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmation = true;
   bool _agreedToTerms = false;
   bool _showZoneError = false;
+  bool _isSubmitting = false;
   double _strength = 0;
   String? _selectedZone;
 
@@ -192,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     FocusManager.instance.primaryFocus?.unfocus();
     final fieldsValid = _formKey.currentState?.validate() ?? false;
     final zoneValid = _selectedZone != null;
@@ -210,15 +214,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: AppMotion.expressive,
-        pageBuilder: (_, animation, __) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: AppMotion.enter),
-          child: OtpScreen(phone: _phoneController.text.trim()),
+    final phone = _phoneController.text.trim();
+    setState(() => _isSubmitting = true);
+    try {
+      final devOtpCode = await context.read<AuthRepository>().register(
+            name: _nameController.text.trim(),
+            phone: phone,
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            zone: _selectedZone!,
+          );
+      if (!mounted) return;
+      if (devOtpCode != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('OTP: $devOtpCode'), behavior: SnackBarBehavior.floating),
+        );
+      }
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          transitionDuration: AppMotion.expressive,
+          pageBuilder: (_, animation, __) => FadeTransition(
+            opacity: CurvedAnimation(parent: animation, curve: AppMotion.enter),
+            child: OtpScreen(phone: phone),
+          ),
         ),
-      ),
-    );
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -381,6 +409,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   label: 'auth.register'.tr(),
                                   icon: Icons.verified_user_outlined,
                                   onPressed: _submit,
+                                  loading: _isSubmitting,
                                 ),
                                 const SizedBox(height: 15),
                                 Row(

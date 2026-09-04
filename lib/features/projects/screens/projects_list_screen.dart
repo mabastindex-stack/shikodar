@@ -1,8 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../developer/screens/developer_profile_screen.dart';
@@ -10,8 +11,26 @@ import '../../home/screens/favorites_screen.dart';
 import '../widgets/project_identity_carousel.dart';
 import 'project_detail_screen.dart';
 
-class ProjectsListScreen extends StatelessWidget {
+class ProjectsListScreen extends StatefulWidget {
   const ProjectsListScreen({super.key});
+
+  @override
+  State<ProjectsListScreen> createState() => _ProjectsListScreenState();
+}
+
+class _ProjectsListScreenState extends State<ProjectsListScreen> {
+  List<Project> _projects = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ProjectRepository>().fetchAll().then((projects) {
+      if (mounted) setState(() { _projects = projects; _isLoading = false; });
+    }).catchError((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +102,16 @@ class ProjectsListScreen extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
-                itemCount: mockProjects.length,
-                itemBuilder: (_, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: _ProjectCard(project: mockProjects[i], index: i),
-                ),
-              ),
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator(color: palette.primary))
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                      itemCount: _projects.length,
+                      itemBuilder: (_, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: _ProjectCard(project: _projects[i], allProjects: _projects, index: i),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -101,8 +122,9 @@ class ProjectsListScreen extends StatelessWidget {
 
 class _ProjectCard extends StatelessWidget {
   final Project project;
+  final List<Project> allProjects;
   final int index;
-  const _ProjectCard({required this.project, required this.index});
+  const _ProjectCard({required this.project, required this.allProjects, required this.index});
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +217,7 @@ class _ProjectCard extends StatelessWidget {
                             onTap: () => Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => DeveloperProfileScreen(
                                 agency: project.agency,
-                                projects: mockProjects.where((p) => p.agency.id == project.agency.id).toList(),
+                                projects: allProjects.where((p) => p.agency.id == project.agency.id).toList(),
                               ),
                             )),
                             borderRadius: BorderRadius.circular(8),

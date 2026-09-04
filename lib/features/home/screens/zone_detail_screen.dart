@@ -1,6 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
+import '../../../core/models/listing.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_palette.dart';
 import '../widgets/filter_bar.dart';
 import '../widgets/listing_card.dart';
@@ -42,11 +44,23 @@ class ZoneDetailScreen extends StatefulWidget {
 
 class _ZoneDetailScreenState extends State<ZoneDetailScreen> {
   final _filterState = HomeFilterState();
+  List<Listing> _allListings = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ListingRepository>().fetchAll().then((listings) {
+      if (mounted) setState(() { _allListings = listings; _isLoading = false; });
+    }).catchError((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final listings = MockData.listings.where((l) {
+    final listings = _allListings.where((l) {
       if (widget.zone != 'هەموو' && l.zone != widget.zone) return false;
       if (_filterState.type != 'all' && l.type.name != _filterState.type) return false;
       return true;
@@ -76,7 +90,9 @@ class _ZoneDetailScreenState extends State<ZoneDetailScreen> {
             ),
           ),
           Expanded(
-            child: listings.isEmpty
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: palette.primary))
+                : listings.isEmpty
                 ? Center(child: Text('zone_detail.no_listings'.tr(), style: TextStyle(color: palette.textSecondary)))
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),

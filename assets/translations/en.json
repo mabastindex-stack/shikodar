@@ -56,6 +56,7 @@
     "complex_parent_name": "Creator company name",
     "field_required": "This field is required",
     "phone_invalid": "Enter a valid phone number",
+    "network_error": "Couldn't connect to the server",
     "email_invalid": "Enter a valid email address",
     "password_short": "Password must contain at least 6 characters",
     "password_mismatch": "Passwords do not match",
@@ -123,6 +124,7 @@
   "common": {
     "save": "Save",
     "cancel": "Cancel",
+    "retry": "Try again",
     "search_hint": "Search for an apartment, villa, land...",
     "no_results": "No results found",
     "loading": "Loading..."

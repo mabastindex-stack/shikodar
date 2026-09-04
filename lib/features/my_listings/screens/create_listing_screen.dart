@@ -6,10 +6,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/mock/kirkuk_neighborhoods.dart';
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/listing_repository.dart';
+import '../../../core/network/upload_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -88,6 +91,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
   final _phoneController = TextEditingController();
   final _whatsappController = TextEditingController();
   bool _sameAsPhone = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -274,30 +278,41 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
     _mapController.mapController.move(_pin!, 15.5);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final phone = _phoneController.text.trim();
     final whatsapp = _sameAsPhone ? phone : _whatsappController.text.trim();
-    final listing = Listing(
-      id: 'l_${DateTime.now().millisecondsSinceEpoch}',
-      title: _titleController.text.trim(),
-      zone: _neighborhood!.name,
-      purpose: _purpose!,
-      type: _type!,
-      price: double.parse(_priceController.text.trim()),
-      negotiable: _negotiable,
-      imageUrls: _photos.map((f) => f.path).toList(),
-      areaSqm: double.parse(_areaController.text.trim()),
-      rooms: (_type == ListingType.house || _type == ListingType.villa) ? int.tryParse(_roomsController.text.trim()) : null,
-      lat: _pin!.latitude,
-      lng: _pin!.longitude,
-      agency: MockData.agencyShiko,
-      createdAt: DateTime.now(),
-      description: _descriptionController.text.trim(),
-      phone: phone,
-      whatsapp: whatsapp,
-    );
-    MockData.listings.insert(0, listing);
-    Navigator.pop(context, true);
+    final uploadRepository = context.read<UploadRepository>();
+    final listingRepository = context.read<ListingRepository>();
+
+    setState(() => _isSubmitting = true);
+    try {
+      final imageUrls = await uploadRepository.uploadAll(_photos.map((f) => f.path).toList());
+
+      await listingRepository.create({
+        'title': _titleController.text.trim(),
+        'zone': _neighborhood!.name,
+        'purpose': _purpose!.name,
+        'type': _type!.name,
+        'price': double.parse(_priceController.text.trim()),
+        'negotiable': _negotiable,
+        'image_urls': imageUrls,
+        'area_sqm': double.parse(_areaController.text.trim()),
+        if (_type == ListingType.house || _type == ListingType.villa) 'rooms': int.tryParse(_roomsController.text.trim()),
+        'lat': _pin!.latitude,
+        'lng': _pin!.longitude,
+        'description': _descriptionController.text.trim(),
+        'phone': phone,
+        'whatsapp': whatsapp,
+      });
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -392,8 +407,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: _next,
-          icon: Icon(isLast ? Icons.check_circle_rounded : Icons.arrow_back_rounded, size: 19),
+          onPressed: _isSubmitting ? null : _next,
+          icon: _isSubmitting
+              ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: isLast ? AppColors.ink : palette.onPrimary))
+              : Icon(isLast ? Icons.check_circle_rounded : Icons.arrow_back_rounded, size: 19),
           label: Text(isLast ? 'my_listings.publish_button'.tr() : 'my_listings.next_button'.tr(), style: const TextStyle(fontWeight: FontWeight.w800)),
           style: ElevatedButton.styleFrom(
             backgroundColor: isLast ? AppColors.gold : palette.primary,

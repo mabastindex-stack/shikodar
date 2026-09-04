@@ -4,8 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/reel_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/boost_sheet.dart';
@@ -20,7 +21,24 @@ class MyReelsScreen extends StatefulWidget {
 }
 
 class _MyReelsScreenState extends State<MyReelsScreen> {
-  List<Reel> get _myReels => MockData.reels.where((r) => r.listing.agency.id == MockData.agencyShiko.id).toList();
+  List<Reel> _myReels = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _isLoading = true);
+    try {
+      final reels = await context.read<ReelRepository>().fetchMine();
+      if (mounted) setState(() { _myReels = reels; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +53,7 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final created = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const CreateReelScreen()));
-          if (created == true && mounted) setState(() {});
+          if (created == true && mounted) _load();
         },
         backgroundColor: palette.textPrimary,
         icon: Icon(Icons.videocam_outlined, color: palette.background),
@@ -67,7 +85,9 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
             ).animate().fadeIn(duration: 300.ms),
           ),
           Expanded(
-            child: reels.isEmpty
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: palette.primary))
+                : reels.isEmpty
                 ? Center(child: Text('my_reels.empty'.tr(), style: TextStyle(color: palette.textSecondary)))
                 : GridView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -165,7 +185,7 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
 
   Future<void> _editReel(Reel reel) async {
     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => CreateReelScreen(existing: reel)));
-    if (saved == true && mounted) setState(() {});
+    if (saved == true && mounted) _load();
   }
 
   Widget _actionIcon(AppPalette palette, IconData icon, VoidCallback onTap, {Color? color}) {
@@ -196,10 +216,15 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text('common.cancel'.tr(), style: TextStyle(color: palette.textSecondary))),
           TextButton(
-            onPressed: () {
-              MockData.reels.removeWhere((r) => r.id == reel.id);
+            onPressed: () async {
+              final reelRepository = context.read<ReelRepository>();
               Navigator.pop(context);
-              setState(() {});
+              try {
+                await reelRepository.delete(reel.id);
+                if (mounted) _load();
+              } catch (_) {
+                // Same pattern as the other my_* screens' delete.
+              }
             },
             child: Text('my_reels.delete_action'.tr(), style: TextStyle(color: palette.error, fontWeight: FontWeight.w700)),
           ),

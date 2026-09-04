@@ -4,6 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'core/network/api_client.dart';
+import 'core/network/auth_repository.dart';
+import 'core/network/favorite_repository.dart';
+import 'core/network/listing_repository.dart';
+import 'core/network/offer_repository.dart';
+import 'core/network/project_repository.dart';
+import 'core/network/reel_repository.dart';
+import 'core/network/upload_repository.dart';
 import 'core/theme/app_fonts.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
@@ -15,6 +23,15 @@ import 'features/auth/screens/splash_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+
+  final apiClient = await ApiClient.create();
+  final authRepository = AuthRepository(apiClient);
+  final listingRepository = ListingRepository(apiClient);
+  final projectRepository = ProjectRepository(apiClient);
+  final reelRepository = ReelRepository(apiClient);
+  final offerRepository = OfferRepository(apiClient);
+  final favoriteRepository = FavoriteRepository(apiClient);
+  final uploadRepository = UploadRepository(apiClient);
 
   runApp(
     EasyLocalization(
@@ -29,6 +46,14 @@ Future<void> main() async {
       startLocale: const Locale('ku'),
       child: MultiProvider(
         providers: [
+          Provider<ApiClient>.value(value: apiClient),
+          Provider<AuthRepository>.value(value: authRepository),
+          Provider<ListingRepository>.value(value: listingRepository),
+          Provider<ProjectRepository>.value(value: projectRepository),
+          Provider<ReelRepository>.value(value: reelRepository),
+          Provider<OfferRepository>.value(value: offerRepository),
+          Provider<FavoriteRepository>.value(value: favoriteRepository),
+          Provider<UploadRepository>.value(value: uploadRepository),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => UserSession()),
           ChangeNotifierProvider(create: (_) => BusinessProfileStore()),

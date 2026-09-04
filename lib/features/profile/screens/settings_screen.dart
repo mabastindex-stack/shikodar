@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import '../../../core/network/auth_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -63,9 +64,12 @@ class SettingsScreen extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text('common.cancel'.tr(), style: TextStyle(color: palette.textSecondary))),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              await context.read<AuthRepository>().logout();
+              if (!context.mounted) return;
               context.read<UserSession>().logOut();
-              Navigator.of(context).popUntil((route) => route.isFirst);
+              navigator.popUntil((route) => route.isFirst);
             },
             child: Text('settings_page.logout_dialog_title'.tr(), style: TextStyle(color: palette.error, fontWeight: FontWeight.w700)),
           ),

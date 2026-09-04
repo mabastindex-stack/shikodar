@@ -3,7 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import '../../../core/session/admin_store.dart';
+import '../../../core/network/offer_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -56,6 +56,35 @@ class Offer {
         imageUrl: imageUrl ?? this.imageUrl,
         isNew: isNew ?? this.isNew,
       );
+
+  factory Offer.fromJson(Map<String, dynamic> json) => Offer(
+        id: json['id'].toString(),
+        icon: iconFromName(json['icon'] ?? ''),
+        title: json['title'] ?? '',
+        preview: json['preview'] ?? '',
+        intro: json['intro'] ?? '',
+        highlights: (json['highlights'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        audience: json['audience'] ?? '',
+        validUntil: json['valid_until'] ?? '',
+        imageUrl: json['image_url'] ?? '',
+        isNew: json['is_new'] ?? false,
+      );
+}
+
+/// Maps the backend's icon-name string (admin picks one when creating an
+/// offer) to a real Material icon constant. Extend as new offer icons are
+/// introduced.
+IconData iconFromName(String name) {
+  switch (name) {
+    case 'card_giftcard_rounded':
+      return Icons.card_giftcard_rounded;
+    case 'vpn_key_rounded':
+      return Icons.vpn_key_rounded;
+    case 'video_camera_back_rounded':
+      return Icons.video_camera_back_rounded;
+    default:
+      return Icons.local_offer_rounded;
+  }
 }
 
 /// One accent per offer, cycling through the app's own emerald/jade family —
@@ -113,13 +142,31 @@ const defaultOffers = [
   ),
 ];
 
-class OffersListScreen extends StatelessWidget {
+class OffersListScreen extends StatefulWidget {
   const OffersListScreen({super.key});
+
+  @override
+  State<OffersListScreen> createState() => _OffersListScreenState();
+}
+
+class _OffersListScreenState extends State<OffersListScreen> {
+  List<Offer> _offers = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<OfferRepository>().fetchAll().then((offers) {
+      if (mounted) setState(() { _offers = offers; _isLoading = false; });
+    }).catchError((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final offers = context.watch<AdminStore>().offers;
+    final offers = _offers;
     return Scaffold(
       backgroundColor: palette.background,
       body: SafeArea(
@@ -159,7 +206,12 @@ class OffersListScreen extends StatelessWidget {
               ),
             ).entrance(),
           ),
-          if (offers.isEmpty)
+          if (_isLoading)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator(color: palette.primary)),
+            )
+          else if (offers.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(child: Text('offers.empty'.tr(), style: TextStyle(color: palette.textSecondary))),

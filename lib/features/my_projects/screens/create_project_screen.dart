@@ -3,11 +3,14 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/mock/kirkuk_neighborhoods.dart';
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/project_repository.dart';
+import '../../../core/network/upload_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -79,6 +82,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   final List<File> _photos = [];
 
   final List<UnitType> _unitTypes = [];
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -177,28 +181,52 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   void _addUnitType(UnitType unit) => setState(() => _unitTypes.add(unit));
   void _removeUnitType(int i) => setState(() => _unitTypes.removeAt(i));
 
-  void _submit() {
-    final project = Project(
-      id: 'p_${DateTime.now().millisecondsSinceEpoch}',
-      name: _nameController.text.trim(),
-      zone: _neighborhood!.name,
-      images: _photos.map((f) => f.path).toList(),
-      videoUrl: _videoUrlController.text.trim(),
-      priceFrom: double.parse(_priceFromController.text.trim()),
-      priceTo: double.parse(_priceToController.text.trim()),
-      status: _status,
-      description: _descriptionController.text.trim(),
-      highlights: _highlightControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList(),
-      amenities: _amenityControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList(),
-      unitTypes: _unitTypes,
-      agencyName: MockData.agencyShiko.name,
-      agency: MockData.agencyShiko,
-      paymentPlan: _paymentPlanController.text.trim(),
-      completionInfo: _completionInfoController.text.trim(),
-      specs: const [],
-    );
-    mockProjects.add(project);
-    Navigator.pop(context, true);
+  Future<void> _submit() async {
+    final uploadRepository = context.read<UploadRepository>();
+    final projectRepository = context.read<ProjectRepository>();
+
+    setState(() => _isSubmitting = true);
+    try {
+      final imageUrls = await uploadRepository.uploadAll(_photos.map((f) => f.path).toList());
+
+      final project = await projectRepository.create({
+        'name': _nameController.text.trim(),
+        'zone': _neighborhood!.name,
+        'images': imageUrls,
+        'video_url': _videoUrlController.text.trim(),
+        'price_from': double.parse(_priceFromController.text.trim()),
+        'price_to': double.parse(_priceToController.text.trim()),
+        'status': _status == ProjectStatus.completed ? 'completed' : 'under_construction',
+        'description': _descriptionController.text.trim(),
+        'highlights': _highlightControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList(),
+        'amenities': _amenityControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList(),
+        'payment_plan': _paymentPlanController.text.trim(),
+        'completion_info': _completionInfoController.text.trim(),
+      });
+
+      // Unit types reuse the same project identity photos (no separate
+      // per-unit photo picker in this form), so the same uploaded URLs
+      // apply — no need to upload them again.
+      for (final unit in _unitTypes) {
+        await projectRepository.addUnitType(project.id, {
+          'name': unit.name,
+          'price_from': unit.priceFrom,
+          'area': unit.area,
+          'images': imageUrls,
+          'description': unit.description,
+          'type': unit.type.name,
+          'purpose': unit.purpose.name,
+        });
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -289,8 +317,10 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: _next,
-          icon: Icon(isLast ? Icons.check_circle_rounded : Icons.arrow_back_rounded, size: 19),
+          onPressed: _isSubmitting ? null : _next,
+          icon: _isSubmitting
+              ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: isLast ? AppColors.ink : palette.onPrimary))
+              : Icon(isLast ? Icons.check_circle_rounded : Icons.arrow_back_rounded, size: 19),
           label: Text(isLast ? 'my_projects.publish_button'.tr() : 'my_projects.next_button'.tr(), style: const TextStyle(fontWeight: FontWeight.w800)),
           style: ElevatedButton.styleFrom(
             backgroundColor: isLast ? AppColors.gold : palette.primary,

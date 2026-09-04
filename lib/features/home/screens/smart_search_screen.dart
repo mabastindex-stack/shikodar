@@ -1,8 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -61,6 +62,15 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
   int? _rooms;
   bool _verifiedOnly = false;
   SortOption _sort = SortOption.newest;
+  List<Listing> _allListings = [];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ListingRepository>().fetchAll().then((listings) {
+      if (mounted) setState(() => _allListings = listings);
+    });
+  }
 
   @override
   void dispose() {
@@ -68,7 +78,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
     super.dispose();
   }
 
-  List<Listing> get _matches => MockData.listings.where((listing) {
+  List<Listing> get _matches => _allListings.where((listing) {
         final keyword = _keywordController.text.trim().toLowerCase();
         if (keyword.isNotEmpty &&
             !listing.title.toLowerCase().contains(keyword) &&
@@ -115,6 +125,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
         pageBuilder: (_, animation, __) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: AppMotion.enter),
           child: SearchResultsScreen(
+            allListings: _allListings,
             keyword: _keywordController.text.trim(),
             zone: _zone,
             purpose: _purpose,

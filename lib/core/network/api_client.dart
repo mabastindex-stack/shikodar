@@ -2,9 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Central API client. Base URL is stored in SharedPreferences and editable
-/// from the in-app settings screen (gear icon) — mirrors the pattern used in
-/// shlon-akhdemak so switching between local AppServ/XAMPP and the Hostinger
-/// server never requires a rebuild.
+/// from the in-app settings screen (gear icon), so switching between local
+/// AppServ and the Hostinger server never requires a rebuild.
 class ApiClient {
   static const _baseUrlKey = 'server_base_url';
   static const String defaultBaseUrl = 'http://127.0.0.1:8000/api';

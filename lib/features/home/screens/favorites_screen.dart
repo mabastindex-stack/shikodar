@@ -1,11 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
+import '../../../core/models/listing.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_palette.dart';
 import '../widgets/listing_card.dart';
 
-/// Global favorites store — a simple ValueNotifier<Set<String>> mirrors the
-/// pattern already used for cross-screen favorites sync in shlon-akhdemak.
+/// Cross-screen favorites sync — a plain ValueNotifier<Set<String>> so any
+/// heart icon anywhere in the app updates instantly when another one is
+/// tapped. Local-only for now (not yet persisted via the real /favorites
+/// API); see FavoriteRepository for the backend side, already built.
 class FavoritesStore {
   static final ValueNotifier<Set<String>> ids = ValueNotifier({});
 
@@ -16,8 +20,23 @@ class FavoritesStore {
   }
 }
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
+
+  @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  List<Listing> _allListings = [];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ListingRepository>().fetchAll().then((listings) {
+      if (mounted) setState(() => _allListings = listings);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +55,7 @@ class FavoritesScreen extends StatelessWidget {
               child: ValueListenableBuilder<Set<String>>(
                 valueListenable: FavoritesStore.ids,
                 builder: (_, ids, __) {
-                  final favs = MockData.listings.where((l) => ids.contains(l.id)).toList();
+                  final favs = _allListings.where((l) => ids.contains(l.id)).toList();
                   if (favs.isEmpty) {
                     return Center(
                       child: Column(

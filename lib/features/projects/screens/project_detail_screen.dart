@@ -5,10 +5,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
@@ -74,6 +76,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     _galleryController.dispose();
     _video?.dispose();
     super.dispose();
+  }
+
+  Future<void> _openDeveloperProfile(BuildContext context) async {
+    final allProjects = await context.read<ProjectRepository>().fetchAll();
+    if (!context.mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DeveloperProfileScreen(
+        agency: project.agency,
+        projects: allProjects.where((p) => p.agency.id == project.agency.id).toList(),
+      ),
+    ));
   }
 
   @override
@@ -170,12 +183,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             color: Colors.transparent,
                             borderRadius: BorderRadius.circular(24),
                             child: InkWell(
-                              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => DeveloperProfileScreen(
-                                  agency: project.agency,
-                                  projects: mockProjects.where((p) => p.agency.id == project.agency.id).toList(),
-                                ),
-                              )),
+                              onTap: () => _openDeveloperProfile(context),
                               borderRadius: BorderRadius.circular(24),
                               child: Container(
                                 padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),

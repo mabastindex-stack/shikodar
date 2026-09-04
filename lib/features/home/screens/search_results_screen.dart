@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/mock/mock_data.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/theme/app_palette.dart';
 import '../widgets/listing_card.dart';
@@ -10,6 +9,7 @@ import 'smart_search_screen.dart';
 class SearchResultsScreen extends StatelessWidget {
   const SearchResultsScreen({
     super.key,
+    required this.allListings,
     required this.keyword,
     required this.zone,
     required this.purpose,
@@ -21,6 +21,7 @@ class SearchResultsScreen extends StatelessWidget {
     required this.sort,
   });
 
+  final List<Listing> allListings;
   final String keyword;
   final String zone;
   final ListingPurpose? purpose;
@@ -32,7 +33,7 @@ class SearchResultsScreen extends StatelessWidget {
   final SortOption sort;
 
   List<Listing> get _results {
-    final results = MockData.listings.where((listing) {
+    final results = allListings.where((listing) {
       if (keyword.isNotEmpty) {
         final query = keyword.toLowerCase();
         if (!listing.title.toLowerCase().contains(query) &&

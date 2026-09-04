@@ -4,8 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/boost_sheet.dart';
@@ -25,9 +26,24 @@ class MyListingsScreen extends StatefulWidget {
 
 class _MyListingsScreenState extends State<MyListingsScreen> {
   _StatusFilter _filter = _StatusFilter.all;
+  List<Listing> _myListings = [];
+  bool _isLoading = true;
 
-  // Demo: treat the enterprise agency's listings as "my listings".
-  List<Listing> get _myListings => MockData.listings.where((l) => l.agency.id == MockData.agencyShiko.id).toList();
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _isLoading = true);
+    try {
+      final listings = await context.read<ListingRepository>().fetchMine();
+      if (mounted) setState(() { _myListings = listings; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +58,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final created = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const CreateListingScreen()));
-          if (created == true && mounted) setState(() {});
+          if (created == true && mounted) _load();
         },
         backgroundColor: palette.textPrimary,
         icon: Icon(Icons.add_rounded, color: palette.background),
@@ -93,7 +109,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             ),
           ),
           Expanded(
-            child: listings.isEmpty
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: palette.primary))
+                : listings.isEmpty
                 ? Center(child: Text('my_listings.empty'.tr(), style: TextStyle(color: palette.textSecondary)))
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -197,7 +215,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 Expanded(
                   child: _actionBtn(palette, Icons.edit_outlined, 'my_listings.edit_action'.tr(), () async {
                     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => EditListingScreen(listing: listing)));
-                    if (saved == true && mounted) setState(() {});
+                    if (saved == true && mounted) _load();
                   }),
                 ),
                 const SizedBox(width: 8),
@@ -274,10 +292,16 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text('common.cancel'.tr(), style: TextStyle(color: palette.textSecondary))),
           TextButton(
-            onPressed: () {
-              MockData.listings.removeWhere((l) => l.id == listing.id);
+            onPressed: () async {
+              final listingRepository = context.read<ListingRepository>();
               Navigator.pop(context);
-              setState(() {});
+              try {
+                await listingRepository.delete(listing.id);
+                if (mounted) _load();
+              } catch (_) {
+                // The list simply won't reflect the delete — the user can
+                // just try again, same as any other failed network action.
+              }
             },
             child: Text('my_listings.delete_action'.tr(), style: TextStyle(color: palette.error, fontWeight: FontWeight.w700)),
           ),

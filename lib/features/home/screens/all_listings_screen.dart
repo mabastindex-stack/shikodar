@@ -1,19 +1,22 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../core/mock/mock_data.dart';
+import '../../../core/models/listing.dart';
 import '../../../core/theme/app_palette.dart';
 import '../widgets/listing_card.dart';
 
 /// Shows every listing that matches the type filter the user had active on
 /// Home — reached via the "بینینی زیاتر" card after the first page of results.
+/// Takes the already-fetched list from HomeFeedScreen rather than
+/// re-fetching, since it's just a differently-laid-out view of the same data.
 class AllListingsScreen extends StatelessWidget {
   final String typeFilter;
-  const AllListingsScreen({super.key, required this.typeFilter});
+  final List<Listing> allListings;
+  const AllListingsScreen({super.key, required this.typeFilter, required this.allListings});
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final listings = MockData.listings.where((l) => typeFilter == 'all' || l.type.name == typeFilter).toList();
+    final listings = allListings.where((l) => typeFilter == 'all' || l.type.name == typeFilter).toList();
     return Scaffold(
       backgroundColor: palette.background,
       appBar: AppBar(

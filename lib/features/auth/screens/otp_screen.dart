@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/auth_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
@@ -32,6 +34,7 @@ class _OtpScreenState extends State<OtpScreen> {
   final List<TextEditingController> _controllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _nodes = List.generate(6, (_) => FocusNode());
+  bool _isVerifying = false;
 
   @override
   void dispose() {
@@ -44,7 +47,7 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
-  void _verify() {
+  Future<void> _verify() async {
     FocusManager.instance.primaryFocus?.unfocus();
     final code = _controllers.map((controller) => controller.text).join();
     if (code.length != 6) {
@@ -57,14 +60,28 @@ class _OtpScreenState extends State<OtpScreen> {
       return;
     }
 
-    context.read<UserSession>().logIn(widget.role);
-    if (widget.role == AccountRole.complex) {
-      context.read<BusinessProfileStore>().setParentCompany(widget.parentCompanyName);
+    setState(() => _isVerifying = true);
+    try {
+      final result = await context.read<AuthRepository>().verifyOtp(phone: widget.phone, code: code);
+      if (!mounted) return;
+
+      context.read<UserSession>().logIn(result.role, name: result.name);
+      if (result.role == AccountRole.complex) {
+        context.read<BusinessProfileStore>().setParentCompany(widget.parentCompanyName);
+      }
+      // Registration is pushed from the profile tab's guest prompt, on top
+      // of the guest HomeShell already showing — pop back to it (now
+      // reactively logged in) instead of tearing down the stack and
+      // building a new one.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
     }
-    // Registration is pushed from the profile tab's guest prompt, on top of
-    // the guest HomeShell already showing — pop back to it (now reactively
-    // logged in) instead of tearing down the stack and building a new one.
-    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -165,6 +182,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     label: 'auth.verify'.tr(),
                     icon: Icons.verified_rounded,
                     onPressed: _verify,
+                    loading: _isVerifying,
                   ).entrance(base: 480.ms),
                   const SizedBox(height: 18),
                   Container(

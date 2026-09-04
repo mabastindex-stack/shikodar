@@ -4,6 +4,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/auth_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
@@ -34,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   AccountRole _selectedRole = AccountRole.client;
   bool _obscure = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -62,16 +65,31 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
-  void _submit() {
-    // No backend yet — skip field validation entirely so the demo flow is
-    // never blocked by an empty phone/password. Re-enable the validate()
-    // gate once real authentication is wired up.
+  Future<void> _submit() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    context.read<UserSession>().logIn(_selectedRole);
-    // Reached by pushing from the profile tab's guest prompt, on top of the
-    // guest HomeShell already showing — pop back to it (now reactively
-    // showing the logged-in profile) instead of building a whole new one.
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      final result = await context.read<AuthRepository>().login(
+            phone: _phoneController.text.trim(),
+            password: _passwordController.text,
+          );
+      if (!mounted) return;
+      context.read<UserSession>().logIn(result.role, name: result.name);
+      // Reached by pushing from the profile tab's guest prompt, on top of
+      // the guest HomeShell already showing — pop back to it (now
+      // reactively showing the logged-in profile) instead of building a
+      // whole new one.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   void _showForgotPasswordInfo() {
@@ -205,6 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               AuthPrimaryButton(
                                 label: 'auth.login'.tr(),
                                 onPressed: _submit,
+                                loading: _isSubmitting,
                               ),
                               const SizedBox(height: 17),
                               Row(

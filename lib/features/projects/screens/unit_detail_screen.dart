@@ -27,10 +27,9 @@ class UnitDetailScreen extends StatefulWidget {
 class _UnitDetailScreenState extends State<UnitDetailScreen> {
   final _galleryController = PageController();
   int _photoIndex = 0;
-  // A UnitType has no id of its own (it's a value nested inside a Project),
-  // so it can't plug into the app-wide FavoritesStore (which resolves ids
-  // against MockData.listings) without a model change — kept as a local,
-  // honest toggle instead of a heart that silently never shows up anywhere.
+  // FavoritesStore only knows how to favorite a Listing or a Project, not a
+  // UnitType — kept as a local, honest toggle instead of a heart that
+  // silently never shows up anywhere.
   bool _isFavorited = false;
 
   @override

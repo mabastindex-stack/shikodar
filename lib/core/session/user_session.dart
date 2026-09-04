@@ -24,6 +24,11 @@ class UserSession extends ChangeNotifier {
   /// sets it, gating account-only screens without gating browsing itself.
   bool isLoggedIn = false;
 
+  /// The signed-in account's real name from the server — null while a
+  /// guest, so screens fall back to a generic label instead of a stale
+  /// placeholder.
+  String? name;
+
   bool get isAgency => role == AccountRole.agency;
   bool get isCompany => role == AccountRole.company;
   bool get isComplex => role == AccountRole.complex;
@@ -35,15 +40,17 @@ class UserSession extends ChangeNotifier {
   }
 
   /// Successful login/registration — called from `LoginScreen`/`OtpScreen`.
-  void logIn(AccountRole newRole) {
+  void logIn(AccountRole newRole, {String? name}) {
     role = newRole;
     isLoggedIn = true;
+    this.name = name;
     notifyListeners();
   }
 
   void logOut() {
     role = AccountRole.client;
     isLoggedIn = false;
+    name = null;
     notifyListeners();
   }
 

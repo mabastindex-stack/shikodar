@@ -1,7 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../core/mock/mock_data.dart';
+import '../../../core/models/listing.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/listing_repository.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/section_header.dart';
@@ -27,6 +30,36 @@ class HomeFeedScreen extends StatefulWidget {
 class _HomeFeedScreenState extends State<HomeFeedScreen> {
   final HomeFilterState _filterState = HomeFilterState();
   String _zoneHighlight = 'هەموو';
+  List<Listing> _listings = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
+
+  Future<void> _loadListings() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final listings = await context.read<ListingRepository>().fetchAll();
+      if (!mounted) return;
+      setState(() {
+        _listings = listings;
+        _isLoading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _isLoading = false;
+      });
+    }
+  }
 
   void _openSearch() {
     Navigator.of(context).push(
@@ -52,7 +85,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final listings = MockData.listings.where((listing) {
+    final listings = _listings.where((listing) {
       return _filterState.type == 'all' || listing.type.name == _filterState.type;
     }).toList()
       ..sort((a, b) {
@@ -131,6 +164,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                             MaterialPageRoute(
                               builder: (_) => AllListingsScreen(
                                 typeFilter: _filterState.type,
+                                allListings: _listings,
                               ),
                             ),
                           )
@@ -138,7 +172,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                 ),
               ),
             ),
-            if (preview.isEmpty)
+            if (_isLoading)
+              const SliverToBoxAdapter(child: _LoadingListings())
+            else if (_error != null)
+              SliverToBoxAdapter(child: _ListingsError(message: _error!, onRetry: _loadListings))
+            else if (preview.isEmpty)
               SliverToBoxAdapter(child: _EmptyListings(onReset: _resetFilter))
             else
               SliverPadding(
@@ -303,6 +341,54 @@ class _CompactSearchBar extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingListings extends StatelessWidget {
+  const _LoadingListings();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Center(child: CircularProgressIndicator(color: palette.primary)),
+    );
+  }
+}
+
+class _ListingsError extends StatelessWidget {
+  const _ListingsError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: palette.divider),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: palette.error, size: 32),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w700),
+            ),
+            TextButton(onPressed: onRetry, child: Text('common.retry'.tr())),
+          ],
         ),
       ),
     );

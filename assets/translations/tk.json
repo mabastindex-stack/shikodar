@@ -56,6 +56,7 @@
     "complex_parent_name": "Kurucu şirketin adı",
     "field_required": "Bu alan gereklidir",
     "phone_invalid": "Geçerli bir telefon numarası girin",
+    "network_error": "Sunucuya bağlanılamadı",
     "email_invalid": "Geçerli bir e-posta girin",
     "password_short": "Şifre en az 6 karakter olmalıdır",
     "password_mismatch": "Şifreler eşleşmiyor",
@@ -123,6 +124,7 @@
   "common": {
     "save": "Kaydet",
     "cancel": "Vazgeç",
+    "retry": "Yeniden dene",
     "search_hint": "Daire, villa, arsa ara...",
     "no_results": "Sonuç bulunamadı",
     "loading": "Yükleniyor..."

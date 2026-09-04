@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
@@ -23,12 +25,15 @@ class _HomeVideoShowcaseState extends State<HomeVideoShowcase> {
   final _controller = PageController();
   Timer? _autoTimer;
   int _index = 0;
-
-  List<Project> get _videos => mockProjects.where((p) => p.videoUrl.isNotEmpty).toList();
+  List<Project> _videos = [];
 
   @override
   void initState() {
     super.initState();
+    context.read<ProjectRepository>().fetchAll().then((projects) {
+      if (!mounted) return;
+      setState(() => _videos = projects.where((p) => p.videoUrl.isNotEmpty).toList());
+    });
     _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!mounted || _videos.length <= 1) return;
       final next = (_index + 1) % _videos.length;

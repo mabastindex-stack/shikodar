@@ -1,8 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/mock/mock_data.dart';
+import 'package:provider/provider.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/boost_sheet.dart';
@@ -26,10 +27,26 @@ class MyProjectsScreen extends StatefulWidget {
 
 class _MyProjectsScreenState extends State<MyProjectsScreen> {
   _StatusFilter _filter = _StatusFilter.all;
+  List<Project> _allProjects = [];
+  bool _isLoading = true;
 
-  // Demo: treat the enterprise agency's projects as "my projects".
-  List<Project> get _myProjects => mockProjects.where((p) {
-        if (p.agency.id != MockData.agencyShiko.id) return false;
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _isLoading = true);
+    try {
+      final projects = await context.read<ProjectRepository>().fetchMine();
+      if (mounted) setState(() { _allProjects = projects; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  List<Project> get _myProjects => _allProjects.where((p) {
         if (_filter == _StatusFilter.building) return p.status == ProjectStatus.underConstruction;
         if (_filter == _StatusFilter.done) return p.status == ProjectStatus.completed;
         return true;
@@ -48,7 +65,7 @@ class _MyProjectsScreenState extends State<MyProjectsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final created = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const CreateProjectScreen()));
-          if (created == true && mounted) setState(() {});
+          if (created == true && mounted) _load();
         },
         backgroundColor: palette.textPrimary,
         icon: Icon(Icons.add_rounded, color: palette.background),
@@ -97,7 +114,9 @@ class _MyProjectsScreenState extends State<MyProjectsScreen> {
             ),
           ),
           Expanded(
-            child: projects.isEmpty
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: palette.primary))
+                : projects.isEmpty
                 ? Center(child: Text('my_projects.empty'.tr(), style: TextStyle(color: palette.textSecondary)))
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -193,7 +212,7 @@ class _MyProjectsScreenState extends State<MyProjectsScreen> {
                         Expanded(
                           child: _actionBtn(palette, Icons.edit_outlined, 'my_projects.edit_action'.tr(), () async {
                             final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => EditProjectScreen(project: project)));
-                            if (saved == true && mounted) setState(() {});
+                            if (saved == true && mounted) _load();
                           }),
                         ),
                         const SizedBox(width: 8),
@@ -262,10 +281,16 @@ class _MyProjectsScreenState extends State<MyProjectsScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text('common.cancel'.tr(), style: TextStyle(color: palette.textSecondary))),
           TextButton(
-            onPressed: () {
-              mockProjects.removeWhere((p) => p.id == project.id);
+            onPressed: () async {
+              final projectRepository = context.read<ProjectRepository>();
               Navigator.pop(context);
-              setState(() {});
+              try {
+                await projectRepository.delete(project.id);
+                if (mounted) _load();
+              } catch (_) {
+                // Same as MyListingsScreen's delete — a failed request just
+                // leaves the list unchanged; the user can retry.
+              }
             },
             child: Text('my_projects.delete_action'.tr(), style: TextStyle(color: palette.error, fontWeight: FontWeight.w700)),
           ),

@@ -6,8 +6,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/mock/mock_data.dart';
+import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/listing_repository.dart';
+import '../../../core/network/project_repository.dart';
+import '../../../core/network/reel_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
@@ -43,10 +46,44 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   File? _coverImage;
   int _tab = 0; // 0 posts, 1 reels, 2 manage
 
+  List<Listing> _myListings = [];
+  List<Project> _myProjects = [];
+  List<Reel> _myReels = [];
+  bool _isLoadingContent = true;
+
   @override
   void initState() {
     super.initState();
     _glow = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _loadContentIfBusiness();
+  }
+
+  Future<void> _loadContentIfBusiness() async {
+    final role = context.read<UserSession>().role;
+    final isBusiness = role == AccountRole.agency || role == AccountRole.company || role == AccountRole.complex;
+    if (!isBusiness) {
+      setState(() => _isLoadingContent = false);
+      return;
+    }
+    final listingRepository = context.read<ListingRepository>();
+    final projectRepository = context.read<ProjectRepository>();
+    final reelRepository = context.read<ReelRepository>();
+    try {
+      final results = await Future.wait([
+        listingRepository.fetchMine(),
+        projectRepository.fetchMine(),
+        reelRepository.fetchMine(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _myListings = results[0] as List<Listing>;
+        _myProjects = results[1] as List<Project>;
+        _myReels = results[2] as List<Reel>;
+        _isLoadingContent = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingContent = false);
+    }
   }
 
   @override
@@ -128,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final isCompany = role == AccountRole.company;
     final isComplex = role == AccountRole.complex;
     final isBusiness = isAgency || isCompany || isComplex;
-    final myComplex = mockProjects.isNotEmpty ? mockProjects.first : null;
+    final myComplex = _myProjects.isNotEmpty ? _myProjects.first : null;
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -142,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  isComplex ? (myComplex?.name ?? 'profile_page.complex_fallback_name'.tr()) : (isCompany || isAgency ? 'کۆمپانیای شکۆ' : 'ئارام حسێن'),
+                  isComplex ? (myComplex?.name ?? 'profile_page.complex_fallback_name'.tr()) : (session.name ?? ''),
                   style: TextStyle(color: palette.textPrimary, fontSize: 17, fontWeight: FontWeight.w800),
                 ),
                 if (isBusiness) ...[
@@ -206,11 +243,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: switch (_tab) {
-                  0 => _postsGrid(context, palette, isCompany: isCompany, isComplex: isComplex, myComplex: myComplex),
-                  1 => _reelsGrid(palette),
-                  _ => _manageList(context, palette, isCompany: isCompany, isComplex: isComplex, myComplex: myComplex),
-                },
+                child: _isLoadingContent
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Center(child: CircularProgressIndicator(color: palette.primary)),
+                      )
+                    : switch (_tab) {
+                        0 => _postsGrid(context, palette, isCompany: isCompany, isComplex: isComplex, myComplex: myComplex),
+                        1 => _reelsGrid(palette),
+                        _ => _manageList(context, palette, isCompany: isCompany, isComplex: isComplex, myComplex: myComplex),
+                      },
               ),
             ] else
               Padding(
@@ -417,7 +459,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _statsRow(AppPalette palette, {required bool isCompany, required bool isComplex, required Project? myComplex}) {
     final firstStat = isComplex
         ? (Icons.door_front_door_outlined, '${myComplex?.unitTypes.length ?? 0}', 'profile_page.stat_unit'.tr())
-        : (isCompany ? (Icons.apartment_rounded, '2', 'profile_page.stat_project'.tr()) : (Icons.home_work_outlined, '24', 'profile_page.stat_listing'.tr()));
+        : (isCompany ? (Icons.apartment_rounded, '${_myProjects.length}', 'profile_page.stat_project'.tr()) : (Icons.home_work_outlined, '${_myListings.length}', 'profile_page.stat_listing'.tr()));
     final stats = [
       firstStat,
       (Icons.star_rounded, '4.8', 'profile_page.stat_rating'.tr()),
@@ -508,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       );
     }
     if (isCompany) {
-      final projects = mockProjects.where((p) => p.agency.id == MockData.agencyShiko.id).toList();
+      final projects = _myProjects;
       if (projects.isEmpty) return _emptyTabState(palette, 'profile_page.empty_projects'.tr());
       return GridView.builder(
         shrinkWrap: true,
@@ -526,7 +568,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         },
       );
     }
-    final listings = MockData.listings.where((l) => l.agency.id == MockData.agencyShiko.id).toList();
+    final listings = _myListings;
     if (listings.isEmpty) return _emptyTabState(palette, 'profile_page.empty_listings'.tr());
     return GridView.builder(
       shrinkWrap: true,
@@ -569,7 +611,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _reelsGrid(AppPalette palette) {
-    final reels = MockData.reels.where((r) => r.listing.agency.id == MockData.agencyShiko.id).toList();
+    final reels = _myReels;
     if (reels.isEmpty) return _emptyTabState(palette, 'profile_page.empty_reels'.tr());
     return GridView.builder(
       shrinkWrap: true,
@@ -597,10 +639,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _manageList(BuildContext context, AppPalette palette, {required bool isCompany, required bool isComplex, required Project? myComplex}) {
-    final postsCount = isComplex
-        ? (myComplex?.unitTypes.length ?? 0)
-        : (isCompany ? mockProjects.where((p) => p.agency.id == MockData.agencyShiko.id).length : MockData.listings.where((l) => l.agency.id == MockData.agencyShiko.id).length);
-    final reelsCount = MockData.reels.where((r) => r.listing.agency.id == MockData.agencyShiko.id).length;
+    final postsCount = isComplex ? (myComplex?.unitTypes.length ?? 0) : (isCompany ? _myProjects.length : _myListings.length);
+    final reelsCount = _myReels.length;
     return Column(
       children: [
         _premiumPackageCard(context, palette, isCompany: isCompany || isComplex, postsCount: postsCount, reelsCount: reelsCount),
