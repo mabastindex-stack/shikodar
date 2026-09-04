@@ -38,6 +38,12 @@ class _ProjectIdentityCarouselState extends State<ProjectIdentityCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.images.isEmpty) {
+      return Container(
+        color: AppColors.surfaceElevated,
+        child: const Icon(Icons.apartment_rounded, color: AppColors.textMuted),
+      );
+    }
     return Stack(
       fit: StackFit.expand,
       children: [

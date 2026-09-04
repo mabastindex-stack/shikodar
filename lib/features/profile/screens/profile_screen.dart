@@ -56,15 +56,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.initState();
     _glow = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
     _loadContentIfBusiness();
+    // ProfileScreen is kept alive inside HomeShell's IndexedStack, so
+    // initState only ever runs once — often while still browsing as a
+    // guest, well before signing in. Without this listener, logging in
+    // later would never re-trigger the fetch above, leaving posts/stats
+    // permanently empty for the rest of the session.
+    context.read<UserSession>().addListener(_loadContentIfBusiness);
   }
 
   Future<void> _loadContentIfBusiness() async {
     final role = context.read<UserSession>().role;
     final isBusiness = role == AccountRole.agency || role == AccountRole.company || role == AccountRole.complex;
     if (!isBusiness) {
-      setState(() => _isLoadingContent = false);
+      setState(() {
+        _isLoadingContent = false;
+        _myListings = [];
+        _myProjects = [];
+        _myReels = [];
+      });
       return;
     }
+    setState(() => _isLoadingContent = true);
     final listingRepository = context.read<ListingRepository>();
     final projectRepository = context.read<ProjectRepository>();
     final reelRepository = context.read<ReelRepository>();
@@ -89,6 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void dispose() {
     _glow.dispose();
+    context.read<UserSession>().removeListener(_loadContentIfBusiness);
     super.dispose();
   }
 

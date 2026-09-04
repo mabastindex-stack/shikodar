@@ -564,9 +564,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   fit: BoxFit.cover,
                   child: SizedBox(width: _video!.value.size.width, height: _video!.value.size.height, child: VideoPlayer(_video!)),
                 )
-              else if (!_videoFailed && !isNetworkImage(project.images.first))
+              else if (!_videoFailed && project.images.isNotEmpty && !isNetworkImage(project.images.first))
                 Image.file(File(project.images.first), fit: BoxFit.cover)
-              else if (!_videoFailed)
+              else if (!_videoFailed && project.images.isNotEmpty)
                 CachedNetworkImage(imageUrl: project.images.first, fit: BoxFit.cover, placeholder: (_, __) => Container(color: palette.surfaceElevated))
               else
                 Container(color: palette.surfaceElevated, child: Icon(Icons.videocam_off_outlined, color: palette.textMuted)),

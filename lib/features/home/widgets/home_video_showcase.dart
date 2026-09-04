@@ -136,6 +136,8 @@ class _VideoCardState extends State<_VideoCard> {
           children: [
             if (_ready && _video != null)
               FittedBox(fit: BoxFit.cover, child: SizedBox(width: _video!.value.size.width, height: _video!.value.size.height, child: VideoPlayer(_video!)))
+            else if (p.images.isEmpty)
+              Container(decoration: const BoxDecoration(gradient: AppColors.brandGradient))
             else if (!isNetworkImage(p.images.first))
               Image.file(File(p.images.first), fit: BoxFit.cover)
             else
