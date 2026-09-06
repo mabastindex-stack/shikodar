@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
 import '../../../core/network/favorite_repository.dart';
+import '../../../core/network/push_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
@@ -69,6 +70,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
       context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId, tier: result.tier, contractEndDate: result.contractEndDate);
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
+      context.read<PushRepository>().registerDevice();
       if (result.role == AccountRole.complex) {
         context.read<BusinessProfileStore>().setParentCompany(widget.parentCompanyName);
       }

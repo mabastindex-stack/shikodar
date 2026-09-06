@@ -1,4 +1,4 @@
-package com.example.shikodar
+package com.shikodar.app
 
 import io.flutter.embedding.android.FlutterActivity
 

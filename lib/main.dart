@@ -1,5 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +18,7 @@ import 'core/network/listing_repository.dart';
 import 'core/network/notification_repository.dart';
 import 'core/network/offer_repository.dart';
 import 'core/network/project_repository.dart';
+import 'core/network/push_repository.dart';
 import 'core/network/reel_repository.dart';
 import 'core/network/review_repository.dart';
 import 'core/network/upload_repository.dart';
@@ -26,9 +30,25 @@ import 'core/session/business_profile_store.dart';
 import 'core/session/user_session.dart';
 import 'features/auth/screens/splash_screen.dart';
 
+/// Runs in a separate isolate when a push arrives while the app is fully
+/// closed or backgrounded — must be a top-level function per
+/// firebase_messaging's contract. Left empty on purpose: we only ever send
+/// plain notification-style pushes, which the OS displays on its own
+/// without any app code running; this just registers the isolate.
+@pragma('vm:entry-point')
+Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+
+  // Not initialized on web — there's no google-services.json equivalent
+  // there, and web push (VAPID keys, service workers) is a separate setup
+  // we haven't done. PushRepository already no-ops on web to match.
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
+  }
 
   final apiClient = await ApiClient.create();
   final authRepository = AuthRepository(apiClient);
@@ -45,6 +65,7 @@ Future<void> main() async {
   final reviewRepository = ReviewRepository(apiClient);
   final activityRepository = ActivityRepository(apiClient);
   final dashboardRepository = DashboardRepository(apiClient);
+  final pushRepository = PushRepository(apiClient);
 
   runApp(
     EasyLocalization(
@@ -74,6 +95,7 @@ Future<void> main() async {
           Provider<ReviewRepository>.value(value: reviewRepository),
           Provider<ActivityRepository>.value(value: activityRepository),
           Provider<DashboardRepository>.value(value: dashboardRepository),
+          Provider<PushRepository>.value(value: pushRepository),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => UserSession()),
           ChangeNotifierProvider(create: (_) => BusinessProfileStore()),

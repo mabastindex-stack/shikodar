@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/auth_repository.dart';
 import '../../../core/network/favorite_repository.dart';
+import '../../../core/network/push_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
@@ -146,6 +147,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       if (restored != null) {
         context.read<UserSession>().logIn(restored.role, name: restored.name, agencyId: restored.agencyId, tier: restored.tier, contractEndDate: restored.contractEndDate);
         FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
+        context.read<PushRepository>().registerDevice();
       }
       if (!mounted) return;
       await _exit.forward();

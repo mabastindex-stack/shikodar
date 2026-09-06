@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
 import '../../../core/network/favorite_repository.dart';
+import '../../../core/network/push_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
@@ -79,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId, tier: result.tier, contractEndDate: result.contractEndDate);
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
+      context.read<PushRepository>().registerDevice();
       // Reached by pushing from the profile tab's guest prompt, on top of
       // the guest HomeShell already showing — pop back to it (now
       // reactively showing the logged-in profile) instead of building a

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "156497736523",
+    "project_id": "shikodar-5f85a",
+    "storage_bucket": "shikodar-5f85a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156497736523:android:796c054be14bf50f95eece",
+        "android_client_info": {
+          "package_name": "com.shikodar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADidXRgsOl-rLMVgZU_SN4oVZUQfWGlJI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
