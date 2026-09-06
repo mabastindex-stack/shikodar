@@ -8,15 +8,20 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/mock/kirkuk_neighborhoods.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/models/zone.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/upload_repository.dart';
+import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/zone_picker_sheet.dart';
 import '../../home/screens/kirkuk_map_style.dart';
+
+/// Fallback camera center when the chosen zone has no admin-set lat/lng yet.
+const _kirkukCenter = LatLng(35.4681, 44.3922);
 
 List<String> get _stepTitles => [
       'my_listings.step_basics_title'.tr(),
@@ -60,6 +65,18 @@ String _typeLabel(ListingType type) {
   }
 }
 
+String _purposeLabel(ListingPurpose? purpose) {
+  switch (purpose) {
+    case ListingPurpose.rent:
+      return 'filters.rent'.tr();
+    case ListingPurpose.installment:
+      return 'filters.installment'.tr();
+    case ListingPurpose.sale:
+    case null:
+      return 'filters.sale'.tr();
+  }
+}
+
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
 
@@ -79,12 +96,16 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
   bool _negotiable = false;
   final _areaController = TextEditingController();
   final _roomsController = TextEditingController();
+  final _downPaymentController = TextEditingController();
+  final _monthlyInstallmentController = TextEditingController();
+  final _installmentMonthsController = TextEditingController();
 
   final _descriptionController = TextEditingController();
 
   final List<File> _photos = [];
 
-  KirkukNeighborhood? _neighborhood;
+  Zone? _zone;
+  List<Zone> _zones = [];
   LatLng? _pin;
   late final AnimatedMapController _mapController = AnimatedMapController(vsync: this);
 
@@ -94,12 +115,23 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    context.read<ZoneRepository>().fetchAll().then((zones) {
+      if (mounted) setState(() => _zones = zones);
+    }).catchError((_) {});
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     _titleController.dispose();
     _priceController.dispose();
     _areaController.dispose();
     _roomsController.dispose();
+    _downPaymentController.dispose();
+    _monthlyInstallmentController.dispose();
+    _installmentMonthsController.dispose();
     _descriptionController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
@@ -121,6 +153,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
           final rooms = int.tryParse(_roomsController.text.trim());
           if (rooms == null || rooms <= 0) return 'my_listings.error_rooms_required'.tr();
         }
+        if (_purpose == ListingPurpose.installment) {
+          final downPayment = double.tryParse(_downPaymentController.text.trim());
+          if (downPayment == null || downPayment <= 0) return 'my_listings.error_down_payment_invalid'.tr();
+          final monthlyInstallment = double.tryParse(_monthlyInstallmentController.text.trim());
+          if (monthlyInstallment == null || monthlyInstallment <= 0) return 'my_listings.error_monthly_installment_invalid'.tr();
+          final installmentMonths = int.tryParse(_installmentMonthsController.text.trim());
+          if (installmentMonths == null || installmentMonths <= 0) return 'my_listings.error_installment_months_invalid'.tr();
+        }
         return null;
       case 1:
         if (_descriptionController.text.trim().length < 30) return 'my_listings.error_description_length'.tr();
@@ -129,7 +169,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
         if (_photos.length < 3) return 'my_listings.error_photos_min'.tr();
         return null;
       case 3:
-        if (_neighborhood == null) return 'my_listings.error_neighborhood_required'.tr();
+        if (_zone == null) return 'my_listings.error_neighborhood_required'.tr();
         return null;
       case 4:
         if (!RegExp(_phonePattern).hasMatch(_phoneController.text.trim())) return 'my_listings.error_phone_invalid'.tr();
@@ -201,81 +241,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
   }
 
   Future<void> _pickNeighborhood() async {
-    final result = await showModalBottomSheet<KirkukNeighborhood>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        var query = '';
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final sheetPalette = context.palette;
-            final filtered = query.trim().isEmpty ? kirkukNeighborhoods : kirkukNeighborhoods.where((n) => n.name.contains(query.trim())).toList();
-            return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.75,
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-                decoration: BoxDecoration(color: sheetPalette.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(color: sheetPalette.divider, borderRadius: BorderRadius.circular(2)),
-                      ),
-                    ),
-                    Text('my_listings.pick_neighborhood_title'.tr(), style: TextStyle(color: sheetPalette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 12),
-                    TextField(
-                      autofocus: false,
-                      onChanged: (v) => setSheetState(() => query = v),
-                      style: TextStyle(color: sheetPalette.textPrimary, fontSize: 13.5),
-                      decoration: InputDecoration(
-                        hintText: 'my_listings.search_neighborhood_hint'.tr(),
-                        hintStyle: TextStyle(color: sheetPalette.textMuted, fontSize: 13),
-                        prefixIcon: Icon(Icons.search_rounded, color: sheetPalette.textMuted, size: 20),
-                        filled: true,
-                        fillColor: sheetPalette.surfaceElevated,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: filtered.isEmpty
-                          ? Center(child: Text('my_listings.no_neighborhood_found'.tr(), style: TextStyle(color: sheetPalette.textSecondary)))
-                          : ListView.separated(
-                              itemCount: filtered.length,
-                              separatorBuilder: (_, __) => Divider(height: 1, color: sheetPalette.divider),
-                              itemBuilder: (_, i) {
-                                final n = filtered[i];
-                                return ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: Icon(Icons.location_on_outlined, color: sheetPalette.primary, size: 20),
-                                  title: Text(n.name, style: TextStyle(color: sheetPalette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600)),
-                                  onTap: () => Navigator.pop(sheetContext, n),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+    final result = await pickZoneSheet(
+      context,
+      _zones,
+      title: 'my_listings.pick_neighborhood_title'.tr(),
+      searchHint: 'my_listings.search_neighborhood_hint'.tr(),
+      notFoundText: 'my_listings.no_neighborhood_found'.tr(),
     );
     if (result == null) return;
     setState(() {
-      _neighborhood = result;
-      _pin = LatLng(result.lat, result.lng);
+      _zone = result;
+      _pin = result.lat != null && result.lng != null ? LatLng(result.lat!, result.lng!) : _kirkukCenter;
     });
-    _mapController.mapController.move(_pin!, 15.5);
+    _mapController.mapController.move(_pin!, result.lat != null ? 15.5 : 12.5);
   }
 
   Future<void> _submit() async {
@@ -290,7 +268,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
 
       await listingRepository.create({
         'title': _titleController.text.trim(),
-        'zone': _neighborhood!.name,
+        'zone': _zone!.name,
         'purpose': _purpose!.name,
         'type': _type!.name,
         'price': double.parse(_priceController.text.trim()),
@@ -298,6 +276,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
         'image_urls': imageUrls,
         'area_sqm': double.parse(_areaController.text.trim()),
         if (_type == ListingType.house || _type == ListingType.villa) 'rooms': int.tryParse(_roomsController.text.trim()),
+        if (_purpose == ListingPurpose.installment) ...{
+          'down_payment': double.parse(_downPaymentController.text.trim()),
+          'monthly_installment': double.parse(_monthlyInstallmentController.text.trim()),
+          'installment_months': int.parse(_installmentMonthsController.text.trim()),
+        },
         'lat': _pin!.latitude,
         'lng': _pin!.longitude,
         'description': _descriptionController.text.trim(),
@@ -450,6 +433,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
             Expanded(child: _choiceChip(palette, 'filters.rent'.tr(), Icons.vpn_key_rounded, _purpose == ListingPurpose.rent, () => setState(() => _purpose = ListingPurpose.rent))),
             const SizedBox(width: 10),
             Expanded(child: _choiceChip(palette, 'filters.sale'.tr(), Icons.sell_rounded, _purpose == ListingPurpose.sale, () => setState(() => _purpose = ListingPurpose.sale))),
+            const SizedBox(width: 10),
+            Expanded(child: _choiceChip(palette, 'filters.installment'.tr(), Icons.calendar_month_rounded, _purpose == ListingPurpose.installment, () => setState(() => _purpose = ListingPurpose.installment))),
           ],
         ),
         const SizedBox(height: 20),
@@ -507,6 +492,51 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
             keyboardType: TextInputType.number,
             style: TextStyle(color: palette.textPrimary),
             decoration: _inputDecoration(palette, hint: 'my_listings.rooms_hint'.tr()),
+          ),
+        ],
+        if (_purpose == ListingPurpose.installment) ...[
+          const SizedBox(height: 20),
+          _fieldLabel(palette, 'my_listings.down_payment_label'.tr()),
+          TextField(
+            controller: _downPaymentController,
+            keyboardType: TextInputType.number,
+            style: TextStyle(color: palette.textPrimary),
+            decoration: _inputDecoration(palette, hint: 'my_listings.down_payment_hint'.tr()),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel(palette, 'my_listings.monthly_installment_label'.tr()),
+                    TextField(
+                      controller: _monthlyInstallmentController,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(color: palette.textPrimary),
+                      decoration: _inputDecoration(palette, hint: 'my_listings.monthly_installment_hint'.tr()),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel(palette, 'my_listings.installment_months_label'.tr()),
+                    TextField(
+                      controller: _installmentMonthsController,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(color: palette.textPrimary),
+                      decoration: _inputDecoration(palette, hint: 'my_listings.installment_months_hint'.tr()),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
         const SizedBox(height: 8),
@@ -665,8 +695,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _neighborhood?.name ?? 'my_listings.select_neighborhood_placeholder'.tr(),
-                    style: TextStyle(color: _neighborhood == null ? palette.textMuted : palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
+                    _zone?.name ?? 'my_listings.select_neighborhood_placeholder'.tr(),
+                    style: TextStyle(color: _zone == null ? palette.textMuted : palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
                   ),
                 ),
                 Icon(Icons.keyboard_arrow_down_rounded, color: palette.textMuted),
@@ -675,7 +705,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
           ),
         ),
         const SizedBox(height: 18),
-        if (_neighborhood == null)
+        if (_zone == null)
           Container(
             height: 220,
             alignment: Alignment.center,
@@ -770,9 +800,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _summaryRow(palette, Icons.title_rounded, _titleController.text.trim().isEmpty ? '—' : _titleController.text.trim()),
-              _summaryRow(palette, Icons.category_outlined, _type == null ? '—' : '${_typeLabel(_type!)} · ${_purpose == ListingPurpose.rent ? 'filters.rent'.tr() : 'filters.sale'.tr()}'),
+              _summaryRow(palette, Icons.category_outlined, _type == null ? '—' : '${_typeLabel(_type!)} · ${_purposeLabel(_purpose)}'),
               _summaryRow(palette, Icons.sell_outlined, _priceController.text.trim().isEmpty ? '—' : '\$${_priceController.text.trim()}'),
-              _summaryRow(palette, Icons.location_on_outlined, _neighborhood?.name ?? '—'),
+              _summaryRow(palette, Icons.location_on_outlined, _zone?.name ?? '—'),
               _summaryRow(palette, Icons.photo_library_outlined, 'my_listings.summary_photos_count'.tr(args: ['${_photos.length}']), isLast: true),
             ],
           ),

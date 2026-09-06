@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -11,12 +12,16 @@ import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/widgets/shikodar_mark.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../../home/screens/home_shell.dart';
 import 'onboarding_screen.dart';
 
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
+
+/// The real brand mark, replacing the old code-drawn placeholder — a
+/// transparent-cropped export of the logo (see assets/branding/ for the
+/// original + how it was cleaned up for the app icon).
+const _logoAsset = 'assets/branding/app_icon_transparent.png';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -35,7 +40,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late final Animation<double> _exitTitle;
   late final Animation<double> _exitMark;
   late final Animation<double> _markScale;
-  late final Animation<double> _markProgress;
+  late final Animation<double> _markBlur;
+  late final Animation<double> _markTilt;
   late final Animation<double> _ring1;
   late final Animation<double> _ring2;
   late final Animation<double> _shine;
@@ -69,21 +75,33 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _exitFooter = CurvedAnimation(parent: _exit, curve: const Interval(0, 0.5, curve: Curves.easeInCubic));
     _exitTitle = CurvedAnimation(parent: _exit, curve: const Interval(0.14, 0.72, curve: Curves.easeInCubic));
     _exitMark = CurvedAnimation(parent: _exit, curve: const Interval(0.3, 1, curve: Curves.easeInCubic));
+    // The badge swings in from a soft blur with a dramatic scale overshoot —
+    // a "focus pull" reveal instead of the old mark's stroke-by-stroke draw
+    // (that trick only worked on a code-painted vector; a photographed logo
+    // needs its own cinematic language).
     _markScale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.72, end: 1.035)
-            .chain(CurveTween(curve: AppMotion.enter)),
-        weight: 72,
+        tween: Tween(begin: 0.5, end: 1.075)
+            .chain(CurveTween(curve: AppMotion.emphasized)),
+        weight: 68,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.035, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 28,
+        tween: Tween(begin: 1.075, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 32,
       ),
     ]).animate(_entrance);
-    _markProgress = CurvedAnimation(
-      parent: _entrance,
-      curve: const Interval(0.06, 0.7, curve: AppMotion.emphasized),
+    _markBlur = Tween(begin: 18.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _entrance,
+        curve: const Interval(0, 0.56, curve: Curves.easeOut),
+      ),
+    );
+    _markTilt = Tween(begin: 0.4, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _entrance,
+        curve: const Interval(0, 0.62, curve: AppMotion.emphasized),
+      ),
     );
     // A double pulse of light announces the mark right as it starts drawing.
     _ring1 = CurvedAnimation(
@@ -160,7 +178,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     final palette = context.palette;
     final reduceMotion = AppMotion.reduce(context);
-    const markSize = 150.0;
+    const markSize = 196.0;
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -217,6 +235,17 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         alignment: Alignment.center,
                         clipBehavior: Clip.none,
                         children: [
+                          // A slow, always-on breathing glow — the badge
+                          // reads as alive on screen, not just during its
+                          // entrance/exit beats.
+                          if (!reduceMotion)
+                            Opacity(
+                              opacity: (0.28 + 0.14 * ambient) * (1 - markExit),
+                              child: _AmbientOrb(
+                                size: markSize * 1.3 + 12 * ambient,
+                                color: AppColors.goldLight.withOpacity(0.4),
+                              ),
+                            ),
                           if (!reduceMotion && glowT > 0)
                             Opacity(
                               opacity: glowT * 0.5,
@@ -251,20 +280,38 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                             opacity: 1 - markExit,
                             child: Transform.scale(
                               scale: (reduceMotion ? 1 : _markScale.value) * (1 + 0.14 * markExit),
-                              child: Stack(
-                                children: [
-                                  ShikodarMark(
-                                    size: markSize,
-                                    progress: reduceMotion ? 1 : _markProgress.value,
-                                  ),
-                                  if (!reduceMotion)
-                                    Positioned.fill(
+                              child: Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.0012)
+                                  ..rotateX(reduceMotion ? 0 : (_markTilt.value - 0.22 * markExit)),
+                                child: SizedBox(
+                                  width: markSize * 1.3,
+                                  height: markSize * 1.3,
+                                  child: ImageFiltered(
+                                    imageFilter: ui.ImageFilter.blur(
+                                      sigmaX: reduceMotion ? 0 : _markBlur.value,
+                                      sigmaY: reduceMotion ? 0 : _markBlur.value,
+                                    ),
+                                    child: Center(
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(markSize * 0.28),
-                                        child: _ShineSweep(progress: _shine.value, size: markSize),
+                                        borderRadius: BorderRadius.circular(markSize * 0.22),
+                                        child: SizedBox(
+                                          width: markSize,
+                                          height: markSize,
+                                          child: Stack(
+                                            fit: StackFit.expand,
+                                            children: [
+                                              Image.asset(_logoAsset, fit: BoxFit.cover),
+                                              if (!reduceMotion)
+                                                _ShineSweep(progress: _shine.value, size: markSize),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),

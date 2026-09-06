@@ -82,6 +82,7 @@
     "all": "هەموو",
     "rent": "کرێ",
     "sale": "فرۆشتن",
+    "installment": "بەقست",
     "house": "خانوو",
     "villa": "ڤیلا",
     "land": "زەوی",
@@ -104,7 +105,12 @@
     "price_mid": "نرخی ناوەڕاست",
     "price_final": "نرخی کۆتایی",
     "featured": "تایبەت",
-    "info_copied": "زانیاری موڵکەکە کۆپی کرا"
+    "info_copied": "زانیاری موڵکەکە کۆپی کرا",
+    "installment_plan_title": "پلانی فرۆشتنی بەقست",
+    "down_payment": "پێشەکی",
+    "monthly_installment": "قیستی مانگانە",
+    "installment_duration": "ماوە",
+    "months_count": "{} مانگ"
   },
   "profile": {
     "dashboard": "داشبۆرد",
@@ -137,6 +143,9 @@
     "azadi": "ئازادی",
     "granata": "گرناتە",
     "sixty_meter_street": "شەقامی ٦٠ مەتری"
+  },
+  "notifications": {
+    "title": "ئاگادارکردنەوەکان"
   },
   "home": {
     "project_video_badge": "ڤیدیۆی پڕۆژە",
@@ -235,6 +244,15 @@
     "type_label": "جۆری موڵک *",
     "price_label": "نرخ ($) *",
     "price_hint": "150000",
+    "down_payment_label": "پێشەکی ($) *",
+    "down_payment_hint": "20000",
+    "monthly_installment_label": "قیستی مانگانە ($) *",
+    "monthly_installment_hint": "500",
+    "installment_months_label": "ماوەی قیستکردن (مانگ) *",
+    "installment_months_hint": "36",
+    "error_down_payment_invalid": "تکایە بڕی پێشەکی دروست بنووسە",
+    "error_monthly_installment_invalid": "تکایە بڕی قیستی مانگانە دروست بنووسە",
+    "error_installment_months_invalid": "تکایە ماوەی قیستکردن دروست بنووسە",
     "area_label": "ڕووبەر (م²) *",
     "area_hint": "250",
     "rooms_label": "ژمارەی ژوور *",
@@ -317,7 +335,10 @@
     "payment_plan_hint": "وەک: ٪٣٠ پێشەکی + ٣٦ قیستی مانگانە",
     "completion_info_label": "زانیاری تەواوبوون",
     "completion_info_hint": "وەک: چاوەڕوانکراوە مارسی ٢٠٢٦",
-    "video_url_label": "بەستەری ڤیدیۆ (ئارەزوومەندانە)",
+    "video_url_label": "ڤیدیۆی پڕۆژە (ئارەزوومەندانە)",
+    "video_pick_button": "زیادکردنی ڤیدیۆ لە ئامێرەکەت",
+    "video_current_label": "ڤیدیۆی ئێستا",
+    "video_replace_button": "گۆڕین",
     "pick_neighborhood_title": "زۆنی پڕۆژە هەڵبژێرە",
     "search_neighborhood_hint": "گەڕان بۆ گەڕەک...",
     "description_label": "وەسفی پڕۆژە *",
@@ -334,6 +355,12 @@
     "unit_name_hint": "وەک: شوقەی ٢ ژووری",
     "unit_price_label": "نرخ ($)",
     "unit_price_hint": "65000",
+    "unit_down_payment_label": "پێشەکی ($)",
+    "unit_down_payment_hint": "20000",
+    "unit_monthly_installment_label": "قیستی مانگانە ($)",
+    "unit_monthly_installment_hint": "500",
+    "unit_installment_months_label": "ماوە (مانگ)",
+    "unit_installment_months_hint": "36",
     "unit_area_label": "ڕووبەر",
     "unit_area_hint": "110 م²",
     "unit_type_label": "جۆر",
@@ -443,9 +470,13 @@
     "tab_reels": "ڕیلز",
     "tab_reviews": "هەڵسەنگاندن",
     "tab_about": "دەربارە",
-    "review_comment_1": "زۆر بەپیشەیی مامەڵەیان کرد، خانووەکەم لە کەمتر لە هەفتەیەکدا فرۆشرا.",
-    "review_comment_2": "ڕوونی و شەفافیەتی نرخ زۆر باش بوو، تەنها کەمێک درەنگ وەڵامیان دامەوە.",
-    "review_comment_3": "کۆمپانیایەکی متمانەپێکراون، بادجی Verified ـیان بەڕاستی بەجێیە.",
+    "empty_reviews": "هێشتا هیچ هەڵسەنگاندنێک نییە",
+    "write_review_button": "هەڵسەنگاندن بنووسە",
+    "write_review_title": "هەڵسەنگاندنت بنووسە",
+    "write_review_hint": "بۆچوونت لەبارەی ئەم کۆمپانیایە بنووسە (ئارەزوومەندانە)",
+    "write_review_submit": "ناردن",
+    "write_review_success": "هەڵسەنگاندنەکەت نێردرا، سوپاس!",
+    "write_review_error": "نەتوانرا هەڵسەنگاندنەکە بنێردرێت، دووبارە هەوڵبدەرەوە",
     "about_company_title": "دەربارەی کۆمپانیا",
     "no_bio_fallback": "هێشتا وردەکاری زیاتر زیاد نەکراوە.",
     "specialties_title": "پسپۆڕی",
@@ -605,6 +636,7 @@
     "change_screenshot": "گۆڕینی وێنەی سکرینشۆت",
     "submit_button": "ناردنی فیدباک",
     "pick_image_error": "کێشەیەک ڕوویدا لە هەڵبژاردنی وێنە",
+    "submit_error": "نەتوانرا فیدباکەکە بنێردرێت، تکایە دووبارە هەوڵ بدەرەوە",
     "success_title": "سوپاس بۆ فیدباکەکەت!",
     "success_message": "تیمی شکۆدار سەیری فیدباکەکەت دەکات و لە کەمترین کاتدا وەڵامت دەداتەوە.",
     "ok_button": "باشە"
@@ -621,6 +653,7 @@
     "whatsapp_message": "سڵاو، دەمەوێت \"{}\" بەرز بکەمەوە"
   },
   "zone_detail": {
-    "no_listings": "هیچ ئیلانێک لەم زۆنەدا نییە"
+    "no_listings": "هیچ ئیلانێک لەم زۆنەدا نییە",
+    "no_pinned_listings": "هیچ ئیلانێک لۆکەیشنی دیاریکراوی نییە لەم زۆنەدا"
   }
 }

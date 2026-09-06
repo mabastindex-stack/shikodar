@@ -53,6 +53,7 @@ class ReelFilterBar extends StatelessWidget {
                     children: [
                       Expanded(child: _pillTab(context, ListingPurpose.rent, 'filters.rent'.tr(), Icons.vpn_key_outlined)),
                       Expanded(child: _pillTab(context, ListingPurpose.sale, 'filters.sale'.tr(), Icons.sell_outlined)),
+                      Expanded(child: _pillTab(context, ListingPurpose.installment, 'filters.installment'.tr(), Icons.calendar_month_outlined)),
                     ],
                   ),
                 ),

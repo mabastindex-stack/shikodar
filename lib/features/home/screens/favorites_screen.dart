@@ -68,14 +68,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final palette = context.palette;
     return Scaffold(
       backgroundColor: palette.background,
+      appBar: AppBar(
+        backgroundColor: palette.background,
+        title: Text('nav.favorites'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text('nav.favorites'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
-            ),
             Expanded(
               child: ValueListenableBuilder<Set<String>>(
                 valueListenable: FavoritesStore.ids,

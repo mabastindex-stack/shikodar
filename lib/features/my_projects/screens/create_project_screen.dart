@@ -2,18 +2,27 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/mock/kirkuk_neighborhoods.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/models/zone.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/network/upload_repository.dart';
+import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/zone_picker_sheet.dart';
+import '../../home/screens/kirkuk_map_style.dart';
+
+/// Fallback camera center when the chosen zone has no admin-set lat/lng yet.
+const _kirkukCenter = LatLng(35.4681, 44.3922);
 
 List<String> get _stepTitles => [
       'my_projects.step_basics_title'.tr(),
@@ -61,19 +70,22 @@ class CreateProjectScreen extends StatefulWidget {
   State<CreateProjectScreen> createState() => _CreateProjectScreenState();
 }
 
-class _CreateProjectScreenState extends State<CreateProjectScreen> {
+class _CreateProjectScreenState extends State<CreateProjectScreen> with TickerProviderStateMixin {
   static const _stepCount = 4;
   final _pageController = PageController();
   int _step = 0;
 
   final _nameController = TextEditingController();
-  KirkukNeighborhood? _neighborhood;
+  Zone? _zone;
+  List<Zone> _zones = [];
+  LatLng? _pin;
+  late final AnimatedMapController _mapController = AnimatedMapController(vsync: this);
   ProjectStatus _status = ProjectStatus.underConstruction;
   final _priceFromController = TextEditingController();
   final _priceToController = TextEditingController();
   final _paymentPlanController = TextEditingController();
   final _completionInfoController = TextEditingController();
-  final _videoUrlController = TextEditingController();
+  File? _videoFile;
 
   final _descriptionController = TextEditingController();
   final List<TextEditingController> _highlightControllers = [];
@@ -85,6 +97,14 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    context.read<ZoneRepository>().fetchAll().then((zones) {
+      if (mounted) setState(() => _zones = zones);
+    }).catchError((_) {});
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     _nameController.dispose();
@@ -92,8 +112,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     _priceToController.dispose();
     _paymentPlanController.dispose();
     _completionInfoController.dispose();
-    _videoUrlController.dispose();
     _descriptionController.dispose();
+    _mapController.dispose();
     for (final c in [..._highlightControllers, ..._amenityControllers]) {
       c.dispose();
     }
@@ -104,7 +124,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     switch (step) {
       case 0:
         if (_nameController.text.trim().length < 3) return 'my_projects.error_name_required'.tr();
-        if (_neighborhood == null) return 'my_projects.error_zone_required'.tr();
+        if (_zone == null) return 'my_projects.error_zone_required'.tr();
         final from = double.tryParse(_priceFromController.text.trim());
         final to = double.tryParse(_priceToController.text.trim());
         if (from == null || to == null || from <= 0 || to < from) return 'my_projects.error_price_range_invalid'.tr();
@@ -178,6 +198,17 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     }
   }
 
+  Future<void> _pickVideo() async {
+    try {
+      final picked = await ImagePicker().pickVideo(source: ImageSource.gallery);
+      if (picked == null) return;
+      setState(() => _videoFile = File(picked.path));
+    } catch (_) {
+      if (!mounted) return;
+      _showError('my_projects.error_photos_pick_failed'.tr());
+    }
+  }
+
   void _addUnitType(UnitType unit) => setState(() => _unitTypes.add(unit));
   void _removeUnitType(int i) => setState(() => _unitTypes.removeAt(i));
 
@@ -188,12 +219,15 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     setState(() => _isSubmitting = true);
     try {
       final imageUrls = await uploadRepository.uploadAll(_photos.map((f) => f.path).toList());
+      final videoUrl = _videoFile != null ? await uploadRepository.upload(_videoFile!.path) : null;
 
       final project = await projectRepository.create({
         'name': _nameController.text.trim(),
-        'zone': _neighborhood!.name,
+        'zone': _zone!.name,
+        'lat': _pin!.latitude,
+        'lng': _pin!.longitude,
         'images': imageUrls,
-        'video_url': _videoUrlController.text.trim(),
+        if (videoUrl != null) 'video_url': videoUrl,
         'price_from': double.parse(_priceFromController.text.trim()),
         'price_to': double.parse(_priceToController.text.trim()),
         'status': _status == ProjectStatus.completed ? 'completed' : 'under_construction',
@@ -211,6 +245,11 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         await projectRepository.addUnitType(project.id, {
           'name': unit.name,
           'price_from': unit.priceFrom,
+          if (unit.purpose == ListingPurpose.installment) ...{
+            'down_payment': unit.downPayment,
+            'monthly_installment': unit.monthlyInstallment,
+            'installment_months': unit.installmentMonths,
+          },
           'area': unit.area,
           'images': imageUrls,
           'description': unit.description,
@@ -366,8 +405,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _neighborhood?.name ?? 'my_projects.select_neighborhood_placeholder'.tr(),
-                    style: TextStyle(color: _neighborhood == null ? palette.textMuted : palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
+                    _zone?.name ?? 'my_projects.select_neighborhood_placeholder'.tr(),
+                    style: TextStyle(color: _zone == null ? palette.textMuted : palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
                   ),
                 ),
                 Icon(Icons.keyboard_arrow_down_rounded, color: palette.textMuted),
@@ -375,6 +414,58 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 14),
+        if (_zone == null)
+          Container(
+            height: 200,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(18)),
+            child: Text('my_listings.map_placeholder_hint'.tr(), style: TextStyle(color: palette.textMuted, fontSize: 12.5), textAlign: TextAlign.center),
+          )
+        else ...[
+          Text('my_listings.map_pin_hint'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 11.5)),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: SizedBox(
+              height: 220,
+              child: FlutterMap(
+                mapController: _mapController.mapController,
+                options: MapOptions(
+                  initialCenter: _pin!,
+                  initialZoom: 15.5,
+                  interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+                  onTap: (tapPosition, point) => setState(() => _pin = point),
+                ),
+                children: [
+                  ColorFiltered(
+                    colorFilter: kirkukTileFilter,
+                    child: TileLayer(
+                      urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+                      userAgentPackageName: 'com.shikodar.app',
+                      maxNativeZoom: 16,
+                    ),
+                  ),
+                  TileLayer(
+                    urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+                    userAgentPackageName: 'com.shikodar.app',
+                    maxNativeZoom: 16,
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _pin!,
+                        width: 40,
+                        height: 40,
+                        child: Icon(Icons.location_on_rounded, color: palette.primary, size: 40, shadows: const [Shadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 3))]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         _fieldLabel(palette, 'my_projects.status_label'.tr()),
         Row(
@@ -416,74 +507,77 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         TextField(controller: _completionInfoController, style: TextStyle(color: palette.textPrimary), decoration: _inputDecoration(palette, hint: 'my_projects.completion_info_hint'.tr())),
         const SizedBox(height: 20),
         _fieldLabel(palette, 'my_projects.video_url_label'.tr()),
-        TextField(controller: _videoUrlController, style: TextStyle(color: palette.textPrimary), decoration: _inputDecoration(palette, hint: 'https://...')),
+        _videoPickerCard(palette),
       ],
     );
   }
 
-  Future<void> _pickNeighborhood() async {
-    final result = await showModalBottomSheet<KirkukNeighborhood>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        var query = '';
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final sheetPalette = context.palette;
-            final filtered = query.trim().isEmpty ? kirkukNeighborhoods : kirkukNeighborhoods.where((n) => n.name.contains(query.trim())).toList();
-            return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.75,
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-                decoration: BoxDecoration(color: sheetPalette.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: sheetPalette.divider, borderRadius: BorderRadius.circular(2))),
-                    ),
-                    Text('my_projects.pick_neighborhood_title'.tr(), style: TextStyle(color: sheetPalette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 12),
-                    TextField(
-                      onChanged: (v) => setSheetState(() => query = v),
-                      style: TextStyle(color: sheetPalette.textPrimary, fontSize: 13.5),
-                      decoration: InputDecoration(
-                        hintText: 'my_projects.search_neighborhood_hint'.tr(),
-                        hintStyle: TextStyle(color: sheetPalette.textMuted, fontSize: 13),
-                        prefixIcon: Icon(Icons.search_rounded, color: sheetPalette.textMuted, size: 20),
-                        filled: true,
-                        fillColor: sheetPalette.surfaceElevated,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => Divider(height: 1, color: sheetPalette.divider),
-                        itemBuilder: (_, i) {
-                          final n = filtered[i];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(Icons.location_on_outlined, color: sheetPalette.primary, size: 20),
-                            title: Text(n.name, style: TextStyle(color: sheetPalette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600)),
-                            onTap: () => Navigator.pop(sheetContext, n),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+  Widget _videoPickerCard(AppPalette palette) {
+    if (_videoFile == null) {
+      return GestureDetector(
+        onTap: _pickVideo,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 22),
+          decoration: BoxDecoration(
+            color: palette.surfaceElevated,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: palette.divider, width: 1.4),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.video_call_outlined, color: palette.primary, size: 26),
+              const SizedBox(height: 6),
+              Text('my_projects.video_pick_button'.tr(), style: TextStyle(color: palette.primary, fontSize: 12, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: palette.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.play_circle_fill_rounded, color: palette.primary, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _videoFile!.path.split(Platform.pathSeparator).last,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _videoFile = null),
+            icon: Icon(Icons.close_rounded, color: palette.textMuted, size: 18),
+          ),
+        ],
+      ),
     );
-    if (result != null) setState(() => _neighborhood = result);
+  }
+
+  Future<void> _pickNeighborhood() async {
+    final result = await pickZoneSheet(
+      context,
+      _zones,
+      title: 'my_projects.pick_neighborhood_title'.tr(),
+      searchHint: 'my_projects.search_neighborhood_hint'.tr(),
+      notFoundText: 'my_listings.no_neighborhood_found'.tr(),
+    );
+    if (result == null) return;
+    setState(() {
+      _zone = result;
+      _pin = result.lat != null && result.lng != null ? LatLng(result.lat!, result.lng!) : _kirkukCenter;
+    });
+    _mapController.mapController.move(_pin!, result.lat != null ? 15.5 : 12.5);
   }
 
   Widget _choiceChip(AppPalette palette, String label, IconData icon, bool selected, VoidCallback onTap) {
@@ -683,6 +777,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     final priceController = TextEditingController();
     final areaController = TextEditingController();
     final descController = TextEditingController();
+    final downPaymentController = TextEditingController();
+    final monthlyInstallmentController = TextEditingController();
+    final installmentMonthsController = TextEditingController();
     var type = ListingType.house;
     var purpose = ListingPurpose.sale;
 
@@ -776,8 +873,49 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setSheetState(() => purpose = ListingPurpose.installment),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(color: purpose == ListingPurpose.installment ? palette.primary : palette.surfaceElevated, borderRadius: BorderRadius.circular(12)),
+                                child: Text('filters.installment'.tr(), style: TextStyle(color: purpose == ListingPurpose.installment ? palette.onPrimary : palette.textSecondary, fontWeight: FontWeight.w700)),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
+                      if (purpose == ListingPurpose.installment) ...[
+                        const SizedBox(height: 14),
+                        _fieldLabel(palette, 'my_projects.unit_down_payment_label'.tr()),
+                        TextField(controller: downPaymentController, keyboardType: TextInputType.number, style: TextStyle(color: palette.textPrimary), decoration: _inputDecoration(palette, hint: 'my_projects.unit_down_payment_hint'.tr())),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _fieldLabel(palette, 'my_projects.unit_monthly_installment_label'.tr()),
+                                  TextField(controller: monthlyInstallmentController, keyboardType: TextInputType.number, style: TextStyle(color: palette.textPrimary), decoration: _inputDecoration(palette, hint: 'my_projects.unit_monthly_installment_hint'.tr())),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _fieldLabel(palette, 'my_projects.unit_installment_months_label'.tr()),
+                                  TextField(controller: installmentMonthsController, keyboardType: TextInputType.number, style: TextStyle(color: palette.textPrimary), decoration: _inputDecoration(palette, hint: 'my_projects.unit_installment_months_hint'.tr())),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       _fieldLabel(palette, 'my_projects.unit_description_label'.tr()),
                       TextField(controller: descController, maxLines: 3, style: TextStyle(color: palette.textPrimary), decoration: _inputDecoration(palette, hint: 'my_projects.unit_description_hint'.tr())),
@@ -791,9 +929,24 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_projects.error_fill_all_fields'.tr()), behavior: SnackBarBehavior.floating));
                               return;
                             }
+                            double? downPayment;
+                            double? monthlyInstallment;
+                            int? installmentMonths;
+                            if (purpose == ListingPurpose.installment) {
+                              downPayment = double.tryParse(downPaymentController.text.trim());
+                              monthlyInstallment = double.tryParse(monthlyInstallmentController.text.trim());
+                              installmentMonths = int.tryParse(installmentMonthsController.text.trim());
+                              if (downPayment == null || monthlyInstallment == null || installmentMonths == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_projects.error_fill_all_fields'.tr()), behavior: SnackBarBehavior.floating));
+                                return;
+                              }
+                            }
                             _addUnitType(UnitType(
                               name: nameController.text.trim(),
                               priceFrom: price,
+                              downPayment: downPayment,
+                              monthlyInstallment: monthlyInstallment,
+                              installmentMonths: installmentMonths,
                               area: areaController.text.trim(),
                               images: _photos.map((f) => f.path).toList(),
                               description: descController.text.trim(),

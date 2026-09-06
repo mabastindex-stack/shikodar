@@ -273,6 +273,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             .slideX(begin: -0.04, end: 0),
                         const SizedBox(height: 18),
                         _priceBlock(listing).animate(delay: 120.ms).fadeIn(duration: 320.ms),
+                        if (listing.purpose == ListingPurpose.installment) ...[
+                          const SizedBox(height: 14),
+                          _installmentPlanBlock(listing).animate(delay: 140.ms).fadeIn(duration: 320.ms),
+                        ],
                         const SizedBox(height: 20),
                         _specsRow(listing).animate(delay: 160.ms).fadeIn(duration: 320.ms),
 
@@ -396,6 +400,43 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             child: Text('listing.negotiable'.tr(), style: const TextStyle(color: AppColors.negotiable, fontSize: 11, fontWeight: FontWeight.w700)),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _installmentPlanBlock(Listing listing) {
+    final palette = context.palette;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('listing.installment_plan_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (listing.downPayment != null)
+                _installmentStat(palette, 'listing.down_payment'.tr(), '\$${listing.downPayment!.toStringAsFixed(0)}'),
+              if (listing.monthlyInstallment != null)
+                _installmentStat(palette, 'listing.monthly_installment'.tr(), '\$${listing.monthlyInstallment!.toStringAsFixed(0)}'),
+              if (listing.installmentMonths != null)
+                _installmentStat(palette, 'listing.installment_duration'.tr(), 'listing.months_count'.tr(args: ['${listing.installmentMonths}'])),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _installmentStat(AppPalette palette, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: palette.textSecondary, fontSize: 10.5)),
+        const SizedBox(height: 3),
+        Text(value, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w800)),
       ],
     );
   }

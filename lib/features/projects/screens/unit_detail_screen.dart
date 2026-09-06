@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -230,10 +231,35 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                             decoration: BoxDecoration(color: AppColors.negotiable.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                            child: Text(unit.purpose.name == 'rent' ? 'filters.rent'.tr() : 'filters.sale'.tr(), style: const TextStyle(color: AppColors.negotiable, fontSize: 11, fontWeight: FontWeight.w700)),
+                            child: Text(_purposeLabel(unit.purpose), style: const TextStyle(color: AppColors.negotiable, fontSize: 11, fontWeight: FontWeight.w700)),
                           ),
                         ],
                       ).animate(delay: 110.ms).fadeIn(duration: 320.ms),
+                      if (unit.purpose == ListingPurpose.installment) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(16)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('listing.installment_plan_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (unit.downPayment != null)
+                                    _installmentStat(palette, 'listing.down_payment'.tr(), '\$${unit.downPayment!.toStringAsFixed(0)}'),
+                                  if (unit.monthlyInstallment != null)
+                                    _installmentStat(palette, 'listing.monthly_installment'.tr(), '\$${unit.monthlyInstallment!.toStringAsFixed(0)}'),
+                                  if (unit.installmentMonths != null)
+                                    _installmentStat(palette, 'listing.installment_duration'.tr(), 'listing.months_count'.tr(args: ['${unit.installmentMonths}'])),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ).animate(delay: 130.ms).fadeIn(duration: 320.ms),
+                      ],
                       const SizedBox(height: 20),
 
                       Wrap(
@@ -313,6 +339,28 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  String _purposeLabel(ListingPurpose purpose) {
+    switch (purpose) {
+      case ListingPurpose.rent:
+        return 'filters.rent'.tr();
+      case ListingPurpose.installment:
+        return 'filters.installment'.tr();
+      case ListingPurpose.sale:
+        return 'filters.sale'.tr();
+    }
+  }
+
+  Widget _installmentStat(AppPalette palette, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: palette.textSecondary, fontSize: 10.5)),
+        const SizedBox(height: 3),
+        Text(value, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w800)),
+      ],
     );
   }
 

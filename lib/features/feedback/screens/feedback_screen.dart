@@ -4,22 +4,27 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/feedback_repository.dart';
+import '../../../core/network/upload_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 
 class _FeedbackType {
   final IconData icon;
   final String labelKey;
-  const _FeedbackType(this.icon, this.labelKey);
+  final String apiValue;
+  const _FeedbackType(this.icon, this.labelKey, this.apiValue);
 
   String get label => labelKey.tr();
 }
 
 List<_FeedbackType> get _types => const [
-      _FeedbackType(Icons.bug_report_outlined, 'feedback.type_bug'),
-      _FeedbackType(Icons.lightbulb_outline_rounded, 'feedback.type_suggestion'),
-      _FeedbackType(Icons.report_gmailerrorred_outlined, 'feedback.type_complaint'),
-      _FeedbackType(Icons.favorite_border_rounded, 'feedback.type_praise'),
+      _FeedbackType(Icons.bug_report_outlined, 'feedback.type_bug', 'bug'),
+      _FeedbackType(Icons.lightbulb_outline_rounded, 'feedback.type_suggestion', 'suggestion'),
+      _FeedbackType(Icons.report_gmailerrorred_outlined, 'feedback.type_complaint', 'complaint'),
+      _FeedbackType(Icons.favorite_border_rounded, 'feedback.type_praise', 'praise'),
     ];
 
 class FeedbackScreen extends StatefulWidget {
@@ -34,16 +39,43 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   int _rating = 0;
   final _messageController = TextEditingController();
   bool _sent = false;
+  bool _submitting = false;
   File? _screenshot;
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('auth.field_required'.tr()), behavior: SnackBarBehavior.floating),
       );
       return;
     }
-    setState(() => _sent = true);
+    setState(() => _submitting = true);
+    final uploadRepository = context.read<UploadRepository>();
+    final feedbackRepository = context.read<FeedbackRepository>();
+    try {
+      String? screenshotUrl;
+      if (_screenshot != null) {
+        screenshotUrl = await uploadRepository.upload(_screenshot!.path);
+      }
+      await feedbackRepository.submit(
+            type: _types[_selectedType].apiValue,
+            message: _messageController.text.trim(),
+            rating: _rating,
+            screenshotUrl: screenshotUrl,
+          );
+      if (!mounted) return;
+      setState(() {
+        _sent = true;
+        _submitting = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      final message = e is ApiException ? e.message : 'feedback.submit_error'.tr();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   Future<void> _pickScreenshot() async {
@@ -188,7 +220,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           child: InkWell(
-            onTap: _submit,
+            onTap: _submitting ? null : _submit,
             borderRadius: BorderRadius.circular(14),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -198,7 +230,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 8))],
               ),
-              child: Text('feedback.submit_button'.tr(), style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w800, fontSize: 15)),
+              child: _submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.ink),
+                    )
+                  : Text('feedback.submit_button'.tr(), style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
         ).animate(delay: 400.ms).fadeIn(duration: 320.ms).slideY(begin: 0.1, end: 0),

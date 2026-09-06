@@ -398,6 +398,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             Expanded(child: _purposeChip(palette, 'filters.rent'.tr(), ListingPurpose.rent)),
             const SizedBox(width: 6),
             Expanded(child: _purposeChip(palette, 'filters.sale'.tr(), ListingPurpose.sale)),
+            const SizedBox(width: 6),
+            Expanded(child: _purposeChip(palette, 'filters.installment'.tr(), ListingPurpose.installment)),
           ],
         ),
         const SizedBox(height: 8),
@@ -438,6 +440,28 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         ),
       ),
     );
+  }
+
+  String _unitPurposeLabel(ListingPurpose purpose) {
+    switch (purpose) {
+      case ListingPurpose.rent:
+        return 'filters.rent'.tr();
+      case ListingPurpose.installment:
+        return 'filters.installment'.tr();
+      case ListingPurpose.sale:
+        return 'filters.sale'.tr();
+    }
+  }
+
+  Color _unitPurposeColor(ListingPurpose purpose, AppPalette palette) {
+    switch (purpose) {
+      case ListingPurpose.rent:
+        return AppColors.negotiable;
+      case ListingPurpose.installment:
+        return AppColors.gold;
+      case ListingPurpose.sale:
+        return palette.textPrimary;
+    }
   }
 
   Widget _typeChip(AppPalette palette, String value, String label, IconData icon) {
@@ -505,8 +529,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                     right: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: u.purpose == ListingPurpose.rent ? AppColors.negotiable : palette.textPrimary, borderRadius: BorderRadius.circular(20)),
-                      child: Text(u.purpose == ListingPurpose.rent ? 'filters.rent'.tr() : 'filters.sale'.tr(), style: TextStyle(color: palette.background, fontSize: 9.5, fontWeight: FontWeight.w700)),
+                      decoration: BoxDecoration(color: _unitPurposeColor(u.purpose, palette), borderRadius: BorderRadius.circular(20)),
+                      child: Text(_unitPurposeLabel(u.purpose), style: TextStyle(color: palette.background, fontSize: 9.5, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],

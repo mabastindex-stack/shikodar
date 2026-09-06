@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/listing_repository.dart';
+import '../../../core/network/notification_repository.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/section_header.dart';
@@ -16,6 +17,7 @@ import '../widgets/listing_card.dart';
 import '../widgets/partner_logos_row.dart';
 import '../widgets/zone_card_row.dart';
 import 'all_listings_screen.dart';
+import 'notifications_screen.dart';
 import 'smart_search_screen.dart';
 
 const _maxPreviewCards = 6;
@@ -33,11 +35,23 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   List<Listing> _listings = [];
   bool _isLoading = true;
   String? _error;
+  bool _hasUnreadNotifications = false;
 
   @override
   void initState() {
     super.initState();
     _loadListings();
+    _loadNotificationStatus();
+  }
+
+  Future<void> _loadNotificationStatus() async {
+    try {
+      final notifications = await context.read<NotificationRepository>().fetchAll();
+      if (!mounted) return;
+      setState(() => _hasUnreadNotifications = notifications.any((n) => n.isNew));
+    } catch (_) {
+      // Best-effort — the bell just won't show a dot this load.
+    }
   }
 
   Future<void> _loadListings() async {
@@ -74,12 +88,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   void _showNotifications() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('home.no_new_notifications'.tr()),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())).then((_) => _loadNotificationStatus());
   }
 
   @override
@@ -103,7 +112,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: _HomeHeader(onNotifications: _showNotifications, onSearchTap: _openSearch),
+              child: _HomeHeader(
+                onNotifications: _showNotifications,
+                onSearchTap: _openSearch,
+                hasUnreadNotifications: _hasUnreadNotifications,
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -229,10 +242,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({required this.onNotifications, required this.onSearchTap});
+  const _HomeHeader({required this.onNotifications, required this.onSearchTap, required this.hasUnreadNotifications});
 
   final VoidCallback onNotifications;
   final VoidCallback onSearchTap;
+  final bool hasUnreadNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +260,7 @@ class _HomeHeader extends StatelessWidget {
           const SizedBox(width: 10),
           _HeaderAction(
             icon: Icons.notifications_none_rounded,
-            showDot: true,
+            showDot: hasUnreadNotifications,
             onTap: onNotifications,
           ),
         ],

@@ -82,6 +82,7 @@
     "all": "الكل",
     "rent": "إيجار",
     "sale": "بيع",
+    "installment": "تقسيط",
     "house": "منزل",
     "villa": "فيلا",
     "land": "أرض",
@@ -104,7 +105,12 @@
     "price_mid": "سعر متوسط",
     "price_final": "السعر النهائي",
     "featured": "مميز",
-    "info_copied": "تم نسخ معلومات العقار"
+    "info_copied": "تم نسخ معلومات العقار",
+    "installment_plan_title": "خطة البيع بالتقسيط",
+    "down_payment": "الدفعة الأولى",
+    "monthly_installment": "القسط الشهري",
+    "installment_duration": "المدة",
+    "months_count": "{} شهر"
   },
   "profile": {
     "dashboard": "لوحة التحكم",
@@ -137,6 +143,9 @@
     "azadi": "أزادي",
     "granata": "غرناطة",
     "sixty_meter_street": "شارع الستين متر"
+  },
+  "notifications": {
+    "title": "الإشعارات"
   },
   "home": {
     "project_video_badge": "فيديو المشروع",
@@ -235,6 +244,15 @@
     "type_label": "نوع العقار *",
     "price_label": "السعر ($) *",
     "price_hint": "150000",
+    "down_payment_label": "الدفعة الأولى ($) *",
+    "down_payment_hint": "20000",
+    "monthly_installment_label": "القسط الشهري ($) *",
+    "monthly_installment_hint": "500",
+    "installment_months_label": "مدة التقسيط (بالأشهر) *",
+    "installment_months_hint": "36",
+    "error_down_payment_invalid": "الرجاء إدخال مبلغ دفعة أولى صحيح",
+    "error_monthly_installment_invalid": "الرجاء إدخال مبلغ قسط شهري صحيح",
+    "error_installment_months_invalid": "الرجاء إدخال مدة تقسيط صحيحة",
     "area_label": "المساحة (م²) *",
     "area_hint": "250",
     "rooms_label": "عدد الغرف *",
@@ -317,7 +335,10 @@
     "payment_plan_hint": "مثال: ٪٣٠ دفعة أولى + ٣٦ قسطاً شهرياً",
     "completion_info_label": "معلومات الإنجاز",
     "completion_info_hint": "مثال: متوقع في مارس ٢٠٢٦",
-    "video_url_label": "رابط الفيديو (اختياري)",
+    "video_url_label": "فيديو المشروع (اختياري)",
+    "video_pick_button": "إضافة فيديو من جهازك",
+    "video_current_label": "الفيديو الحالي",
+    "video_replace_button": "تغيير",
     "pick_neighborhood_title": "اختر منطقة المشروع",
     "search_neighborhood_hint": "ابحث عن حي...",
     "description_label": "وصف المشروع *",
@@ -334,6 +355,12 @@
     "unit_name_hint": "مثال: شقة بغرفتين",
     "unit_price_label": "السعر ($)",
     "unit_price_hint": "65000",
+    "unit_down_payment_label": "الدفعة الأولى ($)",
+    "unit_down_payment_hint": "20000",
+    "unit_monthly_installment_label": "القسط الشهري ($)",
+    "unit_monthly_installment_hint": "500",
+    "unit_installment_months_label": "المدة (بالأشهر)",
+    "unit_installment_months_hint": "36",
     "unit_area_label": "المساحة",
     "unit_area_hint": "110 م²",
     "unit_type_label": "النوع",
@@ -443,9 +470,13 @@
     "tab_reels": "الريلز",
     "tab_reviews": "التقييمات",
     "tab_about": "نبذة",
-    "review_comment_1": "تعاملوا معي باحترافية عالية، بيعت داري في أقل من أسبوع.",
-    "review_comment_2": "وضوح وشفافية في الأسعار كانا ممتازين، فقط تأخروا قليلاً في الرد.",
-    "review_comment_3": "شركة جديرة بالثقة، شارة Verified الخاصة بهم تستحقّها فعلاً.",
+    "empty_reviews": "لا توجد تقييمات بعد",
+    "write_review_button": "اكتب تقييماً",
+    "write_review_title": "اكتب تقييمك",
+    "write_review_hint": "اكتب رأيك عن هذه الشركة (اختياري)",
+    "write_review_submit": "إرسال",
+    "write_review_success": "تم إرسال تقييمك، شكراً لك!",
+    "write_review_error": "تعذّر إرسال التقييم، حاول مرة أخرى",
     "about_company_title": "عن الشركة",
     "no_bio_fallback": "لم تتم إضافة تفاصيل إضافية بعد.",
     "specialties_title": "التخصصات",
@@ -605,6 +636,7 @@
     "change_screenshot": "تغيير لقطة الشاشة",
     "submit_button": "إرسال الملاحظة",
     "pick_image_error": "حدثت مشكلة أثناء اختيار الصورة",
+    "submit_error": "تعذر إرسال الملاحظة، يرجى المحاولة مرة أخرى",
     "success_title": "شكراً على ملاحظتك!",
     "success_message": "سيقوم فريق شكودار بمراجعة ملاحظتك والرد عليك في أقرب وقت ممكن.",
     "ok_button": "حسناً"
@@ -621,6 +653,7 @@
     "whatsapp_message": "مرحباً، أرغب في تعزيز \"{}\""
   },
   "zone_detail": {
-    "no_listings": "لا توجد إعلانات في هذه المنطقة"
+    "no_listings": "لا توجد إعلانات في هذه المنطقة",
+    "no_pinned_listings": "لا توجد إعلانات محددة الموقع في هذه المنطقة"
   }
 }

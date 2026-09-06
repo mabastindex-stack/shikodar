@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -8,7 +10,7 @@ import '../screens/zone_detail_screen.dart';
 
 class ZoneItem {
   final String name;
-  final String imageUrl;
+  final String? imageUrl;
   const ZoneItem(this.name, this.imageUrl);
 }
 
@@ -36,26 +38,49 @@ String _zoneLabel(String zone) {
   }
 }
 
-const _zoneItems = [
-  ZoneItem('هەموو', 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=70'),
-  ZoneItem('شۆڕجە', 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=70'),
-  ZoneItem('ڕاپەرین', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&q=70'),
-  ZoneItem('ناوەڕاستی شار', 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=70'),
-  ZoneItem('ئیمام قاسم', 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&q=70'),
-  ZoneItem('ئازادی', 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&q=70'),
-  ZoneItem('گرناتە', 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&q=70'),
-];
+/// "All" is always the first card and never comes from the backend — it's
+/// a filter option, not a real neighborhood.
+const _allZoneItem = ZoneItem('هەموو', 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=70');
 
 /// Horizontal scroll of real photo cards for Kirkuk's zones — tapping one
-/// opens a dedicated page for that zone (its own filters + listings).
-class ZoneCardRow extends StatelessWidget {
+/// opens a dedicated page for that zone (its own filters + listings). The
+/// zone list itself (name, order, photo) comes from the admin panel's Zone
+/// resource via GET /zones, so adding/renaming/reordering/removing one
+/// there is reflected here without an app update.
+class ZoneCardRow extends StatefulWidget {
   final String selected;
   final ValueChanged<String> onSelect;
   const ZoneCardRow({super.key, required this.selected, required this.onSelect});
 
   @override
+  State<ZoneCardRow> createState() => _ZoneCardRowState();
+}
+
+class _ZoneCardRowState extends State<ZoneCardRow> {
+  List<ZoneItem> _zoneItems = const [_allZoneItem];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ZoneRepository>().fetchAll().then((zones) {
+      if (!mounted) return;
+      setState(() {
+        _zoneItems = [
+          _allZoneItem,
+          ...zones.map((z) => ZoneItem(z.name, z.imageUrl)),
+        ];
+      });
+    }).catchError((_) {
+      // Offline or the server hiccuped — the "All" card alone still lets
+      // browsing continue, it just won't offer specific zones this load.
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final selected = widget.selected;
+    final onSelect = widget.onSelect;
     return SizedBox(
       height: 128,
       child: ListView(
@@ -90,12 +115,15 @@ class ZoneCardRow extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    CachedNetworkImage(
-                      imageUrl: z.imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: palette.surfaceElevated),
-                      errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
-                    ),
+                    if (z.imageUrl != null)
+                      CachedNetworkImage(
+                        imageUrl: z.imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                        errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+                      )
+                    else
+                      Container(color: palette.surfaceElevated),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

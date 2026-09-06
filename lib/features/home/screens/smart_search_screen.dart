@@ -261,6 +261,14 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
                     onTap: () => setState(() => _purpose = ListingPurpose.sale),
                   ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _Segment(
+                    label: 'filters.installment'.tr(),
+                    selected: _purpose == ListingPurpose.installment,
+                    onTap: () => setState(() => _purpose = ListingPurpose.installment),
+                  ),
+                ),
               ],
             ),
           ),

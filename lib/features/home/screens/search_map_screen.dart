@@ -13,12 +13,16 @@ import 'package:provider/provider.dart';
 
 import '../../../core/mock/kirkuk_neighborhoods.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/models/project.dart';
 import '../../../core/network/listing_repository.dart';
+import '../../../core/network/project_repository.dart';
+import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
 import '../../listing/screens/listing_detail_screen.dart';
+import '../../projects/screens/project_detail_screen.dart';
 import '../widgets/listing_card.dart';
 import 'kirkuk_map_style.dart';
 
@@ -35,11 +39,6 @@ const _zoomThreshold = 14.5;
 /// [_zoomThreshold]) every real Kirkuk neighbourhood gets its own outline
 /// and label.
 const _neighborhoodZoomThreshold = 12.6;
-
-// Raw zone values match `Listing.zone` in the mock data (which stays in
-// Kurdish) — only the label shown to the user is localized, via
-// `_kirkukZoneLabel` below, so filtering keeps working regardless of locale.
-const _kirkukZones = ['هەموو', 'شۆڕجە', 'ڕاپەرین', 'ناوەڕاستی شار', 'ئیمام قاسم', 'ئازادی', 'گرناتە', 'شەقامی ٦٠ مەتری'];
 
 String _kirkukZoneLabel(String zone) {
   switch (zone) {
@@ -136,11 +135,30 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
   List<int> _nbUnitCounts = List<int>.filled(kirkukNeighborhoods.length, 0);
 
   List<Listing> _allListings = [];
+  List<Project> _allProjects = [];
+
+  // The admin-managed zone list (same one the home zone cards and every
+  // other zone filter in the app read) — kept in sync here instead of a
+  // separate hardcoded list, which used to drift out of sync with real
+  // zones (new ones missing, renamed/removed ones still offered as a dead
+  // filter option).
+  List<String> _kirkukZoneNames = ['هەموو'];
 
   @override
   void initState() {
     super.initState();
     _loadListings();
+    _loadProjects();
+    _loadZones();
+  }
+
+  Future<void> _loadZones() async {
+    try {
+      final zones = await context.read<ZoneRepository>().fetchAll();
+      if (mounted) setState(() => _kirkukZoneNames = ['هەموو', ...zones.map((z) => z.name)]);
+    } catch (_) {
+      // Falls back to just "all" — the map and its filters still work.
+    }
   }
 
   Future<void> _loadListings() async {
@@ -159,6 +177,19 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
     }
   }
 
+  /// Residential complexes get their own pin layer alongside individual
+  /// listings — independent of the purpose/type filters (a complex isn't
+  /// itself "for rent" or "for sale", its unit types are), but still
+  /// scoped to the zone filter like everything else on this screen.
+  Future<void> _loadProjects() async {
+    try {
+      final projects = await context.read<ProjectRepository>().fetchAll();
+      if (mounted) setState(() => _allProjects = projects);
+    } catch (_) {
+      // Same graceful degradation as _loadListings.
+    }
+  }
+
   @override
   void dispose() {
     _animatedMapController.dispose();
@@ -173,6 +204,8 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
         if (_zone != 'هەموو' && l.zone != _zone) return false;
         return true;
       }).toList();
+
+  List<Project> get _filteredProjects => _allProjects.where((p) => _zone == 'هەموو' || p.zone == _zone).toList();
 
   Map<String, LatLng> _computeZoneCenters() {
     final sums = <String, List<double>>{}; // [latSum, lngSum, count]
@@ -555,6 +588,47 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
     ).entrance();
   }
 
+  /// A residential complex's pin — a distinct square badge (not the
+  /// teardrop used for single units) in gold, since a project isn't itself
+  /// "for rent" or "for sale" the way one listing is.
+  Widget _projectMarker(Project project) {
+    final palette = context.palette;
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProjectDetailScreen(project: project))),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.gold.withOpacity(0.6)),
+              boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+            ),
+            child: Text(
+              '\$${(project.priceFrom / 1000).toStringAsFixed(0)}K+',
+              style: const TextStyle(color: AppColors.goldDark, fontSize: 10, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: AppColors.goldGradient,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 6, offset: const Offset(0, 3))],
+            ),
+            child: const Icon(Icons.apartment_rounded, size: 19, color: AppColors.ink),
+          ),
+        ],
+      ),
+    ).entrance();
+  }
+
   void _openFilterSheet() {
     showModalBottomSheet(
       context: context,
@@ -588,6 +662,8 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
                       Expanded(child: _purposeChip('filters.rent'.tr(), ListingPurpose.rent, onChanged: () => setModalState(() {}))),
                       const SizedBox(width: 6),
                       Expanded(child: _purposeChip('filters.sale'.tr(), ListingPurpose.sale, onChanged: () => setModalState(() {}))),
+                      const SizedBox(width: 6),
+                      Expanded(child: _purposeChip('filters.installment'.tr(), ListingPurpose.installment, onChanged: () => setModalState(() {}))),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -608,7 +684,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _kirkukZones.map((z) {
+                    children: _kirkukZoneNames.map((z) {
                       final sel = z == _zone;
                       return GestureDetector(
                         onTap: () {
@@ -640,6 +716,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
   Widget build(BuildContext context) {
     final palette = context.palette;
     final listings = _filtered;
+    final projects = _filteredProjects;
     final showUnits = _zoom >= _zoomThreshold;
     final showAllNeighborhoods = !showUnits && _zoom >= _neighborhoodZoomThreshold;
     final neighborhoodIndexes = showUnits ? const <int>[] : (showAllNeighborhoods ? List.generate(kirkukNeighborhoods.length, (i) => i) : _majorIndexes);
@@ -723,6 +800,20 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
                             height: 80,
                             alignment: Alignment.topCenter,
                             child: _unitMarker(l),
+                          ),
+                    ],
+                  ),
+                if (showUnits)
+                  MarkerLayer(
+                    markers: [
+                      for (final p in projects)
+                        if (p.lat != null && p.lng != null)
+                          Marker(
+                            point: LatLng(p.lat!, p.lng!),
+                            width: 70,
+                            height: 76,
+                            alignment: Alignment.topCenter,
+                            child: _projectMarker(p),
                           ),
                     ],
                   ),

@@ -7,6 +7,9 @@ class UnitType {
   final String? id;
   final String name;
   final double priceFrom;
+  final double? downPayment;
+  final double? monthlyInstallment;
+  final int? installmentMonths;
   final String area;
   final List<String> images;
   final String description;
@@ -16,6 +19,9 @@ class UnitType {
     this.id,
     required this.name,
     required this.priceFrom,
+    this.downPayment,
+    this.monthlyInstallment,
+    this.installmentMonths,
     required this.area,
     required this.images,
     required this.description,
@@ -27,6 +33,9 @@ class UnitType {
         id: json['id']?.toString(),
         name: json['name'] ?? '',
         priceFrom: (json['price_from'] as num?)?.toDouble() ?? 0,
+        downPayment: (json['down_payment'] as num?)?.toDouble(),
+        monthlyInstallment: (json['monthly_installment'] as num?)?.toDouble(),
+        installmentMonths: json['installment_months'],
         area: json['area'] ?? '',
         images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         description: json['description'] ?? '',
@@ -34,7 +43,10 @@ class UnitType {
           (t) => t.name == json['type'],
           orElse: () => ListingType.house,
         ),
-        purpose: (json['purpose'] == 'sale') ? ListingPurpose.sale : ListingPurpose.rent,
+        purpose: ListingPurpose.values.firstWhere(
+          (p) => p.name == json['purpose'],
+          orElse: () => ListingPurpose.rent,
+        ),
       );
 }
 
@@ -42,6 +54,8 @@ class Project {
   final String id;
   final String name;
   final String zone;
+  final double? lat;
+  final double? lng;
   final List<String> images; // 3 photos — the project's visual identity
   final String videoUrl;
   final double priceFrom;
@@ -60,6 +74,8 @@ class Project {
     required this.id,
     required this.name,
     required this.zone,
+    this.lat,
+    this.lng,
     required this.images,
     required this.videoUrl,
     required this.priceFrom,
@@ -80,6 +96,8 @@ class Project {
         id: json['id'].toString(),
         name: json['name'] ?? '',
         zone: json['zone'] ?? '',
+        lat: (json['lat'] as num?)?.toDouble(),
+        lng: (json['lng'] as num?)?.toDouble(),
         images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         videoUrl: json['video_url'] ?? '',
         priceFrom: (json['price_from'] as num?)?.toDouble() ?? 0,
@@ -103,6 +121,8 @@ class Project {
         id: id,
         name: name ?? this.name,
         zone: zone ?? this.zone,
+        lat: lat,
+        lng: lng,
         images: images,
         videoUrl: videoUrl,
         priceFrom: priceFrom ?? this.priceFrom,

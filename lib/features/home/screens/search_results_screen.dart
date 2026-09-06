@@ -79,7 +79,7 @@ class SearchResultsScreen extends StatelessWidget {
     final results = _results;
     final tags = <String>[
       if (zone != 'هەموو') zone,
-      if (purpose != null) purpose == ListingPurpose.rent ? 'filters.rent'.tr() : 'filters.sale'.tr(),
+      if (purpose != null) _purposeLabel(purpose!),
       if (type != 'all') _typeLabel(type),
       if (rooms != null) rooms == 4 ? 'search.rooms_plus'.tr() : '$rooms ${'listing.rooms'.tr()}',
       if (verifiedOnly) 'search.verified_tag'.tr(),
@@ -160,6 +160,17 @@ class SearchResultsScreen extends StatelessWidget {
         return 'filters.shop'.tr();
       default:
         return value;
+    }
+  }
+
+  String _purposeLabel(ListingPurpose value) {
+    switch (value) {
+      case ListingPurpose.rent:
+        return 'filters.rent'.tr();
+      case ListingPurpose.installment:
+        return 'filters.installment'.tr();
+      case ListingPurpose.sale:
+        return 'filters.sale'.tr();
     }
   }
 }

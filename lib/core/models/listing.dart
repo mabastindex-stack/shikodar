@@ -1,4 +1,4 @@
-enum ListingPurpose { rent, sale }
+enum ListingPurpose { rent, sale, installment }
 
 enum ListingType { house, villa, land, shop }
 
@@ -112,6 +112,9 @@ class Listing {
   final bool negotiable;
   final double? priceLow;
   final double? priceHigh;
+  final double? downPayment;
+  final double? monthlyInstallment;
+  final int? installmentMonths;
   final List<String> imageUrls;
   final String? videoUrl;
   final double? areaSqm;
@@ -135,6 +138,9 @@ class Listing {
     this.negotiable = false,
     this.priceLow,
     this.priceHigh,
+    this.downPayment,
+    this.monthlyInstallment,
+    this.installmentMonths,
     this.imageUrls = const [],
     this.videoUrl,
     this.areaSqm,
@@ -169,6 +175,9 @@ class Listing {
         negotiable: negotiable ?? this.negotiable,
         priceLow: priceLow,
         priceHigh: priceHigh,
+        downPayment: downPayment,
+        monthlyInstallment: monthlyInstallment,
+        installmentMonths: installmentMonths,
         imageUrls: imageUrls,
         videoUrl: videoUrl,
         areaSqm: areaSqm,
@@ -187,7 +196,10 @@ class Listing {
         id: json['id'].toString(),
         title: json['title'] ?? '',
         zone: json['zone'] ?? '',
-        purpose: (json['purpose'] == 'sale') ? ListingPurpose.sale : ListingPurpose.rent,
+        purpose: ListingPurpose.values.firstWhere(
+          (p) => p.name == json['purpose'],
+          orElse: () => ListingPurpose.rent,
+        ),
         type: ListingType.values.firstWhere(
           (t) => t.name == json['type'],
           orElse: () => ListingType.house,
@@ -196,6 +208,9 @@ class Listing {
         negotiable: json['negotiable'] ?? false,
         priceLow: (json['price_low'] as num?)?.toDouble(),
         priceHigh: (json['price_high'] as num?)?.toDouble(),
+        downPayment: (json['down_payment'] as num?)?.toDouble(),
+        monthlyInstallment: (json['monthly_installment'] as num?)?.toDouble(),
+        installmentMonths: json['installment_months'],
         imageUrls: (json['image_urls'] as List?)?.map((e) => e.toString()).toList() ?? [],
         videoUrl: json['video_url'],
         areaSqm: (json['area_sqm'] as num?)?.toDouble(),

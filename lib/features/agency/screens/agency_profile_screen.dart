@@ -8,7 +8,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/models/review.dart';
 import '../../../core/network/listing_repository.dart';
+import '../../../core/network/review_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
@@ -23,19 +25,6 @@ const _coverPhotos = [
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80',
   'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&q=80',
   'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1200&q=80',
-];
-
-class _Review {
-  final String name;
-  final double rating;
-  final String comment;
-  const _Review(this.name, this.rating, this.comment);
-}
-
-final _mockReviews = [
-  _Review('هەڵۆ کەریم', 5, 'agency_profile.review_comment_1'.tr()),
-  _Review('شنۆ ئازاد', 4.5, 'agency_profile.review_comment_2'.tr()),
-  _Review('ڕێباز سامان', 5, 'agency_profile.review_comment_3'.tr()),
 ];
 
 /// Premium agency / broker portfolio page. Visual richness — animated cover,
@@ -57,6 +46,9 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
   int _coverIndex = 0;
   int _tab = 0; // 0 listings, 1 reels, 2 reviews, 3 about
   List<Listing> _listings = [];
+  late Agency _agency = widget.agency;
+  List<Review> _reviews = [];
+  bool _reviewsLoading = true;
 
   bool get _isPremiumTier => widget.agency.tier == PackageTier.premium || widget.agency.tier == PackageTier.enterprise;
 
@@ -75,6 +67,95 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     context.read<ListingRepository>().fetchAll().then((listings) {
       if (mounted) setState(() => _listings = listings.where((l) => l.agency.id == widget.agency.id).toList());
     });
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    try {
+      final reviews = await context.read<ReviewRepository>().fetchForAgency(widget.agency.id);
+      if (mounted) setState(() { _reviews = reviews; _reviewsLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _reviewsLoading = false);
+    }
+  }
+
+  Future<void> _openWriteReview() async {
+    final palette = context.palette;
+    var rating = 5;
+    final commentController = TextEditingController();
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+            decoration: BoxDecoration(color: palette.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: palette.divider, borderRadius: BorderRadius.circular(2))),
+                ),
+                Text('agency_profile.write_review_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (i) {
+                    final star = i + 1;
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => rating = star),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(star <= rating ? Icons.star_rounded : Icons.star_border_rounded, size: 36, color: AppColors.amber),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: commentController,
+                  maxLines: 4,
+                  style: TextStyle(color: palette.textPrimary, fontSize: 13.5),
+                  decoration: InputDecoration(
+                    hintText: 'agency_profile.write_review_hint'.tr(),
+                    hintStyle: TextStyle(color: palette.textMuted, fontSize: 13),
+                    filled: true,
+                    fillColor: palette.surfaceElevated,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(sheetContext, true),
+                    style: ElevatedButton.styleFrom(backgroundColor: palette.primary, foregroundColor: palette.onPrimary, padding: const EdgeInsets.symmetric(vertical: 14)),
+                    child: Text('agency_profile.write_review_submit'.tr(), style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (result != true || !mounted) return;
+    try {
+      final outcome = await context.read<ReviewRepository>().submit(agencyId: widget.agency.id, rating: rating, comment: commentController.text);
+      if (!mounted) return;
+      setState(() => _agency = _agency.copyWith(rating: outcome.rating, reviewCount: outcome.reviewCount));
+      await _loadReviews();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('agency_profile.write_review_success'.tr()), behavior: SnackBarBehavior.floating));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('agency_profile.write_review_error'.tr()), behavior: SnackBarBehavior.floating));
+    }
   }
 
   @override
@@ -89,7 +170,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final a = widget.agency;
+    final a = _agency;
     final listings = _listings;
     final foundedYear = DateTime.now().year - a.yearsActive;
 
@@ -156,18 +237,36 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
               else if (_tab == 1)
                 SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40, bottom: 130), child: _emptyState('agency_profile.empty_reels'.tr())))
               else if (_tab == 2)
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 130),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (_, i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _reviewCard(_mockReviews[i], i),
+                ...[
+                  if (a.id != context.watch<UserSession>().agencyId && context.watch<UserSession>().isLoggedIn)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                        child: OutlinedButton.icon(
+                          onPressed: _openWriteReview,
+                          icon: Icon(Icons.rate_review_outlined, size: 17, color: palette.primary),
+                          label: Text('agency_profile.write_review_button'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w700)),
+                          style: OutlinedButton.styleFrom(side: BorderSide(color: palette.primary.withOpacity(0.4)), padding: const EdgeInsets.symmetric(vertical: 13)),
+                        ),
                       ),
-                      childCount: _mockReviews.length,
                     ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 130),
+                    sliver: _reviewsLoading
+                        ? SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 30), child: Center(child: CircularProgressIndicator(color: palette.primary))))
+                        : _reviews.isEmpty
+                            ? SliverToBoxAdapter(child: _emptyState('agency_profile.empty_reviews'.tr()))
+                            : SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (_, i) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _reviewCard(_reviews[i], i),
+                                  ),
+                                  childCount: _reviews.length,
+                                ),
+                              ),
                   ),
-                )
+                ]
               else
                 SliverToBoxAdapter(
                   child: Padding(
@@ -411,8 +510,9 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     );
   }
 
-  Widget _reviewCard(_Review r, int i) {
+  Widget _reviewCard(Review r, int i) {
     final palette = context.palette;
+    final name = r.userName.isEmpty ? '—' : r.userName;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: palette.divider)),
@@ -421,16 +521,18 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
         children: [
           Row(
             children: [
-              CircleAvatar(radius: 16, backgroundColor: palette.surfaceElevated, child: Text(r.name.substring(0, 1), style: TextStyle(color: palette.textSecondary, fontWeight: FontWeight.w700))),
+              CircleAvatar(radius: 16, backgroundColor: palette.surfaceElevated, child: Text(name.substring(0, 1), style: TextStyle(color: palette.textSecondary, fontWeight: FontWeight.w700))),
               const SizedBox(width: 10),
-              Expanded(child: Text(r.name, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w700))),
+              Expanded(child: Text(name, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w700))),
               Row(
-                children: List.generate(5, (s) => Icon(s < r.rating.round() ? Icons.star_rounded : Icons.star_border_rounded, size: 14, color: AppColors.amber)),
+                children: List.generate(5, (s) => Icon(s < r.rating ? Icons.star_rounded : Icons.star_border_rounded, size: 14, color: AppColors.amber)),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(r.comment, style: TextStyle(color: palette.textSecondary, fontSize: 12.5, height: 1.5)),
+          if (r.comment != null && r.comment!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(r.comment!, style: TextStyle(color: palette.textSecondary, fontSize: 12.5, height: 1.5)),
+          ],
         ],
       ),
     ).animate(delay: (80 * i).ms).fadeIn(duration: 320.ms).slideX(begin: 0.05, end: 0);

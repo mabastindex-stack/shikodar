@@ -327,17 +327,21 @@ class _PurposeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRent = purpose == ListingPurpose.rent;
+    final (label, background, foreground) = switch (purpose) {
+      ListingPurpose.rent => ('filters.rent'.tr(), AppColors.goldLight, AppColors.emeraldDark),
+      ListingPurpose.installment => ('filters.installment'.tr(), AppColors.negotiable, Colors.white),
+      ListingPurpose.sale => ('filters.sale'.tr(), AppColors.emerald, Colors.white),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: isRent ? AppColors.goldLight : AppColors.emerald,
+        color: background,
         borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
-        isRent ? 'filters.rent'.tr() : 'filters.sale'.tr(),
+        label,
         style: TextStyle(
-          color: isRent ? AppColors.emeraldDark : Colors.white,
+          color: foreground,
           fontSize: 9.5,
           fontWeight: FontWeight.w800,
         ),

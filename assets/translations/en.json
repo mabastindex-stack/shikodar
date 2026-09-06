@@ -82,6 +82,7 @@
     "all": "All",
     "rent": "Rent",
     "sale": "Sale",
+    "installment": "Installment",
     "house": "House",
     "villa": "Villa",
     "land": "Land",
@@ -104,7 +105,12 @@
     "price_mid": "Mid Price",
     "price_final": "Final Price",
     "featured": "Featured",
-    "info_copied": "Property information copied"
+    "info_copied": "Property information copied",
+    "installment_plan_title": "Installment Plan",
+    "down_payment": "Down Payment",
+    "monthly_installment": "Monthly Installment",
+    "installment_duration": "Duration",
+    "months_count": "{} months"
   },
   "profile": {
     "dashboard": "Dashboard",
@@ -137,6 +143,9 @@
     "azadi": "Azadi",
     "granata": "Granata",
     "sixty_meter_street": "60m Street"
+  },
+  "notifications": {
+    "title": "Notifications"
   },
   "home": {
     "project_video_badge": "Project Video",
@@ -235,6 +244,15 @@
     "type_label": "Property Type *",
     "price_label": "Price ($) *",
     "price_hint": "150000",
+    "down_payment_label": "Down Payment ($) *",
+    "down_payment_hint": "20000",
+    "monthly_installment_label": "Monthly Installment ($) *",
+    "monthly_installment_hint": "500",
+    "installment_months_label": "Installment Duration (months) *",
+    "installment_months_hint": "36",
+    "error_down_payment_invalid": "Please enter a valid down payment amount",
+    "error_monthly_installment_invalid": "Please enter a valid monthly installment amount",
+    "error_installment_months_invalid": "Please enter a valid installment duration",
     "area_label": "Area (m²) *",
     "area_hint": "250",
     "rooms_label": "Number of Rooms *",
@@ -317,7 +335,10 @@
     "payment_plan_hint": "e.g.: 30% down payment + 36 monthly installments",
     "completion_info_label": "Completion Information",
     "completion_info_hint": "e.g.: Expected March 2026",
-    "video_url_label": "Video Link (optional)",
+    "video_url_label": "Project Video (optional)",
+    "video_pick_button": "Add video from your device",
+    "video_current_label": "Current video",
+    "video_replace_button": "Replace",
     "pick_neighborhood_title": "Choose the project's zone",
     "search_neighborhood_hint": "Search for a neighborhood...",
     "description_label": "Project Description *",
@@ -334,6 +355,12 @@
     "unit_name_hint": "e.g.: 2-bedroom apartment",
     "unit_price_label": "Price ($)",
     "unit_price_hint": "65000",
+    "unit_down_payment_label": "Down Payment ($)",
+    "unit_down_payment_hint": "20000",
+    "unit_monthly_installment_label": "Monthly Installment ($)",
+    "unit_monthly_installment_hint": "500",
+    "unit_installment_months_label": "Duration (months)",
+    "unit_installment_months_hint": "36",
     "unit_area_label": "Area",
     "unit_area_hint": "110 sqm",
     "unit_type_label": "Type",
@@ -443,9 +470,13 @@
     "tab_reels": "Reels",
     "tab_reviews": "Reviews",
     "tab_about": "About",
-    "review_comment_1": "Very professional to deal with — my house sold in less than a week.",
-    "review_comment_2": "Clear and transparent about pricing, they were just a little slow to respond.",
-    "review_comment_3": "A trustworthy company — their Verified badge is truly well-earned.",
+    "empty_reviews": "No reviews yet",
+    "write_review_button": "Write a review",
+    "write_review_title": "Write your review",
+    "write_review_hint": "Share your thoughts about this company (optional)",
+    "write_review_submit": "Submit",
+    "write_review_success": "Your review was sent, thank you!",
+    "write_review_error": "Couldn't send the review, try again",
     "about_company_title": "About the Company",
     "no_bio_fallback": "No further details have been added yet.",
     "specialties_title": "Specialties",
@@ -605,6 +636,7 @@
     "change_screenshot": "Change screenshot",
     "submit_button": "Send Feedback",
     "pick_image_error": "A problem occurred while selecting the image",
+    "submit_error": "Couldn't send your feedback, please try again",
     "success_title": "Thanks for your feedback!",
     "success_message": "The Shikodar team will review your feedback and get back to you as soon as possible.",
     "ok_button": "OK"
@@ -621,6 +653,7 @@
     "whatsapp_message": "Hello, I'd like to boost \"{}\""
   },
   "zone_detail": {
-    "no_listings": "No listings in this zone"
+    "no_listings": "No listings in this zone",
+    "no_pinned_listings": "No listings with a pinned location in this zone"
   }
 }

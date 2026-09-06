@@ -64,6 +64,8 @@ class _ReelFilterSheetState extends State<ReelFilterSheet> {
               Expanded(child: _pill(context, 'filters.rent'.tr(), _purpose == ListingPurpose.rent, () => setState(() => _purpose = ListingPurpose.rent))),
               const SizedBox(width: 8),
               Expanded(child: _pill(context, 'filters.sale'.tr(), _purpose == ListingPurpose.sale, () => setState(() => _purpose = ListingPurpose.sale))),
+              const SizedBox(width: 8),
+              Expanded(child: _pill(context, 'filters.installment'.tr(), _purpose == ListingPurpose.installment, () => setState(() => _purpose = ListingPurpose.installment))),
             ],
           ),
           const SizedBox(height: 20),

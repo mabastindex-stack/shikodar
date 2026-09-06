@@ -7,12 +7,16 @@ import 'package:provider/provider.dart';
 import 'core/network/api_client.dart';
 import 'core/network/auth_repository.dart';
 import 'core/network/favorite_repository.dart';
+import 'core/network/feedback_repository.dart';
 import 'core/network/home_placement_repository.dart';
 import 'core/network/listing_repository.dart';
+import 'core/network/notification_repository.dart';
 import 'core/network/offer_repository.dart';
 import 'core/network/project_repository.dart';
 import 'core/network/reel_repository.dart';
+import 'core/network/review_repository.dart';
 import 'core/network/upload_repository.dart';
+import 'core/network/zone_repository.dart';
 import 'core/theme/app_fonts.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
@@ -31,8 +35,12 @@ Future<void> main() async {
   final reelRepository = ReelRepository(apiClient);
   final offerRepository = OfferRepository(apiClient);
   final favoriteRepository = FavoriteRepository(apiClient);
+  final feedbackRepository = FeedbackRepository(apiClient);
   final uploadRepository = UploadRepository(apiClient);
   final homePlacementRepository = HomePlacementRepository(apiClient);
+  final zoneRepository = ZoneRepository(apiClient);
+  final notificationRepository = NotificationRepository(apiClient);
+  final reviewRepository = ReviewRepository(apiClient);
 
   runApp(
     EasyLocalization(
@@ -54,8 +62,12 @@ Future<void> main() async {
           Provider<ReelRepository>.value(value: reelRepository),
           Provider<OfferRepository>.value(value: offerRepository),
           Provider<FavoriteRepository>.value(value: favoriteRepository),
+          Provider<FeedbackRepository>.value(value: feedbackRepository),
           Provider<UploadRepository>.value(value: uploadRepository),
           Provider<HomePlacementRepository>.value(value: homePlacementRepository),
+          Provider<ZoneRepository>.value(value: zoneRepository),
+          Provider<NotificationRepository>.value(value: notificationRepository),
+          Provider<ReviewRepository>.value(value: reviewRepository),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => UserSession()),
           ChangeNotifierProvider(create: (_) => BusinessProfileStore()),

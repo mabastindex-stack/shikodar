@@ -82,6 +82,7 @@
     "all": "Hepsi",
     "rent": "Kira",
     "sale": "Satış",
+    "installment": "Taksit",
     "house": "Ev",
     "villa": "Villa",
     "land": "Arsa",
@@ -104,7 +105,12 @@
     "price_mid": "Orta fiyat",
     "price_final": "Son fiyat",
     "featured": "Öne çıkan",
-    "info_copied": "Mülk bilgisi kopyalandı"
+    "info_copied": "Mülk bilgisi kopyalandı",
+    "installment_plan_title": "Taksitli Satış Planı",
+    "down_payment": "Peşinat",
+    "monthly_installment": "Aylık Taksit",
+    "installment_duration": "Süre",
+    "months_count": "{} ay"
   },
   "profile": {
     "dashboard": "Panel",
@@ -137,6 +143,9 @@
     "azadi": "Azadi",
     "granata": "Granata",
     "sixty_meter_street": "60 metre caddesi"
+  },
+  "notifications": {
+    "title": "Bildirimler"
   },
   "home": {
     "project_video_badge": "Proje Videosu",
@@ -235,6 +244,15 @@
     "type_label": "Mülk türü *",
     "price_label": "Fiyat ($) *",
     "price_hint": "150000",
+    "down_payment_label": "Peşinat ($) *",
+    "down_payment_hint": "20000",
+    "monthly_installment_label": "Aylık Taksit ($) *",
+    "monthly_installment_hint": "500",
+    "installment_months_label": "Taksit Süresi (ay) *",
+    "installment_months_hint": "36",
+    "error_down_payment_invalid": "Lütfen geçerli bir peşinat miktarı girin",
+    "error_monthly_installment_invalid": "Lütfen geçerli bir aylık taksit miktarı girin",
+    "error_installment_months_invalid": "Lütfen geçerli bir taksit süresi girin",
     "area_label": "Alan (m²) *",
     "area_hint": "250",
     "rooms_label": "Oda sayısı *",
@@ -317,7 +335,10 @@
     "payment_plan_hint": "örn: %30 peşinat + 36 aylık taksit",
     "completion_info_label": "Tamamlanma bilgisi",
     "completion_info_hint": "örn: Mart 2026'da bekleniyor",
-    "video_url_label": "Video bağlantısı (isteğe bağlı)",
+    "video_url_label": "Proje Videosu (isteğe bağlı)",
+    "video_pick_button": "Cihazınızdan video ekleyin",
+    "video_current_label": "Mevcut video",
+    "video_replace_button": "Değiştir",
     "pick_neighborhood_title": "Projenin bölgesini seçin",
     "search_neighborhood_hint": "Mahalle ara...",
     "description_label": "Proje açıklaması *",
@@ -334,6 +355,12 @@
     "unit_name_hint": "örn: 2 odalı daire",
     "unit_price_label": "Fiyat ($)",
     "unit_price_hint": "65000",
+    "unit_down_payment_label": "Peşinat ($)",
+    "unit_down_payment_hint": "20000",
+    "unit_monthly_installment_label": "Aylık Taksit ($)",
+    "unit_monthly_installment_hint": "500",
+    "unit_installment_months_label": "Süre (ay)",
+    "unit_installment_months_hint": "36",
     "unit_area_label": "Alan",
     "unit_area_hint": "110 m²",
     "unit_type_label": "Tür",
@@ -443,9 +470,13 @@
     "tab_reels": "Reels",
     "tab_reviews": "Değerlendirmeler",
     "tab_about": "Hakkında",
-    "review_comment_1": "Çok profesyonel bir şekilde ilgilendiler, evim bir haftadan kısa sürede satıldı.",
-    "review_comment_2": "Fiyat konusunda netlik ve şeffaflık çok iyiydi, sadece yanıt vermede biraz gecikme oldu.",
-    "review_comment_3": "Güvenilir bir şirket, Verified rozetini gerçekten hak ediyorlar.",
+    "empty_reviews": "Henüz değerlendirme yok",
+    "write_review_button": "Değerlendirme yaz",
+    "write_review_title": "Değerlendirmeni yaz",
+    "write_review_hint": "Bu şirket hakkındaki görüşünü yaz (isteğe bağlı)",
+    "write_review_submit": "Gönder",
+    "write_review_success": "Değerlendirmen gönderildi, teşekkürler!",
+    "write_review_error": "Değerlendirme gönderilemedi, tekrar dene",
     "about_company_title": "Şirket hakkında",
     "no_bio_fallback": "Henüz ek bir bilgi eklenmedi.",
     "specialties_title": "Uzmanlıklar",
@@ -605,6 +636,7 @@
     "change_screenshot": "Ekran görüntüsünü değiştir",
     "submit_button": "Geri Bildirim Gönder",
     "pick_image_error": "Görsel seçilirken bir sorun oluştu",
+    "submit_error": "Geri bildirim gönderilemedi, lütfen tekrar deneyin",
     "success_title": "Geri bildiriminiz için teşekkürler!",
     "success_message": "Şikodar ekibi geri bildiriminizi inceleyecek ve en kısa sürede size dönecektir.",
     "ok_button": "Tamam"
@@ -621,6 +653,7 @@
     "whatsapp_message": "Merhaba, \"{}\" öğesini öne çıkarmak istiyorum"
   },
   "zone_detail": {
-    "no_listings": "Bu bölgede ilan yok"
+    "no_listings": "Bu bölgede ilan yok",
+    "no_pinned_listings": "Bu bölgede konumu işaretlenmiş ilan yok"
   }
 }

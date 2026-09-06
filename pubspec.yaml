@@ -44,6 +44,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
@@ -51,6 +52,7 @@ flutter:
     - assets/translations/
     - assets/images/
     - assets/icons/
+    - assets/branding/
   fonts:
     - family: K24Bold
       fonts:
@@ -90,3 +92,11 @@ flutter:
         - asset: assets/fonts/PlusJakartaSans_Bold_Italic.ttf
           weight: 700
           style: italic
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/branding/app_icon_transparent.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  background_color_ios: "#F5F0E7"
