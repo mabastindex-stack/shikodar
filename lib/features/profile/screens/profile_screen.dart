@@ -33,6 +33,15 @@ import 'settings_screen.dart';
 
 const _coverPhotoUrl = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80';
 
+/// Zero-padded d/m/y — avoids intl's DateFormat, which throws on locale
+/// 'ku' (Kurdish isn't in its ICU data; see notifications_screen.dart).
+String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+/// Advertised (not backend-enforced — see PackagesScreen) per-tier limits,
+/// used only to size the usage bars against real counts. `null` = unlimited.
+const _tierListingsLimit = {'starter': 10, 'basic': 20, 'business': 50, 'premium': 100};
+const _tierReelsLimit = {'starter': 2, 'basic': 5, 'business': 15, 'premium': 40};
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -707,6 +716,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   // ── Shared cards ───────────────────────────────────────────────────────
 
   Widget _premiumPackageCard(BuildContext context, AppPalette palette, {required bool isCompany, required int postsCount, required int reelsCount}) {
+    final session = context.watch<UserSession>();
+    final tier = PackageTier.values.firstWhere((t) => t.name == session.tier, orElse: () => PackageTier.starter);
+    final expiry = session.contractEndDate;
+    final listingsLimit = _tierListingsLimit[tier.name];
+    final reelsLimit = _tierReelsLimit[tier.name];
     return GestureDetector(
       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackagesScreen())),
       child: Container(
@@ -732,9 +746,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('profile_page.enterprise_package_title'.tr(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                      Text('profile_page.package_title'.tr(args: [tier.label]), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 2),
-                      Text('profile_page.enterprise_package_expiry'.tr(), style: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 11)),
+                      Text(
+                        expiry != null ? 'profile_page.package_expiry'.tr(args: [_formatDate(expiry)]) : 'profile_page.package_expiry_unknown'.tr(),
+                        style: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 11),
+                      ),
                     ],
                   ),
                 ),
@@ -742,9 +759,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ],
             ),
             const SizedBox(height: 16),
-            _usageRow(isCompany ? 'profile_page.usage_projects_label'.tr() : 'profile_page.usage_listings_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$postsCount']), 1.0),
+            isCompany
+                ? _usageRow('profile_page.usage_projects_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$postsCount']), 1.0)
+                : _usageRow(
+                    'profile_page.usage_listings_label'.tr(),
+                    listingsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$postsCount']) : '$postsCount/$listingsLimit',
+                    listingsLimit == null ? 1.0 : (postsCount / listingsLimit).clamp(0.0, 1.0),
+                  ),
             const SizedBox(height: 12),
-            _usageRow('profile_page.usage_reels_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$reelsCount']), 1.0),
+            _usageRow(
+              'profile_page.usage_reels_label'.tr(),
+              reelsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$reelsCount']) : '$reelsCount/$reelsLimit',
+              reelsLimit == null ? 1.0 : (reelsCount / reelsLimit).clamp(0.0, 1.0),
+            ),
           ],
         ),
       ),

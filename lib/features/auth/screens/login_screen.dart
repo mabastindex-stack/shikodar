@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
             password: _passwordController.text,
           );
       if (!mounted) return;
-      context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId);
+      context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId, tier: result.tier, contractEndDate: result.contractEndDate);
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       // Reached by pushing from the profile tab's guest prompt, on top of
       // the guest HomeShell already showing — pop back to it (now

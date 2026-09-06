@@ -34,6 +34,12 @@ class UserSession extends ChangeNotifier {
   /// recognize when it's showing the signed-in user's own business.
   String? agencyId;
 
+  /// The business's package tier and contract expiry — null for a client.
+  /// Read by ProfileScreen's package-usage card instead of a hardcoded
+  /// "Enterprise" label and a fake expiry date.
+  String? tier;
+  DateTime? contractEndDate;
+
   bool get isAgency => role == AccountRole.agency;
   bool get isCompany => role == AccountRole.company;
   bool get isComplex => role == AccountRole.complex;
@@ -45,11 +51,13 @@ class UserSession extends ChangeNotifier {
   }
 
   /// Successful login/registration — called from `LoginScreen`/`OtpScreen`.
-  void logIn(AccountRole newRole, {String? name, String? agencyId}) {
+  void logIn(AccountRole newRole, {String? name, String? agencyId, String? tier, DateTime? contractEndDate}) {
     role = newRole;
     isLoggedIn = true;
     this.name = name;
     this.agencyId = agencyId;
+    this.tier = tier;
+    this.contractEndDate = contractEndDate;
     notifyListeners();
   }
 
@@ -58,6 +66,8 @@ class UserSession extends ChangeNotifier {
     isLoggedIn = false;
     name = null;
     agencyId = null;
+    tier = null;
+    contractEndDate = null;
     notifyListeners();
   }
 

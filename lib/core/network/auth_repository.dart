@@ -16,7 +16,14 @@ class AuthResult {
   /// it's looking at itself, without hardcoding any particular agency id.
   final String? agencyId;
 
-  const AuthResult({required this.role, required this.token, required this.name, this.agencyId});
+  /// The business's package tier ('starter'..'enterprise') and contract
+  /// expiry — both null for a client. The backend only reveals the
+  /// contract fields on login/me (see Agency::$hidden server-side), so
+  /// these are the one legitimate place in the app that ever sees them.
+  final String? tier;
+  final DateTime? contractEndDate;
+
+  const AuthResult({required this.role, required this.token, required this.name, this.agencyId, this.tier, this.contractEndDate});
 }
 
 /// Wraps the Laravel API's /auth/* endpoints. Persists the bearer token
@@ -95,8 +102,15 @@ class AuthRepository {
       final response = await _client.dio.get('/auth/me');
       final role = _roleFromString(response.data['role'] as String);
       final name = response.data['name'] as String? ?? '';
-      final agencyId = response.data['agency']?['id']?.toString();
-      return AuthResult(role: role, token: token, name: name, agencyId: agencyId);
+      final agency = response.data['agency'];
+      return AuthResult(
+        role: role,
+        token: token,
+        name: name,
+        agencyId: agency?['id']?.toString(),
+        tier: agency?['tier'],
+        contractEndDate: agency?['contract_end_date'] != null ? DateTime.tryParse(agency['contract_end_date']) : null,
+      );
     } on DioException {
       await prefs.remove('auth_token');
       return null;
@@ -117,12 +131,19 @@ class AuthRepository {
     final token = data['token'] as String;
     final role = _roleFromString(data['user']['role'] as String);
     final name = data['user']['name'] as String? ?? '';
-    final agencyId = data['user']['agency']?['id']?.toString();
+    final agency = data['user']['agency'];
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
 
-    return AuthResult(role: role, token: token, name: name, agencyId: agencyId);
+    return AuthResult(
+      role: role,
+      token: token,
+      name: name,
+      agencyId: agency?['id']?.toString(),
+      tier: agency?['tier'],
+      contractEndDate: agency?['contract_end_date'] != null ? DateTime.tryParse(agency['contract_end_date']) : null,
+    );
   }
 
   AccountRole _roleFromString(String value) => AccountRole.values.firstWhere(

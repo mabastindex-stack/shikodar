@@ -67,7 +67,7 @@ class _OtpScreenState extends State<OtpScreen> {
       final result = await context.read<AuthRepository>().verifyOtp(phone: widget.phone, code: code);
       if (!mounted) return;
 
-      context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId);
+      context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId, tier: result.tier, contractEndDate: result.contractEndDate);
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       if (result.role == AccountRole.complex) {
         context.read<BusinessProfileStore>().setParentCompany(widget.parentCompanyName);
