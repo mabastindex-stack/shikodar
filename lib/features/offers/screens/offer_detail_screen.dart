@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/shikodar_contact.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import 'offers_list_screen.dart';
@@ -141,7 +142,7 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                     child: InkWell(
-                      onTap: () => launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication),
+                      onTap: () => launchUrl(Uri.parse('https://wa.me/$shikodarPhoneDigits'), mode: LaunchMode.externalApplication),
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),

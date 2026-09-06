@@ -607,6 +607,8 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
 
   Widget _contactBar() {
     final palette = context.palette;
+    final whatsappNumber = _agency.whatsapp ?? _agency.phone;
+    final callNumber = _agency.phone;
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
@@ -616,26 +618,30 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
             color: palette.background.withOpacity(0.94),
             border: Border(top: BorderSide(color: palette.divider)),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication),
-                  icon: const Icon(Icons.chat, size: 18),
-                  label: Text('listing.contact_whatsapp'.tr()),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
+          child: whatsappNumber == null && callNumber == null
+              ? Text('agency_profile.no_contact_info'.tr(), textAlign: TextAlign.center, style: TextStyle(color: palette.textMuted, fontSize: 12.5))
+              : Row(
+                  children: [
+                    if (whatsappNumber != null)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => launchUrl(Uri.parse('https://wa.me/964${whatsappNumber.replaceFirst(RegExp(r'^0'), '')}'), mode: LaunchMode.externalApplication),
+                          icon: const Icon(Icons.chat, size: 18),
+                          label: Text('listing.contact_whatsapp'.tr()),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
+                        ),
+                      ),
+                    if (whatsappNumber != null && callNumber != null) const SizedBox(width: 10),
+                    if (callNumber != null)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => launchUrl(Uri.parse('tel:+964${callNumber.replaceFirst(RegExp(r'^0'), '')}')),
+                          icon: const Icon(Icons.phone, size: 18),
+                          label: Text('listing.contact_call'.tr()),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('tel:+9647700000000')),
-                  icon: const Icon(Icons.phone, size: 18),
-                  label: Text('listing.contact_call'.tr()),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

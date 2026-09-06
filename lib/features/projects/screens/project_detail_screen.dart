@@ -673,40 +673,46 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   Widget _contactBar() {
     final palette = context.palette;
+    final whatsappNumber = project.agency.whatsapp ?? project.agency.phone;
+    final callNumber = project.agency.phone;
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
           padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(color: palette.background.withOpacity(0.92), border: Border(top: BorderSide(color: palette.divider))),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.read<ActivityRepository>().recordContact(type: 'project', id: project.id);
-                    launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication);
-                  },
-                  icon: const Icon(Icons.chat, size: 18),
-                  label: Text('listing.contact_whatsapp'.tr()),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
+          child: whatsappNumber == null && callNumber == null
+              ? Text('agency_profile.no_contact_info'.tr(), textAlign: TextAlign.center, style: TextStyle(color: palette.textMuted, fontSize: 12.5))
+              : Row(
+                  children: [
+                    if (whatsappNumber != null)
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.read<ActivityRepository>().recordContact(type: 'project', id: project.id);
+                            launchUrl(Uri.parse('https://wa.me/964${whatsappNumber.replaceFirst(RegExp(r'^0'), '')}'), mode: LaunchMode.externalApplication);
+                          },
+                          icon: const Icon(Icons.chat, size: 18),
+                          label: Text('listing.contact_whatsapp'.tr()),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
+                        ),
+                      ),
+                    if (whatsappNumber != null && callNumber != null) const SizedBox(width: 10),
+                    if (callNumber != null)
+                      Expanded(
+                        flex: 2,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            context.read<ActivityRepository>().recordContact(type: 'project', id: project.id);
+                            launchUrl(Uri.parse('tel:+964${callNumber.replaceFirst(RegExp(r'^0'), '')}'));
+                          },
+                          icon: const Icon(Icons.phone, size: 18),
+                          label: Text('listing.contact_call'.tr()),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    context.read<ActivityRepository>().recordContact(type: 'project', id: project.id);
-                    launchUrl(Uri.parse('tel:+9647700000000'));
-                  },
-                  icon: const Icon(Icons.phone, size: 18),
-                  label: Text('listing.contact_call'.tr()),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

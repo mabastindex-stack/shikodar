@@ -14,12 +14,14 @@ class ReelOverlay extends StatelessWidget {
   const ReelOverlay({super.key, required this.listing});
 
   Future<void> _openWhatsApp() async {
-    final uri = Uri.parse('https://wa.me/9647700000000');
+    final number = (listing.whatsapp ?? listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '');
+    final uri = Uri.parse('https://wa.me/964$number');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _call() async {
-    final uri = Uri.parse('tel:+9647700000000');
+    final number = (listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '');
+    final uri = Uri.parse('tel:+964$number');
     await launchUrl(uri);
   }
 

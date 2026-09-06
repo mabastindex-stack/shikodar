@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/shikodar_contact.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 
@@ -55,7 +56,7 @@ void showBoostSheet(BuildContext context, {required String itemName}) {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => launchUrl(
-                    Uri.parse('https://wa.me/9647700000000?text=${Uri.encodeComponent('boost_sheet.whatsapp_message'.tr(args: [itemName]))}'),
+                    Uri.parse('https://wa.me/$shikodarPhoneDigits?text=${Uri.encodeComponent('boost_sheet.whatsapp_message'.tr(args: [itemName]))}'),
                     mode: LaunchMode.externalApplication,
                   ),
                   icon: const Icon(Icons.chat, size: 18),
@@ -72,7 +73,7 @@ void showBoostSheet(BuildContext context, {required String itemName}) {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('tel:+9647700000000')),
+                  onPressed: () => launchUrl(Uri.parse('tel:+$shikodarPhoneDigits')),
                   icon: Icon(Icons.phone, size: 18, color: palette.primary),
                   label: Text('packages.call_action'.tr(), style: TextStyle(color: palette.primary)),
                   style: OutlinedButton.styleFrom(

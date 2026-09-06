@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/shikodar_contact.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 
@@ -347,7 +348,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => launchUrl(
-                      Uri.parse('https://wa.me/9647700000000?text=${Uri.encodeComponent('packages.whatsapp_message'.tr(args: [plan.name]))}'),
+                      Uri.parse('https://wa.me/$shikodarPhoneDigits?text=${Uri.encodeComponent('packages.whatsapp_message'.tr(args: [plan.name]))}'),
                       mode: LaunchMode.externalApplication,
                     ),
                     icon: const Icon(Icons.chat, size: 18),
@@ -364,7 +365,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('tel:+9647700000000')),
+                    onPressed: () => launchUrl(Uri.parse('tel:+$shikodarPhoneDigits')),
                     icon: Icon(Icons.phone, size: 18, color: sheetPalette.primary),
                     label: Text('packages.call_action'.tr(), style: TextStyle(color: sheetPalette.primary)),
                     style: OutlinedButton.styleFrom(

@@ -36,6 +36,12 @@ class Agency {
   final List<String> serviceAreas;
   final String bio;
 
+  /// The business's own public contact — how a browsing user reaches it
+  /// directly (profile page, or any project/unit without its own
+  /// listing-level phone/whatsapp). Null until the business sets one.
+  final String? phone;
+  final String? whatsapp;
+
   const Agency({
     required this.id,
     required this.name,
@@ -50,6 +56,8 @@ class Agency {
     this.specialties = const [],
     this.serviceAreas = const [],
     this.bio = '',
+    this.phone,
+    this.whatsapp,
   });
 
   Agency copyWith({
@@ -99,6 +107,8 @@ class Agency {
         specialties: (json['specialties'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         serviceAreas: (json['service_areas'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         bio: json['bio'] ?? '',
+        phone: json['phone'],
+        whatsapp: json['whatsapp'],
       );
 }
 

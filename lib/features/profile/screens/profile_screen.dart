@@ -11,6 +11,7 @@ import '../../../core/models/project.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/network/reel_repository.dart';
+import '../../../core/shikodar_contact.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
@@ -961,7 +962,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication),
+                    onPressed: () => launchUrl(Uri.parse('https://wa.me/$shikodarPhoneDigits'), mode: LaunchMode.externalApplication),
                     icon: const Icon(Icons.chat, size: 18),
                     label: Text('listing.contact_whatsapp'.tr()),
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),
@@ -971,7 +972,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('tel:+9647700000000')),
+                    onPressed: () => launchUrl(Uri.parse('tel:+$shikodarPhoneDigits')),
                     icon: Icon(Icons.phone, size: 18, color: palette.primary),
                     label: Text('listing.contact_call'.tr(), style: TextStyle(color: palette.primary)),
                     style: OutlinedButton.styleFrom(side: BorderSide(color: palette.primary.withOpacity(0.4)), padding: const EdgeInsets.symmetric(vertical: 15)),
