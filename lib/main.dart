@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'core/network/activity_repository.dart';
 import 'core/network/api_client.dart';
 import 'core/network/auth_repository.dart';
+import 'core/network/dashboard_repository.dart';
 import 'core/network/favorite_repository.dart';
 import 'core/network/feedback_repository.dart';
 import 'core/network/home_placement_repository.dart';
@@ -41,6 +43,8 @@ Future<void> main() async {
   final zoneRepository = ZoneRepository(apiClient);
   final notificationRepository = NotificationRepository(apiClient);
   final reviewRepository = ReviewRepository(apiClient);
+  final activityRepository = ActivityRepository(apiClient);
+  final dashboardRepository = DashboardRepository(apiClient);
 
   runApp(
     EasyLocalization(
@@ -68,6 +72,8 @@ Future<void> main() async {
           Provider<ZoneRepository>.value(value: zoneRepository),
           Provider<NotificationRepository>.value(value: notificationRepository),
           Provider<ReviewRepository>.value(value: reviewRepository),
+          Provider<ActivityRepository>.value(value: activityRepository),
+          Provider<DashboardRepository>.value(value: dashboardRepository),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => UserSession()),
           ChangeNotifierProvider(create: (_) => BusinessProfileStore()),

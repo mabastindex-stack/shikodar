@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../../../core/mock/kirkuk_neighborhoods.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/activity_repository.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/network/zone_repository.dart';
@@ -457,7 +458,10 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () => launchUrl(Uri.parse('https://wa.me/964${(listing.whatsapp ?? listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}'), mode: LaunchMode.externalApplication),
+                            onPressed: () {
+                              context.read<ActivityRepository>().recordContact(type: 'listing', id: listing.id);
+                              launchUrl(Uri.parse('https://wa.me/964${(listing.whatsapp ?? listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}'), mode: LaunchMode.externalApplication);
+                            },
                             icon: const Icon(Icons.chat, size: 16, color: AppColors.whatsapp),
                             label: Text('listing.contact_whatsapp'.tr(), style: const TextStyle(color: AppColors.whatsapp)),
                             style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.whatsapp.withOpacity(0.4))),
@@ -466,7 +470,10 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
                         const SizedBox(width: 10),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () => launchUrl(Uri.parse('tel:+964${(listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}')),
+                            onPressed: () {
+                              context.read<ActivityRepository>().recordContact(type: 'listing', id: listing.id);
+                              launchUrl(Uri.parse('tel:+964${(listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}'));
+                            },
                             icon: Icon(Icons.phone, size: 16, color: palette.primary),
                             label: Text('listing.contact_call'.tr(), style: TextStyle(color: palette.primary)),
                             style: OutlinedButton.styleFrom(side: BorderSide(color: palette.primary.withOpacity(0.4))),

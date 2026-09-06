@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/activity_repository.dart';
 import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/theme/app_colors.dart';
@@ -49,6 +50,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   @override
   void initState() {
     super.initState();
+    context.read<ActivityRepository>().recordView(type: 'project', id: project.id);
     _autoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_galleryController.hasClients) return;
       final next = (_photoIndex + 1) % project.images.length;
@@ -682,7 +684,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               Expanded(
                 flex: 3,
                 child: ElevatedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication),
+                  onPressed: () {
+                    context.read<ActivityRepository>().recordContact(type: 'project', id: project.id);
+                    launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication);
+                  },
                   icon: const Icon(Icons.chat, size: 18),
                   label: Text('listing.contact_whatsapp'.tr()),
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
@@ -692,7 +697,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               Expanded(
                 flex: 2,
                 child: OutlinedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('tel:+9647700000000')),
+                  onPressed: () {
+                    context.read<ActivityRepository>().recordContact(type: 'project', id: project.id);
+                    launchUrl(Uri.parse('tel:+9647700000000'));
+                  },
                   icon: const Icon(Icons.phone, size: 18),
                   label: Text('listing.contact_call'.tr()),
                 ),

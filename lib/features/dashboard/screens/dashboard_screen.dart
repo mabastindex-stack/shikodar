@@ -1,8 +1,17 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import '../../../core/models/dashboard_stats.dart';
+import '../../../core/models/listing.dart';
+import '../../../core/network/dashboard_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+
+/// Advertised (not backend-enforced — see PackagesScreen) per-tier limits,
+/// used only to size the usage bars against real counts. `null` = unlimited.
+const _tierListingsLimit = {'starter': 10, 'basic': 20, 'business': 50, 'premium': 100};
+const _tierReelsLimit = {'starter': 2, 'basic': 5, 'business': 15, 'premium': 40};
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,27 +22,45 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _range = 0; // 0 = week, 1 = month
+  bool _loading = true;
+  DashboardStats? _stats;
 
-  // Mock weekly views (Sat..Fri) and the last 4 weeks' totals — swap for
-  // real API data later.
-  static const _weekViews = [42.0, 68.0, 55.0, 91.0, 130.0, 88.0, 104.0];
-  static const _monthViews = [612.0, 745.0, 580.0, 810.0];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
 
-  List<double> get _chartValues => _range == 0 ? _weekViews : _monthViews;
+  Future<void> _load() async {
+    try {
+      final stats = await context.read<DashboardRepository>().fetchStats();
+      if (mounted) setState(() { _stats = stats; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
-  List<String> get _weekLabels => [
-        'dashboard.day_sat'.tr(),
-        'dashboard.day_sun'.tr(),
-        'dashboard.day_mon'.tr(),
-        'dashboard.day_tue'.tr(),
-        'dashboard.day_wed'.tr(),
-        'dashboard.day_thu'.tr(),
-        'dashboard.day_fri'.tr(),
-      ];
+  List<int> get _chartValues {
+    final stats = _stats!;
+    return _range == 0 ? stats.daily.map((d) => d.views).toList() : stats.weekly.map((w) => w.views).toList();
+  }
 
-  List<String> get _chartLabels => _range == 0
-      ? _weekLabels
-      : List.generate(_monthViews.length, (i) => 'dashboard.week_label'.tr(args: ['${i + 1}']));
+  static const _weekdayKeys = {6: 'dashboard.day_sat', 7: 'dashboard.day_sun', 1: 'dashboard.day_mon', 2: 'dashboard.day_tue', 3: 'dashboard.day_wed', 4: 'dashboard.day_thu', 5: 'dashboard.day_fri'};
+
+  List<String> get _chartLabels {
+    final stats = _stats!;
+    return _range == 0
+        ? stats.daily.map((d) => _weekdayKeys[d.date.weekday]!.tr()).toList()
+        : List.generate(stats.weekly.length, (i) => 'dashboard.week_label'.tr(args: ['${i + 1}']));
+  }
+
+  String _relativeTime(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'dashboard.time_just_now'.tr();
+    if (diff.inMinutes < 60) return 'dashboard.time_minutes_ago'.tr(args: ['${diff.inMinutes}']);
+    if (diff.inHours < 24) return 'dashboard.time_hours_ago'.tr(args: ['${diff.inHours}']);
+    return 'dashboard.time_days_ago'.tr(args: ['${diff.inDays}']);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,44 +71,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: palette.background,
         title: Text('profile.dashboard'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
-        children: [
-          _rangeToggle(palette).animate().fadeIn(duration: 280.ms),
-          const SizedBox(height: 18),
+      body: _loading
+          ? Center(child: CircularProgressIndicator(color: palette.primary))
+          : _stats == null
+              ? Center(child: Text('dashboard.load_error'.tr(), style: TextStyle(color: palette.textSecondary)))
+              : _content(palette, _stats!),
+    );
+  }
 
-          // Top stat cards.
-          Row(
-            children: [
-              Expanded(child: _statCard(palette, Icons.visibility_outlined, '1,284', 'dashboard.stat_views_label'.tr(), '+18%', true, 0)),
-              const SizedBox(width: 12),
-              Expanded(child: _statCard(palette, Icons.chat_bubble_outline, '96', 'dashboard.stat_contacts_label'.tr(), '+7%', true, 60)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _statCard(palette, Icons.home_work_outlined, '24', 'dashboard.stat_active_listings_label'.tr(), null, null, 120)),
-              Expanded(child: _statCard(palette, Icons.percent_rounded, '7.5%', 'dashboard.stat_response_rate_label'.tr(), '-2%', false, 180)),
-            ],
-          ),
+  Widget _content(AppPalette palette, DashboardStats stats) {
+    final tier = PackageTier.values.firstWhere((t) => t.name == stats.tier, orElse: () => PackageTier.starter);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+      children: [
+        _rangeToggle(palette).animate().fadeIn(duration: 280.ms),
+        const SizedBox(height: 18),
 
-          const SizedBox(height: 28),
-          Text('dashboard.weekly_views_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 220.ms).fadeIn(duration: 300.ms),
-          const SizedBox(height: 16),
-          _weeklyChart(palette).animate(delay: 260.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
+        Row(
+          children: [
+            Expanded(child: _statCard(palette, Icons.visibility_outlined, '${stats.totalViews}', 'dashboard.stat_views_label'.tr(), stats.viewsChangePercent, 0)),
+            const SizedBox(width: 12),
+            Expanded(child: _statCard(palette, Icons.chat_bubble_outline, '${stats.totalContacts}', 'dashboard.stat_contacts_label'.tr(), stats.contactsChangePercent, 60)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _statCard(palette, Icons.home_work_outlined, '${stats.activeListings}', 'dashboard.stat_active_listings_label'.tr(), null, 120)),
+            Expanded(child: _statCard(palette, Icons.percent_rounded, '${stats.responseRatePercent.toStringAsFixed(0)}%', 'dashboard.stat_response_rate_label'.tr(), null, 180)),
+          ],
+        ),
 
-          const SizedBox(height: 28),
-          Text('dashboard.package_usage_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 300.ms).fadeIn(duration: 300.ms),
-          const SizedBox(height: 14),
-          _packageUsageCard().animate(delay: 340.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
+        const SizedBox(height: 28),
+        Text('dashboard.weekly_views_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 220.ms).fadeIn(duration: 300.ms),
+        const SizedBox(height: 16),
+        _weeklyChart(palette).animate(delay: 260.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
 
-          const SizedBox(height: 28),
-          Text('dashboard.recent_activity_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 380.ms).fadeIn(duration: 300.ms),
-          const SizedBox(height: 12),
-          ..._activityItems(palette),
-        ],
-      ),
+        const SizedBox(height: 28),
+        Text('dashboard.package_usage_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 300.ms).fadeIn(duration: 300.ms),
+        const SizedBox(height: 14),
+        _packageUsageCard(tier, stats).animate(delay: 340.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
+
+        const SizedBox(height: 28),
+        Text('dashboard.recent_activity_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 380.ms).fadeIn(duration: 300.ms),
+        const SizedBox(height: 12),
+        ..._activityItems(palette, stats.recentActivity),
+      ],
     );
   }
 
@@ -117,7 +152,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _statCard(AppPalette palette, IconData icon, String value, String label, String? trend, bool? trendUp, int delay) {
+  Widget _statCard(AppPalette palette, IconData icon, String value, String label, double? changePercent, int delay) {
+    final trendUp = changePercent == null ? null : changePercent >= 0;
+    final trend = changePercent == null ? null : '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(0)}%';
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -158,7 +195,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _weeklyChart(AppPalette palette) {
     final values = _chartValues;
-    final maxVal = values.reduce((a, b) => a > b ? a : b);
+    final maxVal = values.isEmpty ? 0 : values.reduce((a, b) => a > b ? a : b);
+    final safeMax = maxVal == 0 ? 1 : maxVal;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       decoration: BoxDecoration(
@@ -173,8 +211,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: List.generate(values.length, (i) {
-                final heightFactor = values[i] / maxVal;
-                final isPeak = values[i] == maxVal;
+                final heightFactor = values[i] / safeMax;
+                final isPeak = values[i] == maxVal && maxVal > 0;
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -183,7 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       duration: Duration(milliseconds: 600 + i * 80),
                       curve: Curves.easeOutCubic,
                       builder: (context, t, child) => FractionallySizedBox(
-                        heightFactor: t,
+                        heightFactor: t.clamp(0.02, 1.0),
                         alignment: Alignment.bottomCenter,
                         child: Container(
                           decoration: BoxDecoration(
@@ -208,7 +246,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _packageUsageCard() {
+  Widget _packageUsageCard(PackageTier tier, DashboardStats stats) {
+    final listingsLimit = _tierListingsLimit[tier.name];
+    final reelsLimit = _tierReelsLimit[tier.name];
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -223,13 +263,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Icon(Icons.workspace_premium_rounded, color: AppColors.gold, size: 18),
               const SizedBox(width: 8),
-              Text('dashboard.enterprise_package_title'.tr(), style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800)),
+              Text('dashboard.package_title'.tr(args: [tier.label]), style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800)),
             ],
           ),
           const SizedBox(height: 16),
-          _usageRow('dashboard.usage_listings_label'.tr(), 'dashboard.unlimited_label'.tr(), 1.0),
+          _usageRow(
+            'dashboard.usage_listings_label'.tr(),
+            listingsLimit == null ? 'dashboard.unlimited_label'.tr() : '${stats.activeListings}/$listingsLimit',
+            listingsLimit == null ? 1.0 : (stats.activeListings / listingsLimit).clamp(0.0, 1.0),
+          ),
           const SizedBox(height: 12),
-          _usageRow('dashboard.usage_reels_label'.tr(), 'dashboard.unlimited_label'.tr(), 1.0),
+          _usageRow(
+            'dashboard.usage_reels_label'.tr(),
+            reelsLimit == null ? 'dashboard.unlimited_label'.tr() : '${stats.activeReels}/$reelsLimit',
+            reelsLimit == null ? 1.0 : (stats.activeReels / reelsLimit).clamp(0.0, 1.0),
+          ),
         ],
       ),
     );
@@ -265,15 +313,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  List<Widget> _activityItems(AppPalette palette) {
-    final items = [
-      (Icons.chat_bubble_outline, 'dashboard.activity_new_contact'.tr(), 'dashboard.time_1_day_ago'.tr()),
-      (Icons.visibility_outlined, 'dashboard.activity_new_views'.tr(), 'dashboard.time_3_hours_ago'.tr()),
-      (Icons.star_outline_rounded, 'dashboard.activity_new_review'.tr(), 'dashboard.time_2_days_ago'.tr()),
-      (Icons.favorite_border, 'dashboard.activity_new_favorites'.tr(), 'dashboard.time_4_days_ago'.tr()),
-    ];
+  List<Widget> _activityItems(AppPalette palette, List<RecentActivityItem> items) {
+    if (items.isEmpty) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(20),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(14)),
+          child: Text('dashboard.no_activity'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 12.5)),
+        ),
+      ];
+    }
     return List.generate(items.length, (i) {
       final item = items[i];
+      final isView = item.type == 'view';
+      final label = (isView ? 'dashboard.activity_view' : 'dashboard.activity_contact').tr(args: [item.title]);
       return Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Container(
@@ -289,16 +343,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(10)),
-                child: Icon(item.$1, size: 17, color: AppColors.goldDark),
+                child: Icon(isView ? Icons.visibility_outlined : Icons.chat_bubble_outline, size: 17, color: AppColors.goldDark),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.$2, style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
-                    Text(item.$3, style: TextStyle(color: palette.textMuted, fontSize: 10.5)),
+                    Text(_relativeTime(item.createdAt), style: TextStyle(color: palette.textMuted, fontSize: 10.5)),
                   ],
                 ),
               ),

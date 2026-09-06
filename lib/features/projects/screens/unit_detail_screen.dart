@@ -4,9 +4,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/activity_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
@@ -32,6 +34,12 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
   // UnitType — kept as a local, honest toggle instead of a heart that
   // silently never shows up anywhere.
   bool _isFavorited = false;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ActivityRepository>().recordView(type: 'project', id: widget.project.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +418,10 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
               Expanded(
                 flex: 3,
                 child: ElevatedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication),
+                  onPressed: () {
+                    context.read<ActivityRepository>().recordContact(type: 'project', id: widget.project.id);
+                    launchUrl(Uri.parse('https://wa.me/9647700000000'), mode: LaunchMode.externalApplication);
+                  },
                   icon: const Icon(Icons.chat, size: 18),
                   label: Text('listing.contact_whatsapp'.tr()),
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
@@ -420,7 +431,10 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
               Expanded(
                 flex: 2,
                 child: OutlinedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('tel:+9647700000000')),
+                  onPressed: () {
+                    context.read<ActivityRepository>().recordContact(type: 'project', id: widget.project.id);
+                    launchUrl(Uri.parse('tel:+9647700000000'));
+                  },
                   icon: const Icon(Icons.phone, size: 18),
                   label: Text('listing.contact_call'.tr()),
                 ),

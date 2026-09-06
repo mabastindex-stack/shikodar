@@ -9,6 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/activity_repository.dart';
 import '../../../core/network/favorite_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -58,6 +59,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   @override
   void initState() {
     super.initState();
+    context.read<ActivityRepository>().recordView(type: 'listing', id: widget.listing.id);
     _photoCount = widget.listing.imageUrls.isNotEmpty ? widget.listing.imageUrls.length : 1;
     if (_photoCount > 1) {
       _autoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
@@ -514,7 +516,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               Expanded(
                 flex: 3,
                 child: ElevatedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('https://wa.me/964${(listing.whatsapp ?? listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}'), mode: LaunchMode.externalApplication),
+                  onPressed: () {
+                    context.read<ActivityRepository>().recordContact(type: 'listing', id: listing.id);
+                    launchUrl(Uri.parse('https://wa.me/964${(listing.whatsapp ?? listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}'), mode: LaunchMode.externalApplication);
+                  },
                   icon: const Icon(Icons.chat, size: 18),
                   label: Text('listing.contact_whatsapp'.tr()),
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.whatsapp, foregroundColor: Colors.white),
@@ -524,7 +529,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               Expanded(
                 flex: 2,
                 child: OutlinedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse('tel:+964${(listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}')),
+                  onPressed: () {
+                    context.read<ActivityRepository>().recordContact(type: 'listing', id: listing.id);
+                    launchUrl(Uri.parse('tel:+964${(listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '')}'));
+                  },
                   icon: const Icon(Icons.phone, size: 18),
                   label: Text('listing.contact_call'.tr()),
                 ),
