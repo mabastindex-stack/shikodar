@@ -1,5 +1,8 @@
 {
   "app_name": "شکۆدار",
+  "splash": {
+    "tagline": "خەونەکانت بەدی بێنە"
+  },
   "onboarding": {
     "tagline": "خانووی خەونەکانت لە کەرکوک",
     "skip": "بازدان",
@@ -388,8 +391,18 @@
     "select_listing_error": "تکایە ئیلانێک هەڵبژێرە",
     "change_video_badge": "گۆڕینی ڤیدیۆ",
     "tap_pick_video_hint": "کلیک بکە بۆ هەڵبژاردنی ڤیدیۆ",
-    "related_listing_label": "ئیلانی پەیوەندیدار *",
-    "select_listing_placeholder": "ئیلانێک هەڵبژێرە"
+    "related_listing_label": "ئیلانی پەیوەندیدار (ئارەزوومەندانە)",
+    "select_listing_placeholder": "ئیلانێک هەڵبژێرە",
+    "video_too_long_error": "ڤیدیۆکە زیاترە لە یەک خولەک — تکایە ڤیدیۆیەکی کورتتر هەڵبژێرە",
+    "compressing_status": "چاککردنی ڤیدیۆ...",
+    "uploading_status": "بارکردن...",
+    "no_listing_label": "ڕیلی گشتی",
+    "price_label": "نرخ *",
+    "price_placeholder": "نرخی ڕیلەکە بنووسە",
+    "price_required_error": "تکایە نرخێکی دروست بنووسە",
+    "trim_title": "بڕینی ڤیدیۆ",
+    "trim_done_action": "تەواو",
+    "trim_hint": "ئەم ڤیدیۆیە درێژترە لە سنووری ڕیل — بەشێک هەڵبژێرە کە درێژیی نەبێت لە {} چرکە"
   },
   "profile_page": {
     "guest_title": "چوونەژوورەوە بکە",
@@ -445,6 +458,11 @@
   "edit_business_profile": {
     "title": "دەستکاری پرۆفایل",
     "save_success": "پرۆفایلەکەت نوێکرایەوە — ئێستا لای هەموو بینەران دەردەکەوێت",
+    "contact_label": "پەیوەندی گشتی",
+    "contact_hint": "ئەم ژمارانە لای هەموو بینەران لە پرۆفایلی کۆمپانیاکەت دەردەکەون",
+    "phone_field_label": "ژمارەی پەیوەندی",
+    "whatsapp_field_label": "واتساپ",
+    "phone_hint": "٠٧xx xxx xxxx",
     "about_company_label": "دەربارەی کۆمپانیا",
     "bio_hint": "کورتەیەک لەسەر کۆمپانیاکەت بنووسە...",
     "specialties_label": "پسپۆڕی",

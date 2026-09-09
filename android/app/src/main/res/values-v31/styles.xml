@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ (API 31+) shows its own mandatory system splash screen
+         — the app's launcher icon on a background color — before Flutter
+         even starts, independent of windowBackground below. It can't be
+         turned off outright (every app gets one since API 31), but giving
+         it an invisible icon and our own cream background means what
+         briefly shows is a blank cream frame, not the logo. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:colorBackground">#F5F0E7</item>
+        <item name="android:windowSplashScreenBackground">#F5F0E7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:colorBackground">#F5F0E7</item>
+    </style>
+</resources>

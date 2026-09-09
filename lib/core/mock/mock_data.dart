@@ -197,7 +197,9 @@ class MockData {
             id: 're_${l.id}',
             videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-modern-house-with-a-swimming-pool-4835-large.mp4',
             thumbnailUrl: l.imageUrls.isNotEmpty ? l.imageUrls.first : '',
+            agency: l.agency,
             listing: l,
+            price: l.price,
             duration: const Duration(seconds: 40),
           ))
       .toList();

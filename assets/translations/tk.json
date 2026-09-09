@@ -1,5 +1,8 @@
 {
   "app_name": "Şikodar",
+  "splash": {
+    "tagline": "Hayallerini gerçekleştir"
+  },
   "onboarding": {
     "tagline": "Kerkük'teki hayal eviniz",
     "skip": "Geç",
@@ -388,8 +391,18 @@
     "select_listing_error": "Lütfen bir ilan seçin",
     "change_video_badge": "Videoyu değiştir",
     "tap_pick_video_hint": "Video seçmek için dokunun",
-    "related_listing_label": "İlgili ilan *",
-    "select_listing_placeholder": "Bir ilan seçin"
+    "related_listing_label": "İlgili ilan (isteğe bağlı)",
+    "select_listing_placeholder": "Bir ilan seçin",
+    "video_too_long_error": "Bu video bir dakikadan uzun — lütfen daha kısa bir video seçin",
+    "compressing_status": "Video hazırlanıyor...",
+    "uploading_status": "Yükleniyor...",
+    "no_listing_label": "Genel reel",
+    "price_label": "Fiyat *",
+    "price_placeholder": "Reel'in fiyatını girin",
+    "price_required_error": "Lütfen geçerli bir fiyat girin",
+    "trim_title": "Videoyu kırp",
+    "trim_done_action": "Bitti",
+    "trim_hint": "Bu video reel sınırından uzun — {} saniyeyi geçmeyen bir bölüm seçin"
   },
   "profile_page": {
     "guest_title": "Giriş yapın",
@@ -445,6 +458,11 @@
   "edit_business_profile": {
     "title": "Profili düzenle",
     "save_success": "Profiliniz güncellendi — artık tüm ziyaretçilere görünüyor",
+    "contact_label": "Umumy habarlaşma",
+    "contact_hint": "Bu belgiler kompaniýanyň profilinde ähli myhmanlara görünýär",
+    "phone_field_label": "Telefon belgisi",
+    "whatsapp_field_label": "WhatsApp",
+    "phone_hint": "07xx xxx xxxx",
     "about_company_label": "Şirket hakkında",
     "bio_hint": "Şirketiniz hakkında kısa bir açıklama yazın...",
     "specialties_label": "Uzmanlıklar",

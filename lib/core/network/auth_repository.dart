@@ -23,7 +23,24 @@ class AuthResult {
   final String? tier;
   final DateTime? contractEndDate;
 
-  const AuthResult({required this.role, required this.token, required this.name, this.agencyId, this.tier, this.contractEndDate});
+  /// The business's own public profile fields — null for a client, and
+  /// null for a business that hasn't set them yet. Read by ProfileScreen
+  /// to show the real logo/contact numbers instead of placeholders.
+  final String? logoUrl;
+  final String? agencyPhone;
+  final String? agencyWhatsapp;
+
+  const AuthResult({
+    required this.role,
+    required this.token,
+    required this.name,
+    this.agencyId,
+    this.tier,
+    this.contractEndDate,
+    this.logoUrl,
+    this.agencyPhone,
+    this.agencyWhatsapp,
+  });
 }
 
 /// Wraps the Laravel API's /auth/* endpoints. Persists the bearer token
@@ -110,6 +127,9 @@ class AuthRepository {
         agencyId: agency?['id']?.toString(),
         tier: agency?['tier'],
         contractEndDate: agency?['contract_end_date'] != null ? DateTime.tryParse(agency['contract_end_date']) : null,
+        logoUrl: agency?['logo_url'],
+        agencyPhone: agency?['phone'],
+        agencyWhatsapp: agency?['whatsapp'],
       );
     } on DioException {
       await prefs.remove('auth_token');
@@ -143,7 +163,30 @@ class AuthRepository {
       agencyId: agency?['id']?.toString(),
       tier: agency?['tier'],
       contractEndDate: agency?['contract_end_date'] != null ? DateTime.tryParse(agency['contract_end_date']) : null,
+      logoUrl: agency?['logo_url'],
+      agencyPhone: agency?['phone'],
+      agencyWhatsapp: agency?['whatsapp'],
     );
+  }
+
+  /// Updates the signed-in business's own logo/phone/whatsapp. Returns the
+  /// fresh values so the caller can push them straight into UserSession
+  /// without a second round trip.
+  Future<Map<String, String?>> updateProfile({String? logoUrl, String? phone, String? whatsapp}) async {
+    try {
+      final response = await _client.dio.put('/my/profile', data: {
+        if (logoUrl != null) 'logo_url': logoUrl,
+        if (phone != null) 'phone': phone,
+        if (whatsapp != null) 'whatsapp': whatsapp,
+      });
+      return {
+        'logo_url': response.data['logo_url'] as String?,
+        'phone': response.data['phone'] as String?,
+        'whatsapp': response.data['whatsapp'] as String?,
+      };
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
   }
 
   AccountRole _roleFromString(String value) => AccountRole.values.firstWhere(

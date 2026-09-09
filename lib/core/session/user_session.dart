@@ -40,6 +40,13 @@ class UserSession extends ChangeNotifier {
   String? tier;
   DateTime? contractEndDate;
 
+  /// The business's own public profile — logo shown as the account
+  /// avatar, phone/whatsapp shown on ProfileScreen's contact card. Null
+  /// for a client, and null for a business that hasn't set them yet.
+  String? logoUrl;
+  String? agencyPhone;
+  String? agencyWhatsapp;
+
   bool get isAgency => role == AccountRole.agency;
   bool get isCompany => role == AccountRole.company;
   bool get isComplex => role == AccountRole.complex;
@@ -51,13 +58,25 @@ class UserSession extends ChangeNotifier {
   }
 
   /// Successful login/registration — called from `LoginScreen`/`OtpScreen`.
-  void logIn(AccountRole newRole, {String? name, String? agencyId, String? tier, DateTime? contractEndDate}) {
+  void logIn(
+    AccountRole newRole, {
+    String? name,
+    String? agencyId,
+    String? tier,
+    DateTime? contractEndDate,
+    String? logoUrl,
+    String? agencyPhone,
+    String? agencyWhatsapp,
+  }) {
     role = newRole;
     isLoggedIn = true;
     this.name = name;
     this.agencyId = agencyId;
     this.tier = tier;
     this.contractEndDate = contractEndDate;
+    this.logoUrl = logoUrl;
+    this.agencyPhone = agencyPhone;
+    this.agencyWhatsapp = agencyWhatsapp;
     notifyListeners();
   }
 
@@ -68,6 +87,19 @@ class UserSession extends ChangeNotifier {
     agencyId = null;
     tier = null;
     contractEndDate = null;
+    logoUrl = null;
+    agencyPhone = null;
+    agencyWhatsapp = null;
+    notifyListeners();
+  }
+
+  /// Applied after ProfileScreen saves a logo/phone/whatsapp change, so
+  /// every screen reading these values (this tab, package cards, etc.)
+  /// updates immediately without a fresh /auth/me round trip.
+  void updateAgencyProfile({String? logoUrl, String? agencyPhone, String? agencyWhatsapp}) {
+    if (logoUrl != null) this.logoUrl = logoUrl;
+    if (agencyPhone != null) this.agencyPhone = agencyPhone;
+    if (agencyWhatsapp != null) this.agencyWhatsapp = agencyWhatsapp;
     notifyListeners();
   }
 

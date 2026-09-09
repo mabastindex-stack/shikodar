@@ -98,10 +98,10 @@ class SearchMapScreen extends StatefulWidget {
   const SearchMapScreen({super.key});
 
   @override
-  State<SearchMapScreen> createState() => _SearchMapScreenState();
+  State<SearchMapScreen> createState() => SearchMapScreenState();
 }
 
-class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderStateMixin {
+class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderStateMixin {
   bool _showMap = true;
   ListingPurpose? _purpose; // null = both
   String _type = 'all';
@@ -148,6 +148,16 @@ class _SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+    _loadListings();
+    _loadProjects();
+    _loadZones();
+  }
+
+  /// Kept alive by the bottom nav's IndexedStack, so it never rebuilds on
+  /// its own when a listing is published elsewhere and the visitor switches
+  /// back to this tab — called by HomeShell each time that happens so the
+  /// map/list is never showing a stale snapshot from app launch.
+  void refresh() {
     _loadListings();
     _loadProjects();
     _loadZones();

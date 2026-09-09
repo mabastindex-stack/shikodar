@@ -26,10 +26,10 @@ class HomeFeedScreen extends StatefulWidget {
   const HomeFeedScreen({super.key});
 
   @override
-  State<HomeFeedScreen> createState() => _HomeFeedScreenState();
+  State<HomeFeedScreen> createState() => HomeFeedScreenState();
 }
 
-class _HomeFeedScreenState extends State<HomeFeedScreen> {
+class HomeFeedScreenState extends State<HomeFeedScreen> {
   final HomeFilterState _filterState = HomeFilterState();
   String _zoneHighlight = 'هەموو';
   List<Listing> _listings = [];
@@ -40,6 +40,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   @override
   void initState() {
     super.initState();
+    _loadListings();
+    _loadNotificationStatus();
+  }
+
+  /// Kept alive by the bottom nav's IndexedStack, so it never rebuilds on
+  /// its own when a listing is published elsewhere and the visitor switches
+  /// back to this tab — called by HomeShell each time that happens so the
+  /// feed is never showing a stale snapshot from app launch.
+  void refresh() {
     _loadListings();
     _loadNotificationStatus();
   }

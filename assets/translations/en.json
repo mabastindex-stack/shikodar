@@ -1,5 +1,8 @@
 {
   "app_name": "Şikodar",
+  "splash": {
+    "tagline": "Make your dreams come true"
+  },
   "onboarding": {
     "tagline": "Your dream home in Kirkuk",
     "skip": "Skip",
@@ -388,8 +391,18 @@
     "select_listing_error": "Please select a listing",
     "change_video_badge": "Change Video",
     "tap_pick_video_hint": "Tap to select a video",
-    "related_listing_label": "Related Listing *",
-    "select_listing_placeholder": "Select a listing"
+    "related_listing_label": "Related Listing (optional)",
+    "select_listing_placeholder": "Select a listing",
+    "video_too_long_error": "This video is longer than one minute — please pick a shorter one",
+    "compressing_status": "Preparing video...",
+    "uploading_status": "Uploading...",
+    "no_listing_label": "General reel",
+    "price_label": "Price *",
+    "price_placeholder": "Enter the reel's price",
+    "price_required_error": "Please enter a valid price",
+    "trim_title": "Trim Video",
+    "trim_done_action": "Done",
+    "trim_hint": "This video is longer than the reel limit — pick a section no longer than {} seconds"
   },
   "profile_page": {
     "guest_title": "Log In",
@@ -445,6 +458,11 @@
   "edit_business_profile": {
     "title": "Edit Profile",
     "save_success": "Your profile has been updated — now visible to all viewers",
+    "contact_label": "Public Contact",
+    "contact_hint": "These numbers appear to everyone on your company's profile",
+    "phone_field_label": "Phone number",
+    "whatsapp_field_label": "WhatsApp",
+    "phone_hint": "07xx xxx xxxx",
     "about_company_label": "About the Company",
     "bio_hint": "Write a short summary about your company...",
     "specialties_label": "Specialties",

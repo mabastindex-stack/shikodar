@@ -1,26 +1,31 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:video_compress/video_compress.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/models/listing.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/network/listing_repository.dart';
 import '../../../core/network/reel_repository.dart';
 import '../../../core/network/upload_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/listing_image.dart';
+import 'reel_trim_screen.dart';
+
+/// Hard cap on reel length — keeps every published reel short (and, once
+/// compressed, small) regardless of what the visitor originally recorded.
+const _maxReelDuration = Duration(seconds: 60);
 
 class CreateReelScreen extends StatefulWidget {
   const CreateReelScreen({super.key, this.existing});
 
   /// When set, the screen edits this reel in place instead of publishing a
-  /// new one — the existing video/listing are pre-filled, and a new video
+  /// new one — the existing video/price are pre-filled, and a new video
   /// pick is optional (the current one is kept if the owner doesn't change it).
   final Reel? existing;
 
@@ -31,21 +36,18 @@ class CreateReelScreen extends StatefulWidget {
 class _CreateReelScreenState extends State<CreateReelScreen> {
   File? _video;
   VideoPlayerController? _preview;
-  Listing? _listing;
-  List<Listing> _myListings = [];
+  final _priceController = TextEditingController();
   bool _isSubmitting = false;
+  String? _statusText;
 
   bool get _isEditing => widget.existing != null;
 
   @override
   void initState() {
     super.initState();
-    context.read<ListingRepository>().fetchMine().then((listings) {
-      if (mounted) setState(() => _myListings = listings);
-    });
     final existing = widget.existing;
     if (existing != null) {
-      _listing = existing.listing;
+      _priceController.text = existing.price > 0 ? existing.price.toStringAsFixed(0) : '';
       final controller = isNetworkImage(existing.videoUrl)
           ? VideoPlayerController.networkUrl(Uri.parse(existing.videoUrl))
           : VideoPlayerController.file(File(existing.videoUrl));
@@ -62,83 +64,53 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
   @override
   void dispose() {
     _preview?.dispose();
+    _priceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _setVideo(File file) async {
+    final controller = VideoPlayerController.file(file);
+    await controller.initialize();
+    await controller.setLooping(true);
+    await controller.setVolume(0);
+    controller.play();
+    if (!mounted) return;
+    _preview?.dispose();
+    setState(() {
+      _video = file;
+      _preview = controller;
+    });
   }
 
   Future<void> _pickVideo() async {
     try {
-      final picked = await ImagePicker().pickVideo(source: ImageSource.gallery);
+      // `maxDuration` caps the in-app camera recorder and is honored by
+      // some gallery pickers too, but not all — a video that still comes
+      // back longer than the cap goes to the trim screen instead of being
+      // rejected outright.
+      final picked = await ImagePicker().pickVideo(source: ImageSource.gallery, maxDuration: _maxReelDuration);
       if (picked == null) return;
       final file = File(picked.path);
       final controller = VideoPlayerController.file(file);
       await controller.initialize();
-      await controller.setLooping(true);
-      await controller.setVolume(0);
-      controller.play();
-      if (!mounted) return;
-      _preview?.dispose();
-      setState(() {
-        _video = file;
-        _preview = controller;
-      });
+      final duration = controller.value.duration;
+      await controller.dispose();
+
+      if (duration > _maxReelDuration) {
+        if (!mounted) return;
+        final trimmedPath = await Navigator.of(context).push<String>(
+          MaterialPageRoute(builder: (_) => ReelTrimScreen(file: file, maxLength: _maxReelDuration)),
+        );
+        if (trimmedPath == null) return;
+        await _setVideo(File(trimmedPath));
+        return;
+      }
+
+      await _setVideo(file);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_reels.pick_video_error'.tr()), behavior: SnackBarBehavior.floating));
     }
-  }
-
-  Future<void> _pickListing() async {
-    final result = await showModalBottomSheet<Listing>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        final palette = sheetContext.palette;
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-          decoration: BoxDecoration(color: palette.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: palette.divider, borderRadius: BorderRadius.circular(2)))),
-              Text('my_reels.pick_listing_sheet_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 14),
-              Expanded(
-                child: _myListings.isEmpty
-                    ? Center(child: Text('my_reels.no_listings'.tr(), style: TextStyle(color: palette.textSecondary)))
-                    : ListView.separated(
-                        itemCount: _myListings.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) {
-                          final l = _myListings[i];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: SizedBox(
-                                width: 52,
-                                height: 52,
-                                child: l.imageUrls.isEmpty
-                                    ? Container(color: palette.surfaceElevated)
-                                    : isNetworkImage(l.imageUrls.first)
-                                        ? CachedNetworkImage(imageUrl: l.imageUrls.first, fit: BoxFit.cover)
-                                        : Image.file(File(l.imageUrls.first), fit: BoxFit.cover),
-                              ),
-                            ),
-                            title: Text(l.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
-                            subtitle: Text(l.zone, style: TextStyle(color: palette.textSecondary, fontSize: 11.5)),
-                            onTap: () => Navigator.pop(sheetContext, l),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (result != null) setState(() => _listing = result);
   }
 
   Future<void> _submit() async {
@@ -147,44 +119,72 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_reels.select_video_error'.tr()), behavior: SnackBarBehavior.floating));
       return;
     }
-    if (_listing == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_reels.select_listing_error'.tr()), behavior: SnackBarBehavior.floating));
+    final price = double.tryParse(_priceController.text.trim());
+    if (price == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('my_reels.price_required_error'.tr()), behavior: SnackBarBehavior.floating));
       return;
     }
 
     final uploadRepository = context.read<UploadRepository>();
     final reelRepository = context.read<ReelRepository>();
-    final thumbnailUrl = _listing!.imageUrls.isNotEmpty ? _listing!.imageUrls.first : null;
     final durationSeconds = _preview?.value.duration.inSeconds ?? existing?.duration.inSeconds;
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _statusText = _video != null ? 'my_reels.compressing_status'.tr() : null;
+    });
     try {
-      final videoUrl = _video != null ? await uploadRepository.upload(_video!.path) : null;
+      String? uploadPath = _video?.path;
+      if (_video != null) {
+        // Shrinks storage/bandwidth a lot for what's typically a
+        // phone-camera clip going into a short in-app reel — falls back to
+        // the original file if compression fails for any reason, so a
+        // publish never gets blocked by it.
+        try {
+          final compressed = await VideoCompress.compressVideo(
+            _video!.path,
+            quality: VideoQuality.MediumQuality,
+            deleteOrigin: false,
+            includeAudio: true,
+          );
+          if (compressed?.path != null) uploadPath = compressed!.path;
+        } catch (_) {
+          // Keep the original path.
+        }
+      }
+      if (!mounted) return;
+      setState(() => _statusText = _video != null ? 'my_reels.uploading_status'.tr() : null);
+
+      final videoUrl = uploadPath != null ? await uploadRepository.upload(uploadPath) : null;
 
       if (existing != null) {
         await reelRepository.update(
           existing.id,
-          listingId: _listing!.id,
           videoUrl: videoUrl,
-          thumbnailUrl: thumbnailUrl,
+          price: price,
           durationSeconds: durationSeconds,
         );
       } else {
         await reelRepository.create(
-          listingId: _listing!.id,
           videoUrl: videoUrl!,
-          thumbnailUrl: thumbnailUrl,
+          price: price,
           durationSeconds: durationSeconds,
         );
       }
 
+      if (_video != null) unawaited(VideoCompress.deleteAllCache());
       if (!mounted) return;
       Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _statusText = null;
+        });
+      }
     }
   }
 
@@ -198,7 +198,19 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         title: Text(_isEditing ? 'my_reels.edit_reel_title'.tr() : 'my_reels.new_reel_fab'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
           _isSubmitting
-              ? Padding(padding: const EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: palette.primary)))
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.4, color: palette.primary)),
+                      if (_statusText != null) ...[
+                        const SizedBox(width: 8),
+                        Text(_statusText!, style: TextStyle(color: palette.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ],
+                    ],
+                  ),
+                )
               : TextButton(onPressed: _submit, child: Text('my_reels.publish_action'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800))),
         ],
       ),
@@ -244,28 +256,20 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
             ),
           ),
           const SizedBox(height: 22),
-          Text('my_reels.related_listing_label'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600)),
+          Text('my_reels.price_label'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _pickListing,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(14)),
-              child: Row(
-                children: [
-                  Icon(Icons.home_work_outlined, color: palette.primary, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _listing?.title ?? 'my_reels.select_listing_placeholder'.tr(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: _listing == null ? palette.textMuted : palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Icon(Icons.keyboard_arrow_down_rounded, color: palette.textMuted),
-                ],
-              ),
+          TextField(
+            controller: _priceController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: palette.surfaceElevated,
+              prefixIcon: Icon(Icons.attach_money_rounded, color: palette.primary, size: 20),
+              hintText: 'my_reels.price_placeholder'.tr(),
+              hintStyle: TextStyle(color: palette.textMuted, fontWeight: FontWeight.w600),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             ),
           ),
         ],

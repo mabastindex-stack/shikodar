@@ -1,12 +1,17 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Central API client. Base URL is stored in SharedPreferences and editable
-/// from the in-app settings screen (gear icon), so switching between local
-/// AppServ and the Hostinger server never requires a rebuild.
+/// from the in-app settings screen (gear icon) — but that screen only
+/// exists in debug/profile builds (see login_screen.dart/settings_screen.dart),
+/// so a real published build always talks to the real backend below and a
+/// regular user has no way to point the app anywhere else.
 class ApiClient {
   static const _baseUrlKey = 'server_base_url';
-  static const String defaultBaseUrl = 'http://127.0.0.1:8000/api';
+  static const String defaultBaseUrl = kReleaseMode
+      ? 'https://dublinclass.com/api'
+      : 'http://127.0.0.1:8000/api';
 
   final Dio dio;
   String baseUrl;

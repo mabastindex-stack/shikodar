@@ -16,7 +16,15 @@ class UploadRepository {
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(localFilePath),
       });
-      final response = await _client.dio.post('/upload', data: formData);
+      // A photo clears the client's normal 15s timeout easily, but a video
+      // (even compressed) can take a lot longer to actually send over a
+      // typical connection — this only loosens the timeout for this one
+      // request, not every other call the app makes.
+      final response = await _client.dio.post(
+        '/upload',
+        data: formData,
+        options: Options(sendTimeout: const Duration(minutes: 3), receiveTimeout: const Duration(seconds: 30)),
+      );
       return response.data['url'] as String;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +11,6 @@ import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/push_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
@@ -36,7 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  AccountRole _selectedRole = AccountRole.client;
   bool _obscure = true;
   bool _isSubmitting = false;
 
@@ -78,7 +77,16 @@ class _LoginScreenState extends State<LoginScreen> {
             password: _passwordController.text,
           );
       if (!mounted) return;
-      context.read<UserSession>().logIn(result.role, name: result.name, agencyId: result.agencyId, tier: result.tier, contractEndDate: result.contractEndDate);
+      context.read<UserSession>().logIn(
+            result.role,
+            name: result.name,
+            agencyId: result.agencyId,
+            tier: result.tier,
+            contractEndDate: result.contractEndDate,
+            logoUrl: result.logoUrl,
+            agencyPhone: result.agencyPhone,
+            agencyWhatsapp: result.agencyWhatsapp,
+          );
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       context.read<PushRepository>().registerDevice();
       // Reached by pushing from the profile tab's guest prompt, on top of
@@ -173,11 +181,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              _RoleSelector(
-                                selected: _selectedRole,
-                                onChanged: (value) => setState(() => _selectedRole = value),
-                              ),
-                              const SizedBox(height: 18),
                               AuthTextFormField(
                                 controller: _phoneController,
                                 label: 'auth.phone'.tr(),
@@ -281,16 +284,19 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          PositionedDirectional(
-            top: MediaQuery.paddingOf(context).top + 10,
-            end: 14,
-            child: _GlassIconButton(
-              icon: Icons.tune_rounded,
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ServerSettingsScreen()),
+          // Dev-only escape hatch for pointing the app at a different
+          // backend while testing — never shown to a real published build.
+          if (!kReleaseMode)
+            PositionedDirectional(
+              top: MediaQuery.paddingOf(context).top + 10,
+              end: 14,
+              child: _GlassIconButton(
+                icon: Icons.tune_rounded,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ServerSettingsScreen()),
+                ),
               ),
             ),
-          ),
           // Only shown when there's actually somewhere to go back to — this
           // screen is reached by pushing from the profile tab's guest
           // prompt now, not as the app's unskippable root anymore.
@@ -392,128 +398,6 @@ class _LoginBrandHeader extends StatelessWidget {
   }
 }
 
-class _RoleSelector extends StatelessWidget {
-  const _RoleSelector({required this.selected, required this.onChanged});
-
-  final AccountRole selected;
-  final ValueChanged<AccountRole> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: palette.surfaceElevated,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: palette.divider.withOpacity(0.7)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _RoleOption(
-                  label: 'auth.as_client'.tr(),
-                  icon: Icons.person_outline_rounded,
-                  selected: selected == AccountRole.client,
-                  onTap: () => onChanged(AccountRole.client),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: _RoleOption(
-                  label: 'auth.as_agency'.tr(),
-                  icon: Icons.storefront_outlined,
-                  selected: selected == AccountRole.agency,
-                  onTap: () => onChanged(AccountRole.agency),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: _RoleOption(
-                  label: 'auth.as_company'.tr(),
-                  icon: Icons.apartment_rounded,
-                  selected: selected == AccountRole.company,
-                  onTap: () => onChanged(AccountRole.company),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: _RoleOption(
-                  label: 'auth.as_complex'.tr(),
-                  icon: Icons.location_city_rounded,
-                  selected: selected == AccountRole.complex,
-                  onTap: () => onChanged(AccountRole.complex),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoleOption extends StatelessWidget {
-  const _RoleOption({required this.label, required this.icon, required this.selected, required this.onTap});
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(13),
-        child: AnimatedContainer(
-          duration: AppMotion.standard,
-          curve: AppMotion.enter,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-          decoration: BoxDecoration(
-            color: selected ? palette.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(13),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: palette.shadow.withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: selected ? Colors.white : palette.textSecondary),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: selected ? Colors.white : palette.textSecondary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _GlassIconButton extends StatelessWidget {
   const _GlassIconButton({required this.icon, required this.onPressed});

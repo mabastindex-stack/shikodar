@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A fully invisible drawable, used as the Android 12+ splash screen's
+     "icon" (see values-v31/styles.xml) so that mandatory system splash
+     shows only our background color instead of the launcher icon. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent" />
+</shape>

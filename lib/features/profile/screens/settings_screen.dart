@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -40,9 +41,12 @@ class SettingsScreen extends StatelessWidget {
               title: Text('profile.dark_mode'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 14)),
               secondary: Icon(Icons.dark_mode_outlined, color: palette.textSecondary),
             ),
-            _tile(palette, Icons.settings_outlined, 'profile.server_settings'.tr(),
-                () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServerSettingsScreen())),
-                isLast: true),
+            // Dev-only escape hatch for pointing the app at a different
+            // backend while testing — never shown to a real published build.
+            if (!kReleaseMode)
+              _tile(palette, Icons.settings_outlined, 'profile.server_settings'.tr(),
+                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServerSettingsScreen())),
+                  isLast: true),
           ]),
           const SizedBox(height: 16),
           _sectionCard(palette, delay: 60, children: [

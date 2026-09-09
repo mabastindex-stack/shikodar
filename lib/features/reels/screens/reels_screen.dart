@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/network/activity_repository.dart';
 import '../../../core/network/reel_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
@@ -16,10 +17,10 @@ class ReelsScreen extends StatefulWidget {
   const ReelsScreen({super.key});
 
   @override
-  State<ReelsScreen> createState() => _ReelsScreenState();
+  State<ReelsScreen> createState() => ReelsScreenState();
 }
 
-class _ReelsScreenState extends State<ReelsScreen> {
+class ReelsScreenState extends State<ReelsScreen> {
   final _pageController = PageController();
   final _searchController = TextEditingController();
   final Map<int, GlobalKey<ReelVideoPlayerState>> _playerKeys = {};
@@ -30,12 +31,29 @@ class _ReelsScreenState extends State<ReelsScreen> {
   String _query = '';
   List<Reel> _allReels = [];
   bool _isLoading = true;
+  final Set<String> _viewedReelIds = {};
 
   GlobalKey<ReelVideoPlayerState> _keyFor(int i) => _playerKeys.putIfAbsent(i, () => GlobalKey<ReelVideoPlayerState>());
+
+  /// Counts a real view the first time a reel is actually scrolled to and
+  /// starts playing — once per reel per visit to this tab, not on every
+  /// scroll back and forth over it.
+  void _recordView(Reel reel) {
+    if (!_viewedReelIds.add(reel.id)) return;
+    context.read<ActivityRepository>().recordView(type: 'reel', id: reel.id);
+  }
 
   @override
   void initState() {
     super.initState();
+    refresh();
+  }
+
+  /// Kept alive by the bottom nav's IndexedStack, so it never rebuilds on
+  /// its own when a reel is published elsewhere and the visitor switches
+  /// back to this tab — called by HomeShell each time that happens so the
+  /// feed is never showing a stale snapshot from app launch.
+  void refresh() {
     context.read<ReelRepository>().fetchAll().then((reels) {
       if (mounted) setState(() { _allReels = reels; _isLoading = false; });
     }).catchError((_) {
@@ -74,15 +92,19 @@ class _ReelsScreenState extends State<ReelsScreen> {
   @override
   Widget build(BuildContext context) {
     final reels = _allReels.where((r) {
-      if (_purpose != null && r.listing.purpose != _purpose) return false;
-      if (_type != 'all' && r.listing.type.name != _type) return false;
+      if (_purpose != null && r.listing?.purpose != _purpose) return false;
+      if (_type != 'all' && r.listing?.type.name != _type) return false;
       if (_query.isNotEmpty) {
         final q = _query.toLowerCase();
-        final matches = r.listing.agency.name.toLowerCase().contains(q) || r.listing.title.toLowerCase().contains(q);
+        final matches = r.agency.name.toLowerCase().contains(q) || (r.listing?.title.toLowerCase().contains(q) ?? false);
         if (!matches) return false;
       }
       return true;
     }).toList();
+
+    if (reels.isNotEmpty && _activeIndex < reels.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _recordView(reels[_activeIndex]));
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -249,7 +271,7 @@ class _ReelItem extends StatelessWidget {
             ),
           ),
         ),
-        ReelOverlay(listing: reel.listing),
+        ReelOverlay(reel: reel),
       ],
     ).animate().fadeIn(duration: 320.ms, curve: AppMotion.enter);
   }

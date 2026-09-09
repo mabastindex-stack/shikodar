@@ -1,5 +1,8 @@
 {
   "app_name": "شكودار",
+  "splash": {
+    "tagline": "حقق أحلامك"
+  },
   "onboarding": {
     "tagline": "بيت أحلامك في كركوك",
     "skip": "تخطي",
@@ -388,8 +391,18 @@
     "select_listing_error": "يرجى اختيار إعلان",
     "change_video_badge": "تغيير الفيديو",
     "tap_pick_video_hint": "اضغط لاختيار فيديو",
-    "related_listing_label": "الإعلان المرتبط *",
-    "select_listing_placeholder": "اختر إعلاناً"
+    "related_listing_label": "الإعلان المرتبط (اختياري)",
+    "select_listing_placeholder": "اختر إعلاناً",
+    "video_too_long_error": "هذا الفيديو أطول من دقيقة واحدة — يرجى اختيار فيديو أقصر",
+    "compressing_status": "جارٍ تجهيز الفيديو...",
+    "uploading_status": "جارٍ الرفع...",
+    "no_listing_label": "ريل عام",
+    "price_label": "السعر *",
+    "price_placeholder": "أدخل سعر الريل",
+    "price_required_error": "يرجى إدخال سعر صحيح",
+    "trim_title": "قص الفيديو",
+    "trim_done_action": "تم",
+    "trim_hint": "هذا الفيديو أطول من الحد المسموح — اختر جزءاً لا يزيد عن {} ثانية"
   },
   "profile_page": {
     "guest_title": "سجّل الدخول",
@@ -445,6 +458,11 @@
   "edit_business_profile": {
     "title": "تعديل الملف الشخصي",
     "save_success": "تم تحديث ملفك الشخصي — يظهر الآن لجميع الزوار",
+    "contact_label": "التواصل العام",
+    "contact_hint": "تظهر هذه الأرقام لجميع الزوار في ملف شركتك",
+    "phone_field_label": "رقم الهاتف",
+    "whatsapp_field_label": "واتساب",
+    "phone_hint": "٠٧xx xxx xxxx",
     "about_company_label": "عن الشركة",
     "bio_hint": "اكتب نبذة مختصرة عن شركتك...",
     "specialties_label": "التخصصات",

@@ -107,7 +107,6 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
   }
 
   Widget _reelCard(AppPalette palette, Reel reel, int index) {
-    final views = (index + 1) * 214;
     return Container(
       decoration: BoxDecoration(
         color: palette.surface,
@@ -152,7 +151,7 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
                     children: [
                       const Icon(Icons.visibility_outlined, size: 12, color: Colors.white),
                       const SizedBox(width: 3),
-                      Text('$views', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600)),
+                      Text('${reel.viewsCount}', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -164,13 +163,13 @@ class _MyReelsScreenState extends State<MyReelsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(reel.listing.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(reel.listing?.title ?? 'my_reels.no_listing_label'.tr(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(child: _actionIcon(palette, Icons.edit_outlined, () => _editReel(reel))),
                     const SizedBox(width: 6),
-                    Expanded(child: _actionIcon(palette, Icons.trending_up_rounded, () => showBoostSheet(context, itemName: reel.listing.title))),
+                    Expanded(child: _actionIcon(palette, Icons.trending_up_rounded, () => showBoostSheet(context, itemName: reel.listing?.title ?? 'my_reels.no_listing_label'.tr()))),
                     const SizedBox(width: 6),
                     Expanded(child: _actionIcon(palette, Icons.delete_outline_rounded, () => _confirmDelete(palette, reel), color: palette.error)),
                   ],

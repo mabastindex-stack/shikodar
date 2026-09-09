@@ -8,9 +8,12 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/auth_repository.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/network/reel_repository.dart';
+import '../../../core/network/upload_repository.dart';
 import '../../../core/shikodar_contact.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
@@ -32,8 +35,6 @@ import '../../projects/screens/unit_detail_screen.dart';
 import 'edit_business_profile_screen.dart';
 import 'settings_screen.dart';
 
-const _coverPhotoUrl = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80';
-
 /// Zero-padded d/m/y — avoids intl's DateFormat, which throws on locale
 /// 'ku' (Kurdish isn't in its ICU data; see notifications_screen.dart).
 String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -53,7 +54,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _glow;
   File? _profileImage;
-  File? _coverImage;
+  bool _uploadingLogo = false;
   int _tab = 0; // 0 posts, 1 reels, 2 manage
 
   List<Listing> _myListings = [];
@@ -115,14 +116,33 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.dispose();
   }
 
+  /// Picks a logo/avatar image and, for a business account, immediately
+  /// uploads and saves it as the agency's real logo — a client's own
+  /// avatar has no server-side field, so it just stays a local preview.
   Future<void> _pickProfileImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (picked != null) setState(() => _profileImage = File(picked.path));
-  }
+    if (picked == null || !mounted) return;
+    setState(() => _profileImage = File(picked.path));
 
-  Future<void> _pickCoverImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (picked != null) setState(() => _coverImage = File(picked.path));
+    final role = context.read<UserSession>().role;
+    final isBusiness = role == AccountRole.agency || role == AccountRole.company || role == AccountRole.complex;
+    if (!isBusiness) return;
+
+    final uploadRepository = context.read<UploadRepository>();
+    final authRepository = context.read<AuthRepository>();
+    setState(() => _uploadingLogo = true);
+    try {
+      final url = await uploadRepository.upload(picked.path);
+      final result = await authRepository.updateProfile(logoUrl: url);
+      if (!mounted) return;
+      context.read<UserSession>().updateAgencyProfile(logoUrl: result['logo_url']);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _profileImage = null);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
   }
 
   /// The whole app is browsable as a guest — this only shows up when the
@@ -371,41 +391,33 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             left: 0,
             right: 0,
             height: coverHeight,
-            child: GestureDetector(
-              onTap: _pickCoverImage,
+            // No real "cover photo" exists on an agency's profile — this is
+            // the brand's own emerald gradient (same family as the admin
+            // panel's sign-in scene) instead of a placeholder stock photo,
+            // so every business looks distinctly "Shikodar" here, not like
+            // whichever royalty-free image happened to be hardcoded in.
+            child: ClipRect(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _coverImage != null
-                      ? Image.file(_coverImage!, fit: BoxFit.cover)
-                      : CachedNetworkImage(
-                          imageUrl: _coverPhotoUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: palette.surfaceElevated),
-                        ),
+                  const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.brandGradient)),
+                  Positioned(
+                    top: -40,
+                    left: -30,
+                    child: _glowBlob(color: AppColors.gold.withOpacity(0.28), size: 160),
+                  ),
+                  Positioned(
+                    bottom: -50,
+                    right: -20,
+                    child: _glowBlob(color: AppColors.emeraldLight.withOpacity(0.35), size: 190),
+                  ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0x66000000), Colors.transparent, Color(0x88000000)],
+                        colors: [Color(0x33000000), Colors.transparent, Color(0x55000000)],
                         stops: [0, 0.5, 1],
-                      ),
-                    ),
-                  ),
-                  PositionedDirectional(
-                    start: 14,
-                    bottom: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(20)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 13),
-                          const SizedBox(width: 6),
-                          Text('profile_page.change_cover_label'.tr(), style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600)),
-                        ],
                       ),
                     ),
                   ),
@@ -418,16 +430,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             top: coverHeight - avatarSize / 2,
             left: 0,
             right: 0,
-            child: Center(child: _avatar(palette, size: avatarSize, isBusiness: true, icon: avatarIcon)),
+            child: Center(child: _avatar(palette, size: avatarSize, isBusiness: true, icon: avatarIcon, networkImageUrl: context.watch<UserSession>().logoUrl)),
           ),
         ],
       ),
     ).animate().fadeIn(duration: 380.ms);
   }
 
-  Widget _avatar(AppPalette palette, {required double size, required bool isBusiness, IconData icon = Icons.storefront_rounded}) {
+  Widget _avatar(AppPalette palette, {required double size, required bool isBusiness, IconData icon = Icons.storefront_rounded, String? networkImageUrl}) {
+    final hasLocalImage = _profileImage != null;
+    final hasNetworkImage = !hasLocalImage && networkImageUrl != null && networkImageUrl.isNotEmpty;
     return GestureDetector(
-      onTap: _pickProfileImage,
+      onTap: _uploadingLogo ? null : _pickProfileImage,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -444,19 +458,35 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
               child: child,
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: _profileImage == null && isBusiness ? AppColors.goldGradient : null,
-                color: _profileImage == null && !isBusiness ? palette.surfaceElevated : null,
-                shape: BoxShape.circle,
-                border: Border.all(color: palette.background, width: 4),
-                image: _profileImage != null ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover) : null,
+            child: ClipOval(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: !hasLocalImage && !hasNetworkImage && isBusiness ? AppColors.goldGradient : null,
+                  color: !hasLocalImage && !hasNetworkImage && isBusiness ? null : palette.surfaceElevated,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: palette.background, width: 4),
+                  image: hasLocalImage ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover) : null,
+                ),
+                child: hasLocalImage
+                    ? null
+                    : hasNetworkImage
+                        ? CachedNetworkImage(
+                            imageUrl: networkImageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Center(child: Icon(isBusiness ? icon : Icons.person, color: isBusiness ? AppColors.ink : palette.textSecondary, size: size * 0.42)),
+                            errorWidget: (_, __, ___) => Icon(isBusiness ? icon : Icons.person, color: isBusiness ? AppColors.ink : palette.textSecondary, size: size * 0.42),
+                          )
+                        : Icon(isBusiness ? icon : Icons.person, color: isBusiness ? AppColors.ink : palette.textSecondary, size: size * 0.42),
               ),
-              child: _profileImage == null
-                  ? Icon(isBusiness ? icon : Icons.person, color: isBusiness ? AppColors.ink : palette.textSecondary, size: size * 0.42)
-                  : null,
             ),
           ),
+          if (_uploadingLogo)
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black38),
+                child: const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))),
+              ),
+            ),
           PositionedDirectional(
             bottom: -2,
             end: -2,
@@ -469,6 +499,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ],
       ),
     ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn();
+  }
+
+  Widget _glowBlob({required Color color, required double size}) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
+        ),
+      ),
+    );
   }
 
   Widget _settingsGearButton(BuildContext context, AppPalette palette) {

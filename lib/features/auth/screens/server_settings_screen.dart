@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
@@ -18,7 +19,10 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _urlController.text = ApiClient.defaultBaseUrl;
+    // The app's one live ApiClient — whatever it's currently pointed at
+    // (from a previous save, or the built-in default) is what's actually
+    // in effect right now, so that's what this field should show.
+    _urlController.text = context.read<ApiClient>().baseUrl;
   }
 
   @override
@@ -51,14 +55,16 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                 spacing: 8,
                 children: [
                   _presetChip(palette, 'Local AppServ', 'http://127.0.0.1/shikodar/public/api'),
-                  _presetChip(palette, 'Hostinger', 'https://shikodar.com/api'),
+                  _presetChip(palette, 'Hostinger', 'https://dublinclass.com/api'),
                 ],
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
-                  final client = await ApiClient.create();
-                  await client.updateBaseUrl(_urlController.text.trim());
+                  // Updates the app's one live ApiClient directly — every
+                  // repository already holds a reference to it, so this
+                  // takes effect immediately, with no app restart needed.
+                  await context.read<ApiClient>().updateBaseUrl(_urlController.text.trim());
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('auth.server_settings_saved'.tr())),

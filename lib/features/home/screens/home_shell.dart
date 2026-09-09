@@ -22,21 +22,34 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
+const _searchIndex = 0;
+const _reelsIndex = 1;
+
 class _HomeShellState extends State<HomeShell> {
   int _index = _homeIndex;
 
-  final _screens = const <Widget>[
-    SearchMapScreen(),
-    ReelsScreen(),
-    HomeFeedScreen(),
-    ProjectsListScreen(),
-    ProfileScreen(),
+  final _searchMapKey = GlobalKey<SearchMapScreenState>();
+  final _reelsKey = GlobalKey<ReelsScreenState>();
+  final _homeFeedKey = GlobalKey<HomeFeedScreenState>();
+
+  late final _screens = <Widget>[
+    SearchMapScreen(key: _searchMapKey),
+    ReelsScreen(key: _reelsKey),
+    HomeFeedScreen(key: _homeFeedKey),
+    const ProjectsListScreen(),
+    const ProfileScreen(),
   ];
 
   void _select(int index) {
     if (index == _index) return;
     HapticFeedback.selectionClick();
     setState(() => _index = index);
+    // These tabs stay alive in the IndexedStack for the whole app session,
+    // so without this they'd keep showing whatever existed at app launch —
+    // never anything published afterwards.
+    if (index == _searchIndex) _searchMapKey.currentState?.refresh();
+    if (index == _reelsIndex) _reelsKey.currentState?.refresh();
+    if (index == _homeIndex) _homeFeedKey.currentState?.refresh();
   }
 
   @override

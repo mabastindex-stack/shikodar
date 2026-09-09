@@ -28,11 +28,11 @@ class ReelRepository {
     }
   }
 
-  Future<Reel> create({required String listingId, required String videoUrl, String? thumbnailUrl, int? durationSeconds}) async {
+  Future<Reel> create({required String videoUrl, required double price, String? thumbnailUrl, int? durationSeconds}) async {
     try {
       final response = await _client.dio.post('/my/reels', data: {
-        'listing_id': listingId,
         'video_url': videoUrl,
+        'price': price,
         if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
         if (durationSeconds != null) 'duration_seconds': durationSeconds,
       });
@@ -42,11 +42,11 @@ class ReelRepository {
     }
   }
 
-  Future<Reel> update(String id, {String? listingId, String? videoUrl, String? thumbnailUrl, int? durationSeconds}) async {
+  Future<Reel> update(String id, {String? videoUrl, double? price, String? thumbnailUrl, int? durationSeconds}) async {
     try {
       final response = await _client.dio.put('/my/reels/$id', data: {
-        if (listingId != null) 'listing_id': listingId,
         if (videoUrl != null) 'video_url': videoUrl,
+        if (price != null) 'price': price,
         if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
         if (durationSeconds != null) 'duration_seconds': durationSeconds,
       });

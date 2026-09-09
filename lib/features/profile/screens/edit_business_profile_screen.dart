@@ -1,7 +1,12 @@
+import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/auth_repository.dart';
 import '../../../core/session/business_profile_store.dart';
+import '../../../core/session/user_session.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 
 // NOTE: these lists are the actual stored/compared values (BusinessProfileStore
@@ -58,14 +63,20 @@ class EditBusinessProfileScreen extends StatefulWidget {
 
 class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
   late final TextEditingController _bioController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _whatsappController;
   late Set<String> _specialties;
   late Set<String> _serviceAreas;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     final store = context.read<BusinessProfileStore>();
+    final session = context.read<UserSession>();
     _bioController = TextEditingController(text: store.bio);
+    _phoneController = TextEditingController(text: session.agencyPhone ?? '');
+    _whatsappController = TextEditingController(text: session.agencyWhatsapp ?? '');
     _specialties = Set.of(store.specialties);
     _serviceAreas = Set.of(store.serviceAreas);
   }
@@ -73,19 +84,40 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
   @override
   void dispose() {
     _bioController.dispose();
+    _phoneController.dispose();
+    _whatsappController.dispose();
     super.dispose();
   }
 
-  void _save() {
-    context.read<BusinessProfileStore>().updateAbout(
-          bio: _bioController.text.trim(),
-          specialties: _specialties,
-          serviceAreas: _serviceAreas,
-        );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('edit_business_profile.save_success'.tr()), behavior: SnackBarBehavior.floating),
-    );
-    Navigator.pop(context);
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final result = await context.read<AuthRepository>().updateProfile(
+            phone: _phoneController.text.trim(),
+            whatsapp: _whatsappController.text.trim(),
+          );
+      if (!mounted) return;
+      context.read<UserSession>().updateAgencyProfile(
+            agencyPhone: result['phone'],
+            agencyWhatsapp: result['whatsapp'],
+          );
+      context.read<BusinessProfileStore>().updateAbout(
+            bio: _bioController.text.trim(),
+            specialties: _specialties,
+            serviceAreas: _serviceAreas,
+          );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('edit_business_profile.save_success'.tr()), behavior: SnackBarBehavior.floating),
+      );
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _addMilestone() async {
@@ -110,14 +142,48 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
         title: Text('edit_business_profile.title'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
           TextButton(
-            onPressed: _save,
-            child: Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800)),
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: palette.primary))
+                : Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
+          _label(palette, 'edit_business_profile.contact_label'.tr()),
+          const SizedBox(height: 4),
+          Text('edit_business_profile.contact_hint'.tr(), style: TextStyle(color: palette.textMuted, fontSize: 11)),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: palette.divider),
+              boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.1), blurRadius: 16, offset: const Offset(0, 8))],
+            ),
+            child: Column(
+              children: [
+                _contactField(
+                  palette,
+                  controller: _phoneController,
+                  icon: Icons.call_rounded,
+                  iconColor: palette.primary,
+                  label: 'edit_business_profile.phone_field_label'.tr(),
+                ),
+                Divider(height: 1, color: palette.divider, indent: 66, endIndent: 16),
+                _contactField(
+                  palette,
+                  controller: _whatsappController,
+                  icon: Icons.chat_bubble_rounded,
+                  iconColor: AppColors.whatsapp,
+                  label: 'edit_business_profile.whatsapp_field_label'.tr(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 26),
           _label(palette, 'edit_business_profile.about_company_label'.tr()),
           const SizedBox(height: 8),
           Container(
@@ -210,6 +276,51 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
   }
 
   Widget _label(AppPalette palette, String text) => Text(text, style: TextStyle(color: palette.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600));
+
+  Widget _contactField(
+    AppPalette palette, {
+    required TextEditingController controller,
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: iconColor.withOpacity(0.14), shape: BoxShape.circle),
+            child: Icon(icon, color: iconColor, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: palette.textMuted, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.phone,
+                  textDirection: ui.TextDirection.ltr,
+                  style: TextStyle(color: palette.textPrimary, fontSize: 14.5, fontWeight: FontWeight.w700),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    isCollapsed: true,
+                    hintText: 'edit_business_profile.phone_hint'.tr(),
+                    hintStyle: TextStyle(color: palette.textMuted.withOpacity(0.55), fontSize: 13),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.only(top: 4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _chipWrap(AppPalette palette, {required List<String> options, required Set<String> selected, required ValueChanged<String> onToggle, String Function(String) labelBuilder = _identityLabel}) {
     return Wrap(

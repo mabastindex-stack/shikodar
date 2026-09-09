@@ -7,21 +7,20 @@ import '../../../core/theme/app_motion.dart';
 import '../../agency/screens/agency_profile_screen.dart';
 import '../../listing/screens/listing_detail_screen.dart';
 
-/// Premium reel info overlay: agency identity row, title, price pill, and
-/// two clearly separated contact actions. No like/comment — by design.
+/// Premium reel info overlay: agency identity row, an optional title/price
+/// section (only when the reel showcases a specific listing), and two
+/// clearly separated contact actions. No like/comment — by design.
 class ReelOverlay extends StatelessWidget {
-  final Listing listing;
-  const ReelOverlay({super.key, required this.listing});
+  final Reel reel;
+  const ReelOverlay({super.key, required this.reel});
 
-  Future<void> _openWhatsApp() async {
-    final number = (listing.whatsapp ?? listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '');
-    final uri = Uri.parse('https://wa.me/964$number');
+  Future<void> _openWhatsApp(String number) async {
+    final uri = Uri.parse('https://wa.me/964${number.replaceFirst(RegExp(r'^0'), '')}');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _call() async {
-    final number = (listing.phone ?? '7700000000').replaceFirst(RegExp(r'^0'), '');
-    final uri = Uri.parse('tel:+964$number');
+  Future<void> _call(String number) async {
+    final uri = Uri.parse('tel:+964${number.replaceFirst(RegExp(r'^0'), '')}');
     await launchUrl(uri);
   }
 
@@ -39,7 +38,7 @@ class ReelOverlay extends StatelessWidget {
           children: [
             // Agency identity — tappable, opens the portfolio.
             _InkTap(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AgencyProfileScreen(agency: listing.agency))),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AgencyProfileScreen(agency: reel.agency))),
               child: Row(
                 children: [
                   Container(
@@ -54,71 +53,77 @@ class ReelOverlay extends StatelessWidget {
                   ),
                   const SizedBox(width: 9),
                   Flexible(
-                    child: Text(listing.agency.name, style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                    child: Text(reel.agency.name, style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                   ),
-                  if (listing.agency.verified) ...[
+                  if (reel.agency.verified) ...[
                     const SizedBox(width: 5),
                     const Icon(Icons.verified_rounded, color: AppColors.gold, size: 15),
                   ],
                 ],
               ),
             ).entrance(index: 0),
-            const SizedBox(height: 10),
 
-            // Title.
-            _InkTap(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing))),
-              child: Text(
-                listing.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w600, height: 1.35),
-              ),
-            ).entrance(index: 1),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined, size: 13, color: Colors.white70),
-                const SizedBox(width: 3),
-                Text(listing.zone, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ).entrance(index: 1),
-            const SizedBox(height: 10),
-
-            // Price pill + spec chips.
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(gradient: AppColors.goldGradient, borderRadius: BorderRadius.circular(20)),
-                  child: Text('\$${listing.price.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.ink, fontSize: 14, fontWeight: FontWeight.w800)),
+            // Title/zone — only for a reel that showcases one of the
+            // agency's listings; a general reel skips straight to price.
+            if (reel.listing case final listing?) ...[
+              const SizedBox(height: 10),
+              _InkTap(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing))),
+                child: Text(
+                  listing.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w600, height: 1.35),
                 ),
-                if (listing.negotiable) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.16), borderRadius: BorderRadius.circular(20)),
-                    child: Text('listing.negotiable'.tr(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
+              ).entrance(index: 1),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.location_on_outlined, size: 13, color: Colors.white70),
+                  const SizedBox(width: 3),
+                  Text(listing.zone, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
-              ],
+              ).entrance(index: 1),
+            ],
+            const SizedBox(height: 10),
+
+            // The reel's own price — always shown, independent of whether
+            // it's tied to a listing.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(gradient: AppColors.goldGradient, borderRadius: BorderRadius.circular(20)),
+              child: Text('\$${reel.price.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.ink, fontSize: 14, fontWeight: FontWeight.w800)),
             ).entrance(index: 2),
             const SizedBox(height: 16),
 
-            // Contact actions.
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _ContactButton(icon: Icons.chat_bubble_rounded, label: 'listing.contact_whatsapp'.tr(), color: AppColors.whatsapp, onTap: _openWhatsApp),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: _ContactButton(icon: Icons.phone_rounded, label: 'listing.contact_call'.tr(), color: Colors.white.withOpacity(0.16), textColor: Colors.white, onTap: _call),
-                ),
-              ],
-            ).entrance(index: 3),
+            // Contact actions — the agency's own numbers, regardless of
+            // whether this reel is tied to a listing; no placeholder number
+            // dialing a stranger.
+            Builder(builder: (context) {
+              final whatsappNumber = reel.agency.whatsapp ?? reel.agency.phone;
+              final callNumber = reel.agency.phone;
+              if (whatsappNumber == null && callNumber == null) {
+                return Text(
+                  'agency_profile.no_contact_info'.tr(),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                );
+              }
+              return Row(
+                children: [
+                  if (whatsappNumber != null)
+                    Expanded(
+                      flex: 3,
+                      child: _ContactButton(icon: Icons.chat_bubble_rounded, label: 'listing.contact_whatsapp'.tr(), color: AppColors.whatsapp, onTap: () => _openWhatsApp(whatsappNumber)),
+                    ),
+                  if (whatsappNumber != null && callNumber != null) const SizedBox(width: 10),
+                  if (callNumber != null)
+                    Expanded(
+                      flex: 2,
+                      child: _ContactButton(icon: Icons.phone_rounded, label: 'listing.contact_call'.tr(), color: Colors.white.withOpacity(0.16), textColor: Colors.white, onTap: () => _call(callNumber)),
+                    ),
+                ],
+              );
+            }).entrance(index: 3),
           ],
         ),
       ),

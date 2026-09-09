@@ -240,22 +240,31 @@ class Reel {
   final String id;
   final String videoUrl;
   final String thumbnailUrl;
-  final Listing listing;
+  final Agency agency;
+  final Listing? listing;
+  final double price;
   final Duration duration;
+  final int viewsCount;
 
   const Reel({
     required this.id,
     required this.videoUrl,
     required this.thumbnailUrl,
-    required this.listing,
+    required this.agency,
+    this.listing,
+    required this.price,
     required this.duration,
+    this.viewsCount = 0,
   });
 
   factory Reel.fromJson(Map<String, dynamic> json) => Reel(
         id: json['id'].toString(),
         videoUrl: json['video_url'] ?? '',
         thumbnailUrl: json['thumbnail_url'] ?? '',
-        listing: Listing.fromJson(json['listing'] ?? const {}),
+        agency: Agency.fromJson(json['agency'] ?? const {}),
+        listing: json['listing'] != null ? Listing.fromJson(json['listing']) : null,
+        price: (json['price'] as num?)?.toDouble() ?? 0,
         duration: Duration(seconds: json['duration_seconds'] ?? 0),
+        viewsCount: json['views_count'] ?? 0,
       );
 }
