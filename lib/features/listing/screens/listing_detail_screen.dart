@@ -479,29 +479,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     );
   }
 
-  Widget _amenityChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: AppColors.cardShadow,
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.14), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, size: 18, color: AppColors.goldDark),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.inkSoft, fontSize: 12.5, fontWeight: FontWeight.w700))),
-        ],
-      ),
-    );
-  }
 
   Widget _contactBar(BuildContext context, Listing listing) {
     final palette = context.palette;
