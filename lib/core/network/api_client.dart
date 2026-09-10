@@ -24,8 +24,11 @@ class ApiClient {
 
     final dio = Dio(BaseOptions(
       baseUrl: storedUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      // Generous enough for a slow/congested mobile connection to a
+      // shared-hosting server — 15s was cutting off requests that a
+      // browser (with its own longer patience) still completed fine.
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
       headers: {'Accept': 'application/json'},
     ));
 
