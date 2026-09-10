@@ -14,7 +14,7 @@ const _defaultMilestones = [
   Milestone(year: '٢٠١٧', title: 'دامەزراندنی کۆمپانیا لە کەرکوک', icon: Icons.flag_circle_rounded),
   Milestone(year: '٢٠١٩', title: 'یەکەم پڕۆژەی سکنی تەواو کرا', icon: Icons.apartment_rounded),
   Milestone(year: '٢٠٢١', title: 'گەیشتنە ژمارەی ٥٠٠ خانووی نیشتەجێکراو', icon: Icons.groups_rounded),
-  Milestone(year: '٢٠٢٤', title: 'وەرگرتنی بادجی Verified لە شکۆدار', icon: Icons.verified_rounded),
+  Milestone(year: '٢٠٢٤', title: 'وەرگرتنی بادجی Verified لە موڵک', icon: Icons.verified_rounded),
 ];
 
 /// The editable half of a business account's public profile — everything an

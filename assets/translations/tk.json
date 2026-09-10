@@ -1,5 +1,5 @@
 {
-  "app_name": "Şikodar",
+  "app_name": "MULK",
   "splash": {
     "tagline": "Hayallerini gerçekleştir"
   },
@@ -31,7 +31,7 @@
     "forgot_password": "Şifrenizi mi unuttunuz?",
     "forgot_unavailable": "Şifre kurtarma, sunucu bağlandığında etkinleştirilecektir.",
     "welcome_back": "Tekrar hoş geldiniz",
-    "login_subtitle": "Şikodar'a girmek için telefon numaranızı ve şifrenizi yazın.",
+    "login_subtitle": "MULK'a girmek için telefon numaranızı ve şifrenizi yazın.",
     "trust_note": "Güvenilir emlak pazarı",
     "no_account": "Hesabınız yok mu?",
     "have_account": "Zaten hesabınız var mı?",
@@ -46,7 +46,7 @@
     "specialties": "Uzmanlıklarınızı seçin",
     "specialty_required": "En az bir uzmanlık seçin",
     "password_section": "Hesap güvenliği",
-    "terms": "Şikodar'ın koşullarını ve gizlilik politikasını kabul ediyorum.",
+    "terms": "MULK'ın koşullarını ve gizlilik politikasını kabul ediyorum.",
     "accept_terms": "Lütfen önce şartları kabul edin.",
     "profile_photo_optional": "Profil resmi (isteğe bağlı)",
     "agency_benefit": "Özel portföy ve profesyonel emlakçı araçları",
@@ -449,7 +449,7 @@
     "unlimited_count": "{} — Sınırsız",
     "active_offer_title": "Katılım: Premium pakette %20 indirim",
     "active_offer_expiry": "Bu ayın 30'una kadar aktif",
-    "business_contact_note": "Emlakçı, şirket ve konut kompleksi hesapları yalnızca Şikodar yönetimi tarafından oluşturulur. Başlamak için bize ulaşın."
+    "business_contact_note": "Emlakçı, şirket ve konut kompleksi hesapları yalnızca MULK yönetimi tarafından oluşturulur. Başlamak için bize ulaşın."
   },
   "settings_page": {
     "logout_dialog_title": "Çıkış yap",
@@ -504,7 +504,7 @@
   },
   "developer_profile": {
     "video_tour_label": "Şirket turu",
-    "subtitle": "Şikodar geliştiricisi · {} yılında kuruldu",
+    "subtitle": "MULK geliştiricisi · {} yılında kuruldu",
     "badge": "Doğrulanmış emlak geliştiricisi",
     "stat_projects": "Proje",
     "stat_units_delivered": "Teslim edilen birim",
@@ -550,7 +550,7 @@
   },
   "offers": {
     "title": "Fırsatlar",
-    "active_count": "Şikodar kullanıcıları için aktif fırsatlar: {}",
+    "active_count": "MULK kullanıcıları için aktif fırsatlar: {}",
     "empty": "Şu anda aktif bir fırsat yok",
     "new_badge": "Yeni",
     "special_offer_badge": "Özel fırsat",
@@ -647,9 +647,9 @@
     "type_suggestion": "Öneri",
     "type_complaint": "Şikayet",
     "type_praise": "Övgü",
-    "intro": "Geri bildiriminiz Şikodar'ı geliştirmemize yardımcı olur",
+    "intro": "Geri bildiriminiz MULK'ı geliştirmemize yardımcı olur",
     "type_label": "Geri Bildirim Türü",
-    "rating_label": "Şikodar hakkında ne hissediyorsunuz?",
+    "rating_label": "MULK hakkında ne hissediyorsunuz?",
     "message_label": "Mesajınız",
     "message_hint": "Geri bildiriminizin ayrıntılarını buraya yazın...",
     "add_screenshot": "Ekran görüntüsü ekle (isteğe bağlı)",
@@ -658,7 +658,7 @@
     "pick_image_error": "Görsel seçilirken bir sorun oluştu",
     "submit_error": "Geri bildirim gönderilemedi, lütfen tekrar deneyin",
     "success_title": "Geri bildiriminiz için teşekkürler!",
-    "success_message": "Şikodar ekibi geri bildiriminizi inceleyecek ve en kısa sürede size dönecektir.",
+    "success_message": "MULK ekibi geri bildiriminizi inceleyecek ve en kısa sürede size dönecektir.",
     "ok_button": "Tamam"
   },
   "reels": {

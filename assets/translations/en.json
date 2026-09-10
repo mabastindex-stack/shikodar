@@ -1,5 +1,5 @@
 {
-  "app_name": "Şikodar",
+  "app_name": "MULK",
   "splash": {
     "tagline": "Make your dreams come true"
   },
@@ -31,7 +31,7 @@
     "forgot_password": "Forgot password?",
     "forgot_unavailable": "Password recovery will be enabled when the server is connected.",
     "welcome_back": "Welcome back",
-    "login_subtitle": "Enter your phone number and password to access Shikodar.",
+    "login_subtitle": "Enter your phone number and password to access MULK.",
     "trust_note": "A trusted real-estate marketplace",
     "no_account": "Don't have an account?",
     "have_account": "Already have an account?",
@@ -46,7 +46,7 @@
     "specialties": "Choose your specialties",
     "specialty_required": "Choose at least one specialty",
     "password_section": "Account security",
-    "terms": "I agree to Shikodar's terms, conditions and privacy policy.",
+    "terms": "I agree to MULK's terms, conditions and privacy policy.",
     "accept_terms": "Please agree to the terms and conditions first.",
     "profile_photo_optional": "Profile photo (optional)",
     "agency_benefit": "A dedicated portfolio and professional broker tools",
@@ -449,7 +449,7 @@
     "unlimited_count": "{} — Unlimited",
     "active_offer_title": "Enrolled in: 20% discount on the Premium package",
     "active_offer_expiry": "Active until the 30th of this month",
-    "business_contact_note": "Agency, company, and residential-complex accounts are created by the Shikodar admin only. Contact us to get started."
+    "business_contact_note": "Agency, company, and residential-complex accounts are created by the MULK admin only. Contact us to get started."
   },
   "settings_page": {
     "logout_dialog_title": "Log Out",
@@ -504,7 +504,7 @@
   },
   "developer_profile": {
     "video_tour_label": "Company Tour",
-    "subtitle": "Shikodar Developer · Founded in {}",
+    "subtitle": "MULK Developer · Founded in {}",
     "badge": "Verified Real-Estate Developer",
     "stat_projects": "Projects",
     "stat_units_delivered": "Units Delivered",
@@ -550,7 +550,7 @@
   },
   "offers": {
     "title": "Offers",
-    "active_count": "Active offers for Shikodar users: {}",
+    "active_count": "Active offers for MULK users: {}",
     "empty": "No offers are currently active",
     "new_badge": "New",
     "special_offer_badge": "Special Offer",
@@ -647,9 +647,9 @@
     "type_suggestion": "Suggestion",
     "type_complaint": "Complaint",
     "type_praise": "Compliment",
-    "intro": "Your feedback helps us make Shikodar better",
+    "intro": "Your feedback helps us make MULK better",
     "type_label": "Feedback Type",
-    "rating_label": "How do you feel about Shikodar?",
+    "rating_label": "How do you feel about MULK?",
     "message_label": "Your Message",
     "message_hint": "Write the details of your feedback here...",
     "add_screenshot": "Add a screenshot (optional)",
@@ -658,7 +658,7 @@
     "pick_image_error": "A problem occurred while selecting the image",
     "submit_error": "Couldn't send your feedback, please try again",
     "success_title": "Thanks for your feedback!",
-    "success_message": "The Shikodar team will review your feedback and get back to you as soon as possible.",
+    "success_message": "The MULK team will review your feedback and get back to you as soon as possible.",
     "ok_button": "OK"
   },
   "reels": {

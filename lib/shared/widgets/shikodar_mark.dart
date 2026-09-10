@@ -21,7 +21,7 @@ class ShikodarMark extends StatelessWidget {
     final value = progress.clamp(0.0, 1.0).toDouble();
     return Semantics(
       image: true,
-      label: 'Shikodar',
+      label: 'MULK',
       child: Container(
         width: size,
         height: size,

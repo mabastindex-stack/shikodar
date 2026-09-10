@@ -155,7 +155,7 @@ class SikodarApp extends StatelessWidget {
     final fontFamily = AppFonts.forLocale(context.locale);
 
     return MaterialApp(
-      title: 'Şikodar',
+      title: 'MULK',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: [
         ...context.localizationDelegates,
