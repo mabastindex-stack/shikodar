@@ -19,10 +19,11 @@ import 'onboarding_screen.dart';
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
 
 /// App entry point — a cinematic wordmark reveal ("MULK" set as one flowing
-/// hand-lettered script under a breathing glow, framed above and below by
-/// two scattered bands of twenty gently-bobbing, jeweled property-icon
-/// medallions) while a previous session restores in the background, then a
-/// cross-fade into onboarding or straight into the app.
+/// hand-lettered script under a breathing glow) over twenty jeweled
+/// property-icon medallions scattered freely across the whole screen, each
+/// slowly drifting in its own lazy loop, while a previous session restores
+/// in the background, then a cross-fade into onboarding or straight into
+/// the app.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -43,10 +44,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   /// the incoming page's own fade-in.
   bool _leaving = false;
 
-  /// Size of the wordmark stage — wide enough to fan out ten badges per
-  /// icon band without crowding.
-  static const _stageWidth = 420.0;
-  static const _stageHeight = 290.0;
+  /// Size of the wordmark/halo stage — the icon constellation lives
+  /// separately, scattered across the full screen (see [_scatteredIcons]).
+  static const _stageWidth = 280.0;
+  static const _stageHeight = 220.0;
 
   /// Cycled through to fill both icon bands — repeating the same handful of
   /// property glyphs (like a repeated bird/tree motif on a hand-lettered
@@ -120,17 +121,26 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.dispose();
   }
 
-  /// One small badge in either icon band (above or below the wordmark) — a
-  /// real property-themed glyph in a glass-highlighted, jeweled medallion.
-  /// Fades/pops in on entrance, then gently bobs in place for the rest of
-  /// the reveal — it never drifts toward the sides, staying strictly in its
-  /// horizontal band above or below the lettering.
+  /// A tiny, deterministic pseudo-random value in [0, 1) for a given index —
+  /// stable across rebuilds (unlike [math.Random]), so the scattered icons
+  /// never jump around when the ambient animation ticks and rebuilds the
+  /// tree every frame.
+  static double _hash(int seed) {
+    final x = math.sin(seed * 12.9898) * 43758.5453;
+    return x - x.floorToDouble();
+  }
+
+  /// One badge floating free anywhere on the page — a real property-themed
+  /// glyph in a glass-highlighted, jeweled medallion. Fades/pops in on
+  /// entrance, then drifts in a slow, gentle elliptical loop (x via sine, y
+  /// via a slightly out-of-phase cosine) for the rest of the reveal — a lazy
+  /// floating-balloon motion rather than a simple up-down bob.
   Widget _iconBadge({
     required IconData icon,
     required double dx,
     required double dy,
     required int delayMs,
-    required double bobPhase,
+    required double phase,
     double size = 26,
     bool goldVariant = false,
   }) {
@@ -140,10 +150,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     return AnimatedBuilder(
       animation: _ambient,
       builder: (context, child) {
-        final bob = math.sin((_ambient.value + bobPhase) * math.pi) * 3.5;
+        final t = (_ambient.value * 2 + phase) * math.pi;
+        final driftX = math.sin(t) * 10;
+        final driftY = math.cos(t * 0.8) * 12;
         return Positioned(
-          left: dx,
-          top: dy + bob,
+          left: dx + driftX,
+          top: dy + driftY,
           child: child!,
         );
       },
@@ -183,35 +195,29 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
   }
 
-  /// Twenty of [_iconBadge] laid out as two loose scattered rows — one above
-  /// the wordmark, one below — never at its sides. [stageWidth]/[stageHeight]
-  /// are the size of the enclosing Stack, used to convert the -1..1 spread
-  /// below into actual pixel positions.
-  List<Widget> _iconBands({required double stageWidth, required double stageHeight}) {
-    const perRow = 10;
+  /// Twenty of [_iconBadge] scattered freely across the *entire* screen —
+  /// not confined to a band near the wordmark — using a fixed pseudo-random
+  /// layout (via [_hash]) so it looks organically strewn rather than lined
+  /// up in neat rows, while staying stable frame to frame.
+  List<Widget> _scatteredIcons(Size screen) {
     final widgets = <Widget>[];
-    for (var row = 0; row < 2; row++) {
-      final isTop = row == 0;
-      for (var i = 0; i < perRow; i++) {
-        final icon = _icons[i % _icons.length];
-        final t = i / (perRow - 1); // 0..1 across the row
-        final x = stageWidth * (0.06 + t * 0.88) - 13;
-        // A gentle scattered arc instead of a razor-straight line — every
-        // third badge sits a little further from the wordmark.
-        final jitter = (i % 3 == 0) ? 14.0 : (i % 3 == 1 ? 0.0 : 7.0);
-        final y = isTop ? jitter : stageHeight - 26 - jitter;
-        widgets.add(
-          _iconBadge(
-            icon: icon,
-            dx: x,
-            dy: y,
-            delayMs: 500 + i * 55 + (isTop ? 0 : 400),
-            bobPhase: i * 0.31 + (isTop ? 0 : 0.5),
-            size: i.isEven ? 27 : 22,
-            goldVariant: i.isOdd,
-          ),
-        );
-      }
+    for (var i = 0; i < 20; i++) {
+      final icon = _icons[i % _icons.length];
+      final size = 20.0 + _hash(i * 7 + 3) * 16; // 20–36
+      // Margins keep every badge fully on screen even at max drift/size.
+      final fx = 0.06 + _hash(i * 2 + 1) * 0.88;
+      final fy = 0.05 + _hash(i * 2 + 2) * 0.86;
+      widgets.add(
+        _iconBadge(
+          icon: icon,
+          dx: screen.width * fx - size / 2,
+          dy: screen.height * fy - size / 2,
+          delayMs: 400 + i * 70,
+          phase: _hash(i * 3 + 5) * 2,
+          size: size,
+          goldVariant: i.isOdd,
+        ),
+      );
     }
     return widgets;
   }
@@ -240,6 +246,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     final palette = context.palette;
     final reduceMotion = AppMotion.reduce(context);
+    final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -280,6 +287,11 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   ),
                 ),
               ),
+
+              // Twenty badges floating freely across the whole screen —
+              // scattered, not lined up — sitting behind the wordmark below.
+              if (!reduceMotion) ..._scatteredIcons(screenSize),
+
               AnimatedOpacity(
                 opacity: _leaving ? 0 : 1,
                 duration: AppMotion.splashExit,
@@ -298,11 +310,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              // Twenty icon badges in two scattered bands —
-                              // strictly above and below the wordmark, never
-                              // at its sides.
-                              if (!reduceMotion) ..._iconBands(stageWidth: _stageWidth, stageHeight: _stageHeight),
-
                               // Soft breathing halo behind the wordmark.
                               Positioned(
                                 left: _stageWidth / 2 - 115,
