@@ -143,10 +143,10 @@ class ReelsScreenState extends State<ReelsScreen> {
                         child: Container(
                           height: 42,
                           padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(color: const Color(0xFF0E1917).withOpacity(0.55), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.gold.withOpacity(0.35))),
+                          decoration: BoxDecoration(color: const Color(0xFF0E1917).withOpacity(0.55), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.24))),
                           child: Row(
                             children: [
-                              const Icon(Icons.search_rounded, size: 18, color: AppColors.gold),
+                              const Icon(Icons.search_rounded, size: 18, color: Colors.white70),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: TextField(
@@ -162,7 +162,7 @@ class ReelsScreenState extends State<ReelsScreen> {
                                     focusedBorder: InputBorder.none,
                                     contentPadding: EdgeInsets.zero,
                                     hintText: 'reels.search_hint'.tr(),
-                                    hintStyle: TextStyle(color: AppColors.gold.withOpacity(0.55), fontSize: 12.5),
+                                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12.5),
                                   ),
                                 ),
                               ),
@@ -176,16 +176,16 @@ class ReelsScreenState extends State<ReelsScreen> {
                   _ReelIconButton(
                     onTap: () => setState(() => _muted = !_muted),
                     color: const Color(0xFF0E1917).withOpacity(0.55),
-                    borderColor: AppColors.gold.withOpacity(0.35),
-                    child: Icon(_muted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: AppColors.gold, size: 18),
+                    borderColor: Colors.white.withOpacity(0.24),
+                    child: Icon(_muted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: Colors.white70, size: 18),
                   ).entrance(index: 1),
                   const SizedBox(width: 10),
                   _ReelIconButton(
                     onTap: _openFilters,
                     gradient: (_purpose != null || _type != 'all') ? AppColors.goldGradient : null,
                     color: (_purpose != null || _type != 'all') ? null : const Color(0xFF0E1917).withOpacity(0.55),
-                    borderColor: (_purpose != null || _type != 'all') ? null : AppColors.gold.withOpacity(0.35),
-                    child: Icon(Icons.tune_rounded, size: 18, color: (_purpose != null || _type != 'all') ? AppColors.ink : AppColors.gold),
+                    borderColor: (_purpose != null || _type != 'all') ? null : Colors.white.withOpacity(0.24),
+                    child: Icon(Icons.tune_rounded, size: 18, color: (_purpose != null || _type != 'all') ? AppColors.ink : Colors.white70),
                   ).entrance(index: 2),
                 ],
               ),

@@ -141,11 +141,16 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         // the original file if compression fails for any reason, so a
         // publish never gets blocked by it.
         try {
+          // Caps every reel at 720p regardless of the source resolution —
+          // keeps the visual quality high enough for a vertical feed while
+          // making the output size predictable (a 4K phone clip compresses
+          // far more than MediumQuality's relative scaling would give it).
           final compressed = await VideoCompress.compressVideo(
             _video!.path,
-            quality: VideoQuality.MediumQuality,
+            quality: VideoQuality.Res1280x720Quality,
             deleteOrigin: false,
             includeAudio: true,
+            frameRate: 30,
           );
           if (compressed?.path != null) uploadPath = compressed!.path;
         } catch (_) {
