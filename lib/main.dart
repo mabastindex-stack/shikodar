@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'core/navigation/app_route_observer.dart';
 import 'core/network/activity_repository.dart';
 import 'core/network/api_client.dart';
 import 'core/network/auth_repository.dart';
@@ -161,6 +162,7 @@ class SikodarApp extends StatelessWidget {
     return MaterialApp(
       title: 'MULK',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver],
       localizationsDelegates: [
         ...context.localizationDelegates,
         GlobalWidgetsLocalizations.delegate,

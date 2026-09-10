@@ -107,12 +107,15 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
         children: [
           // Real photo always underneath — never a flat black screen.
           _photoBackground(),
+          // Shows the video at its own real aspect ratio (contain, not
+          // cover) — a vertical clip still fills the screen edge to edge,
+          // but a horizontal or square one is no longer cropped/zoomed to
+          // force-fill a 9:16 frame; the photo behind it fills the rest,
+          // the same way TikTok letterboxes a non-vertical video.
           if (_ready && _controller != null)
-            FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: _controller!.value.size.width,
-                height: _controller!.value.size.height,
+            Center(
+              child: AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
                 child: VideoPlayer(_controller!),
               ),
             )

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/listing.dart';
+import '../../../core/navigation/app_route_observer.dart';
 import '../../../core/network/activity_repository.dart';
 import '../../../core/network/reel_repository.dart';
 import '../../../core/theme/app_colors.dart';
@@ -20,7 +21,7 @@ class ReelsScreen extends StatefulWidget {
   State<ReelsScreen> createState() => ReelsScreenState();
 }
 
-class ReelsScreenState extends State<ReelsScreen> {
+class ReelsScreenState extends State<ReelsScreen> with RouteAware {
   final _pageController = PageController();
   final _searchController = TextEditingController();
   final Map<int, GlobalKey<ReelVideoPlayerState>> _playerKeys = {};
@@ -49,6 +50,23 @@ class ReelsScreenState extends State<ReelsScreen> {
     refresh();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  /// Another screen was just pushed on top of this one (e.g. tapping
+  /// through to a listing or agency profile from a reel) — pause so its
+  /// video/audio doesn't keep running behind the new screen.
+  @override
+  void didPushNext() => pauseActive();
+
+  /// Back on top again after that screen was popped — resume where we
+  /// left off.
+  @override
+  void didPopNext() => resumeActive();
+
   /// Kept alive by the bottom nav's IndexedStack, so it never rebuilds on
   /// its own when a reel is published elsewhere and the visitor switches
   /// back to this tab — called by HomeShell each time that happens so the
@@ -59,6 +77,22 @@ class ReelsScreenState extends State<ReelsScreen> {
     }).catchError((_) {
       if (mounted) setState(() => _isLoading = false);
     });
+  }
+
+  /// Pauses the currently on-screen reel's video — called by HomeShell the
+  /// instant the visitor switches to a different bottom-nav tab. Without
+  /// this, the reel (and its audio) kept playing invisibly in the
+  /// background: this screen stays mounted inside HomeShell's IndexedStack
+  /// rather than being disposed on tab switch, so nothing else ever told
+  /// its VideoPlayerController to stop.
+  void pauseActive() {
+    _keyFor(_activeIndex).currentState?.controller?.pause();
+  }
+
+  /// Resumes the on-screen reel — called by HomeShell right after
+  /// switching back to this tab, mirroring pauseActive().
+  void resumeActive() {
+    _keyFor(_activeIndex).currentState?.controller?.play();
   }
 
   void _resetToTop() {
@@ -84,6 +118,7 @@ class ReelsScreenState extends State<ReelsScreen> {
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _searchController.dispose();
     _pageController.dispose();
     super.dispose();

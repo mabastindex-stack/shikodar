@@ -44,12 +44,19 @@ class _HomeShellState extends State<HomeShell> {
   void _select(int index) {
     if (index == _index) return;
     HapticFeedback.selectionClick();
+    // Reels stays mounted (and playing) inside the IndexedStack below —
+    // pause it the moment we leave, or its video/audio keeps running
+    // invisibly in the background on whatever tab we switch to.
+    if (_index == _reelsIndex) _reelsKey.currentState?.pauseActive();
     setState(() => _index = index);
     // These tabs stay alive in the IndexedStack for the whole app session,
     // so without this they'd keep showing whatever existed at app launch —
     // never anything published afterwards.
     if (index == _searchIndex) _searchMapKey.currentState?.refresh();
-    if (index == _reelsIndex) _reelsKey.currentState?.refresh();
+    if (index == _reelsIndex) {
+      _reelsKey.currentState?.refresh();
+      _reelsKey.currentState?.resumeActive();
+    }
     if (index == _homeIndex) _homeFeedKey.currentState?.refresh();
   }
 
