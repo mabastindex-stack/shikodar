@@ -167,17 +167,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                 ),
                               ),
 
-                              // "MULK" set as one flowing hand-lettered
-                              // script — Yellowtail — nothing else on stage
-                              // to compete with it.
+                              // "MULK" set in the app's own English
+                              // typeface (Plus Jakarta Sans) — nothing else
+                              // on stage to compete with it.
                               ShaderMask(
                                 shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
                                 child: const Text(
                                   'MULK',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontFamily: 'Yellowtail',
-                                    fontSize: 112,
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 72,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1,
                                     height: 1,
                                   ),
                                 ),
