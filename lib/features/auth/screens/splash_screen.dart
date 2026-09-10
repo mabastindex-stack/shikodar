@@ -223,11 +223,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         // visitor picks a language in Settings.
                         Text(
                           'splash.tagline'.tr(),
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: isLatinScript ? 0.6 : 0.2,
+                            color: palette.gold,
+                            fontFamily: isLatinScript ? 'PlayfairDisplay' : null,
+                            fontStyle: isLatinScript ? FontStyle.italic : FontStyle.normal,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: isLatinScript ? 0.4 : 0.2,
                           ),
                         )
                             .animate(delay: 1200.ms)

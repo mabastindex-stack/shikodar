@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,6 +10,7 @@ import '../../../core/theme/app_palette.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../projects/screens/projects_list_screen.dart';
 import '../../reels/screens/reels_screen.dart';
+import '../widgets/nav_glyph.dart';
 import 'home_feed_screen.dart';
 import 'search_map_screen.dart';
 
@@ -89,21 +89,17 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class _NavDestination {
-  const _NavDestination(this.icon, this.selectedIcon, this.label);
+  const _NavDestination(this.glyph, this.label);
 
-  final IconData icon;
-  final IconData selectedIcon;
+  final NavGlyphType glyph;
   final String label;
 }
 
 List<_NavDestination> get _destinations => <_NavDestination>[
-      _NavDestination(CupertinoIcons.compass, CupertinoIcons.compass_fill, 'nav.search'.tr()),
-      _NavDestination(CupertinoIcons.play_circle, CupertinoIcons.play_circle_fill, 'nav.reels'.tr()),
-      // Cupertino Icons only ships a filled "buildings" glyph — no outline
-      // counterpart exists — so both states reuse it and rely on color
-      // (like the rest of the bar) to show selection.
-      _NavDestination(CupertinoIcons.building_2_fill, CupertinoIcons.building_2_fill, 'nav.projects'.tr()),
-      _NavDestination(CupertinoIcons.person, CupertinoIcons.person_fill, 'nav.me'.tr()),
+      _NavDestination(NavGlyphType.search, 'nav.search'.tr()),
+      _NavDestination(NavGlyphType.reels, 'nav.reels'.tr()),
+      _NavDestination(NavGlyphType.projects, 'nav.projects'.tr()),
+      _NavDestination(NavGlyphType.profile, 'nav.me'.tr()),
     ];
 
 const _destinationIndexes = <int>[0, 1, 3, 4];
@@ -189,10 +185,11 @@ class _LuxuryNavigationBar extends StatelessWidget {
               children: [
                 AnimatedSwitcher(
                   duration: AppMotion.quick,
-                  child: Icon(
-                    selected ? destination.selectedIcon : destination.icon,
+                  child: NavGlyph(
                     key: ValueKey(selected),
-                    color: selected ? palette.primary : palette.textMuted,
+                    type: destination.glyph,
+                    selected: selected,
+                    mutedColor: palette.textMuted,
                     size: 23,
                   ),
                 ),
@@ -270,9 +267,11 @@ class _HomeButtonState extends State<_HomeButton> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Icon(
-                  widget.selected ? CupertinoIcons.house_fill : CupertinoIcons.house,
-                  color: Colors.white,
+                NavGlyph(
+                  type: NavGlyphType.home,
+                  selected: widget.selected,
+                  mutedColor: Colors.white,
+                  overrideColor: Colors.white,
                   size: 26,
                 ),
                 Positioned(
