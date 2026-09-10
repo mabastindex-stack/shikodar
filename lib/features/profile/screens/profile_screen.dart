@@ -6,10 +6,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/models/dashboard_stats.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
+import '../../../core/network/dashboard_repository.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/network/reel_repository.dart';
@@ -39,11 +41,6 @@ import 'settings_screen.dart';
 /// 'ku' (Kurdish isn't in its ICU data; see notifications_screen.dart).
 String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
-/// Advertised (not backend-enforced — see PackagesScreen) per-tier limits,
-/// used only to size the usage bars against real counts. `null` = unlimited.
-const _tierListingsLimit = {'starter': 10, 'basic': 20, 'business': 50, 'premium': 100};
-const _tierReelsLimit = {'starter': 2, 'basic': 5, 'business': 15, 'premium': 40};
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -60,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   List<Listing> _myListings = [];
   List<Project> _myProjects = [];
   List<Reel> _myReels = [];
+  DashboardStats? _dashboardStats;
   bool _isLoadingContent = true;
 
   @override
@@ -84,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         _myListings = [];
         _myProjects = [];
         _myReels = [];
+        _dashboardStats = null;
       });
       return;
     }
@@ -91,17 +90,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final listingRepository = context.read<ListingRepository>();
     final projectRepository = context.read<ProjectRepository>();
     final reelRepository = context.read<ReelRepository>();
+    final dashboardRepository = context.read<DashboardRepository>();
     try {
       final results = await Future.wait([
         listingRepository.fetchMine(),
         projectRepository.fetchMine(),
         reelRepository.fetchMine(),
+        dashboardRepository.fetchStats(),
       ]);
       if (!mounted) return;
       setState(() {
         _myListings = results[0] as List<Listing>;
         _myProjects = results[1] as List<Project>;
         _myReels = results[2] as List<Reel>;
+        _dashboardStats = results[3] as DashboardStats;
         _isLoadingContent = false;
       });
     } catch (_) {
@@ -777,10 +779,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _premiumPackageCard(BuildContext context, AppPalette palette, {required bool isCompany, required int postsCount, required int reelsCount}) {
     final session = context.watch<UserSession>();
-    final tier = PackageTier.values.firstWhere((t) => t.name == session.tier, orElse: () => PackageTier.starter);
     final expiry = session.contractEndDate;
-    final listingsLimit = _tierListingsLimit[tier.name];
-    final reelsLimit = _tierReelsLimit[tier.name];
+    final stats = _dashboardStats;
+    final hasPackage = stats?.packageTitle != null;
+    final listingsLimit = stats?.listingsLimit;
+    final reelsLimit = stats?.reelsLimit;
     return GestureDetector(
       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackagesScreen())),
       child: Container(
@@ -806,10 +809,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('profile_page.package_title'.tr(args: [tier.label]), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                      Text(
+                        hasPackage ? 'profile_page.package_title'.tr(args: [stats!.packageTitle!]) : 'profile_page.no_active_package_title'.tr(),
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
+                      ),
                       const SizedBox(height: 2),
                       Text(
-                        expiry != null ? 'profile_page.package_expiry'.tr(args: [_formatDate(expiry)]) : 'profile_page.package_expiry_unknown'.tr(),
+                        !hasPackage
+                            ? 'profile_page.no_active_package_subtitle'.tr()
+                            : (expiry != null ? 'profile_page.package_expiry'.tr(args: [_formatDate(expiry)]) : 'profile_page.package_expiry_unknown'.tr()),
                         style: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 11),
                       ),
                     ],
@@ -819,19 +827,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ],
             ),
             const SizedBox(height: 16),
-            isCompany
-                ? _usageRow('profile_page.usage_projects_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$postsCount']), 1.0)
-                : _usageRow(
-                    'profile_page.usage_listings_label'.tr(),
-                    listingsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$postsCount']) : '$postsCount/$listingsLimit',
-                    listingsLimit == null ? 1.0 : (postsCount / listingsLimit).clamp(0.0, 1.0),
-                  ),
-            const SizedBox(height: 12),
-            _usageRow(
-              'profile_page.usage_reels_label'.tr(),
-              reelsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$reelsCount']) : '$reelsCount/$reelsLimit',
-              reelsLimit == null ? 1.0 : (reelsCount / reelsLimit).clamp(0.0, 1.0),
-            ),
+            if (hasPackage) ...[
+              isCompany
+                  ? _usageRow('profile_page.usage_projects_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$postsCount']), 1.0)
+                  : _usageRow(
+                      'profile_page.usage_listings_label'.tr(),
+                      listingsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$postsCount']) : '$postsCount/$listingsLimit',
+                      listingsLimit == null ? 1.0 : (postsCount / listingsLimit).clamp(0.0, 1.0),
+                    ),
+              const SizedBox(height: 12),
+              _usageRow(
+                'profile_page.usage_reels_label'.tr(),
+                reelsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$reelsCount']) : '$reelsCount/$reelsLimit',
+                reelsLimit == null ? 1.0 : (reelsCount / reelsLimit).clamp(0.0, 1.0),
+              ),
+            ],
           ],
         ),
       ),

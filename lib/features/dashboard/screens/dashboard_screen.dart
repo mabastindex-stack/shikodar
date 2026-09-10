@@ -3,15 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/dashboard_stats.dart';
-import '../../../core/models/listing.dart';
 import '../../../core/network/dashboard_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
-
-/// Advertised (not backend-enforced — see PackagesScreen) per-tier limits,
-/// used only to size the usage bars against real counts. `null` = unlimited.
-const _tierListingsLimit = {'starter': 10, 'basic': 20, 'business': 50, 'premium': 100};
-const _tierReelsLimit = {'starter': 2, 'basic': 5, 'business': 15, 'premium': 40};
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -80,7 +74,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _content(AppPalette palette, DashboardStats stats) {
-    final tier = PackageTier.values.firstWhere((t) => t.name == stats.tier, orElse: () => PackageTier.starter);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
       children: [
@@ -110,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 28),
         Text('dashboard.package_usage_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 300.ms).fadeIn(duration: 300.ms),
         const SizedBox(height: 14),
-        _packageUsageCard(tier, stats).animate(delay: 340.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
+        _packageUsageCard(stats).animate(delay: 340.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
 
         const SizedBox(height: 28),
         Text('dashboard.recent_activity_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)).animate(delay: 380.ms).fadeIn(duration: 300.ms),
@@ -246,9 +239,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _packageUsageCard(PackageTier tier, DashboardStats stats) {
-    final listingsLimit = _tierListingsLimit[tier.name];
-    final reelsLimit = _tierReelsLimit[tier.name];
+  Widget _packageUsageCard(DashboardStats stats) {
+    final hasPackage = stats.packageTitle != null;
+    final listingsLimit = stats.listingsLimit;
+    final reelsLimit = stats.reelsLimit;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -263,21 +257,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Icon(Icons.workspace_premium_rounded, color: AppColors.gold, size: 18),
               const SizedBox(width: 8),
-              Text('dashboard.package_title'.tr(args: [tier.label]), style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800)),
+              Text(
+                hasPackage ? 'dashboard.package_title'.tr(args: [stats.packageTitle!]) : 'dashboard.no_active_package_title'.tr(),
+                style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800),
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          _usageRow(
-            'dashboard.usage_listings_label'.tr(),
-            listingsLimit == null ? 'dashboard.unlimited_label'.tr() : '${stats.activeListings}/$listingsLimit',
-            listingsLimit == null ? 1.0 : (stats.activeListings / listingsLimit).clamp(0.0, 1.0),
-          ),
-          const SizedBox(height: 12),
-          _usageRow(
-            'dashboard.usage_reels_label'.tr(),
-            reelsLimit == null ? 'dashboard.unlimited_label'.tr() : '${stats.activeReels}/$reelsLimit',
-            reelsLimit == null ? 1.0 : (stats.activeReels / reelsLimit).clamp(0.0, 1.0),
-          ),
+          if (hasPackage) ...[
+            _usageRow(
+              'dashboard.usage_listings_label'.tr(),
+              listingsLimit == null ? 'dashboard.unlimited_label'.tr() : '${stats.activeListings}/$listingsLimit',
+              listingsLimit == null ? 1.0 : (stats.activeListings / listingsLimit).clamp(0.0, 1.0),
+            ),
+            const SizedBox(height: 12),
+            _usageRow(
+              'dashboard.usage_reels_label'.tr(),
+              reelsLimit == null ? 'dashboard.unlimited_label'.tr() : '${stats.activeReels}/$reelsLimit',
+              reelsLimit == null ? 1.0 : (stats.activeReels / reelsLimit).clamp(0.0, 1.0),
+            ),
+          ] else
+            Text('dashboard.no_active_package_subtitle'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
         ],
       ),
     );

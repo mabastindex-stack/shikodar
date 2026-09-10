@@ -51,6 +51,15 @@ class DashboardStats {
   final int activeReels;
   final double responseRatePercent;
   final String? tier;
+
+  /// The account's REAL publish limits, straight from its active
+  /// PackageAssignment (Agency::activeOffer() server-side) — never a
+  /// tier-based guess. `packageTitle` is null when there's no active
+  /// package at all (nothing can be published yet); a null limit while
+  /// `packageTitle` is set means that specific package is unlimited.
+  final String? packageTitle;
+  final int? listingsLimit;
+  final int? reelsLimit;
   final List<RecentActivityItem> recentActivity;
 
   const DashboardStats({
@@ -64,6 +73,9 @@ class DashboardStats {
     required this.activeReels,
     required this.responseRatePercent,
     this.tier,
+    this.packageTitle,
+    this.listingsLimit,
+    this.reelsLimit,
     required this.recentActivity,
   });
 
@@ -78,6 +90,9 @@ class DashboardStats {
         activeReels: json['active_reels'] ?? 0,
         responseRatePercent: (json['response_rate_percent'] as num?)?.toDouble() ?? 0,
         tier: json['tier'],
+        packageTitle: json['package_title'],
+        listingsLimit: json['listings_limit'],
+        reelsLimit: json['reels_limit'],
         recentActivity: (json['recent_activity'] as List).map((a) => RecentActivityItem.fromJson(a)).toList(),
       );
 }
