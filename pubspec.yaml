@@ -64,6 +64,9 @@ flutter:
       fonts:
         - asset: assets/fonts/K24KurdishBold-Bold.ttf
           weight: 700
+    - family: Dashling
+      fonts:
+        - asset: assets/fonts/Quicksand_Dash.otf
     - family: Quicksand
       fonts:
         - asset: assets/fonts/Quicksand_Light.otf

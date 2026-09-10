@@ -12,17 +12,17 @@ import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/widgets/shikodar_mark.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../../home/screens/home_shell.dart';
 import 'onboarding_screen.dart';
 
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
 
-/// App entry point — a cinematic wordmark reveal (mark draws itself, then
-/// "MULK" cascades in letter by letter under a breathing glow, orbited by
-/// slowly-revolving property icons) while a previous session restores in
-/// the background, then a cross-fade into onboarding or straight into the app.
+/// App entry point — a cinematic wordmark reveal ("MULK", set in the bespoke
+/// Dashling display face, cascades in letter by letter under a breathing
+/// glow, orbited by slowly-revolving property icons) while a previous session
+/// restores in the background, then a cross-fade into onboarding or straight
+/// into the app.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -32,7 +32,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late final AnimationController _ambient;
-  late final AnimationController _logoDraw;
   late final AnimationController _orbitSpin;
 
   /// Kicked off immediately so it resolves alongside (not after) the brief
@@ -60,7 +59,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.initState();
     _restoreSessionFuture = context.read<AuthRepository>().restoreSession();
     _ambient = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))..repeat(reverse: true);
-    _logoDraw = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
     _orbitSpin = AnimationController(vsync: this, duration: const Duration(seconds: 46))..repeat();
     _bootstrap();
   }
@@ -113,7 +111,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   void dispose() {
     _ambient.dispose();
-    _logoDraw.dispose();
     _orbitSpin.dispose();
     super.dispose();
   }
@@ -235,8 +232,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 340,
-                          height: 220,
+                          width: 380,
+                          height: 240,
                           child: Stack(
                             alignment: Alignment.center,
                             clipBehavior: Clip.none,
@@ -255,12 +252,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 _orbitIcon(icon: _orbitIcons[5], baseAngle: 1.0, radiusX: 1.0, radiusY: 0.95, delayMs: 1200, size: 30),
                               ],
 
-                              // Soft breathing halo behind the mark/wordmark.
+                              // Soft breathing halo behind the wordmark.
                               Transform.scale(
                                 scale: 1 + glow * 0.1,
                                 child: Container(
-                                  width: 190,
-                                  height: 190,
+                                  width: 230,
+                                  height: 230,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: RadialGradient(
@@ -273,49 +270,35 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 ),
                               ),
 
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // The mark literally draws itself on first
-                                  // frame — architectural doorway + gold dots.
-                                  AnimatedBuilder(
-                                    animation: _logoDraw,
-                                    builder: (context, child) => ShikodarMark(
-                                      size: 64,
-                                      showShadow: true,
-                                      progress: Curves.easeOutCubic.transform(_logoDraw.value),
-                                    ),
-                                  ).animate().fadeIn(duration: 260.ms),
-                                  const SizedBox(height: 14),
-                                  // "MULK" cascades in one letter at a time —
-                                  // each with its own delayed fade/rise/scale
-                                  // — instead of popping in as one block.
-                                  ShaderMask(
-                                    shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        for (var i = 0; i < _wordmark.length; i++)
-                                          Text(
-                                            _wordmark[i],
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 64,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 2,
-                                            ),
-                                          )
-                                              .animate(delay: (1150 + i * 110).ms)
-                                              .fadeIn(duration: 460.ms, curve: AppMotion.emphasized)
-                                              .slideY(begin: 0.55, end: 0, duration: 520.ms, curve: AppMotion.emphasized)
-                                              .scale(begin: const Offset(0.6, 0.6), end: const Offset(1, 1), duration: 520.ms, curve: AppMotion.emphasized),
-                                      ],
-                                    ),
-                                  )
-                                      .animate(delay: 1150.ms)
-                                      .shimmer(delay: 550.ms, duration: 1300.ms, color: AppColors.goldLight.withOpacity(0.75)),
-                                ],
-                              ),
+                              // "MULK" cascades in one letter at a time, set
+                              // in the bespoke Dashling display face — each
+                              // letter with its own delayed fade/rise/scale
+                              // — instead of popping in as one flat block.
+                              ShaderMask(
+                                shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    for (var i = 0; i < _wordmark.length; i++)
+                                      Text(
+                                        _wordmark[i],
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontFamily: 'Dashling',
+                                          fontSize: 96,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1,
+                                        ),
+                                      )
+                                          .animate(delay: (350 + i * 130).ms)
+                                          .fadeIn(duration: 500.ms, curve: AppMotion.emphasized)
+                                          .slideY(begin: 0.55, end: 0, duration: 580.ms, curve: AppMotion.emphasized)
+                                          .scale(begin: const Offset(0.6, 0.6), end: const Offset(1, 1), duration: 580.ms, curve: AppMotion.emphasized),
+                                  ],
+                                ),
+                              )
+                                  .animate(delay: 350.ms)
+                                  .shimmer(delay: 650.ms, duration: 1300.ms, color: AppColors.goldLight.withOpacity(0.75)),
                             ],
                           ),
                         ),

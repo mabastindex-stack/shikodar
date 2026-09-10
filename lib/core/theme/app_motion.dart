@@ -8,7 +8,7 @@ class AppMotion {
   static const Duration quick = Duration(milliseconds: 180);
   static const Duration standard = Duration(milliseconds: 320);
   static const Duration expressive = Duration(milliseconds: 650);
-  static const Duration splashEntrance = Duration(milliseconds: 3400);
+  static const Duration splashEntrance = Duration(milliseconds: 5400);
   static const Duration splashExit = Duration(milliseconds: 900);
 
   static const Curve enter = Cubic(0.16, 1, 0.3, 1);
