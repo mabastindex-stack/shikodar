@@ -99,7 +99,10 @@ class _NavDestination {
 List<_NavDestination> get _destinations => <_NavDestination>[
       _NavDestination(CupertinoIcons.compass, CupertinoIcons.compass_fill, 'nav.search'.tr()),
       _NavDestination(CupertinoIcons.play_circle, CupertinoIcons.play_circle_fill, 'nav.reels'.tr()),
-      _NavDestination(CupertinoIcons.building_2, CupertinoIcons.building_2_fill, 'nav.projects'.tr()),
+      // Cupertino Icons only ships a filled "buildings" glyph — no outline
+      // counterpart exists — so both states reuse it and rely on color
+      // (like the rest of the bar) to show selection.
+      _NavDestination(CupertinoIcons.building_2_fill, CupertinoIcons.building_2_fill, 'nav.projects'.tr()),
       _NavDestination(CupertinoIcons.person, CupertinoIcons.person_fill, 'nav.me'.tr()),
     ];
 
