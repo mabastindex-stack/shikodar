@@ -81,7 +81,7 @@ Future<void> main() async {
       // one) — once they choose Kurdish/Arabic/English/Turkmen in Settings,
       // easy_localization persists and restores that choice on every later
       // launch, overriding this default.
-      startLocale: const Locale('en'),
+      startLocale: const Locale('ar'),
       child: MultiProvider(
         providers: [
           Provider<ApiClient>.value(value: apiClient),

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -96,10 +97,10 @@ class _NavDestination {
 }
 
 List<_NavDestination> get _destinations => <_NavDestination>[
-      _NavDestination(Icons.explore_outlined, Icons.explore_rounded, 'nav.search'.tr()),
-      _NavDestination(Icons.play_circle_outline_rounded, Icons.play_circle_rounded, 'nav.reels'.tr()),
-      _NavDestination(Icons.apartment_outlined, Icons.apartment_rounded, 'nav.projects'.tr()),
-      _NavDestination(Icons.person_outline_rounded, Icons.person_rounded, 'nav.me'.tr()),
+      _NavDestination(CupertinoIcons.compass, CupertinoIcons.compass_fill, 'nav.search'.tr()),
+      _NavDestination(CupertinoIcons.play_circle, CupertinoIcons.play_circle_fill, 'nav.reels'.tr()),
+      _NavDestination(CupertinoIcons.building_2, CupertinoIcons.building_2_fill, 'nav.projects'.tr()),
+      _NavDestination(CupertinoIcons.person, CupertinoIcons.person_fill, 'nav.me'.tr()),
     ];
 
 const _destinationIndexes = <int>[0, 1, 3, 4];
@@ -171,7 +172,13 @@ class _LuxuryNavigationBar extends StatelessWidget {
             curve: AppMotion.enter,
             margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
             decoration: BoxDecoration(
-              color: selected ? palette.primary.withOpacity(0.10) : Colors.transparent,
+              gradient: selected
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [palette.primary.withOpacity(0.16), palette.primary.withOpacity(0.06)],
+                    )
+                  : null,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
@@ -183,7 +190,7 @@ class _LuxuryNavigationBar extends StatelessWidget {
                     selected ? destination.selectedIcon : destination.icon,
                     key: ValueKey(selected),
                     color: selected ? palette.primary : palette.textMuted,
-                    size: 21,
+                    size: 23,
                   ),
                 ),
                 AnimatedSize(
@@ -261,9 +268,9 @@ class _HomeButtonState extends State<_HomeButton> {
               alignment: Alignment.center,
               children: [
                 Icon(
-                  widget.selected ? Icons.home_rounded : Icons.home_outlined,
+                  widget.selected ? CupertinoIcons.house_fill : CupertinoIcons.house,
                   color: Colors.white,
-                  size: 27,
+                  size: 26,
                 ),
                 Positioned(
                   bottom: 10,
