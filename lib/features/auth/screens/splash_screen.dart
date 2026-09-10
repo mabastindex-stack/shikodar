@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,15 +12,17 @@ import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/shikodar_mark.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../../home/screens/home_shell.dart';
 import 'onboarding_screen.dart';
 
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
 
-/// App entry point — a soft wordmark reveal (no logo mark) while a previous
-/// session restores in the background, then a cross-fade into onboarding
-/// or straight into the app.
+/// App entry point — a cinematic wordmark reveal (mark draws itself, then
+/// "MULK" cascades in letter by letter under a breathing glow, orbited by
+/// slowly-revolving property icons) while a previous session restores in
+/// the background, then a cross-fade into onboarding or straight into the app.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -26,8 +30,10 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late final AnimationController _ambient;
+  late final AnimationController _logoDraw;
+  late final AnimationController _orbitSpin;
 
   /// Kicked off immediately so it resolves alongside (not after) the brief
   /// wordmark reveal below — a previously signed-in user shouldn't have to
@@ -39,11 +45,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   /// the incoming page's own fade-in.
   bool _leaving = false;
 
+  static const _wordmark = ['M', 'U', 'L', 'K'];
+  static const _orbitIcons = [
+    Icons.home_rounded,
+    Icons.villa_rounded,
+    Icons.terrain_rounded,
+    Icons.storefront_rounded,
+    Icons.location_on_rounded,
+    Icons.apartment_rounded,
+  ];
+
   @override
   void initState() {
     super.initState();
     _restoreSessionFuture = context.read<AuthRepository>().restoreSession();
     _ambient = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))..repeat(reverse: true);
+    _logoDraw = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
+    _orbitSpin = AnimationController(vsync: this, duration: const Duration(seconds: 46))..repeat();
     _bootstrap();
   }
 
@@ -95,41 +113,68 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _ambient.dispose();
+    _logoDraw.dispose();
+    _orbitSpin.dispose();
     super.dispose();
   }
 
-  /// One small badge in the "constellation" around the wordmark — a real
-  /// property-themed icon (house / villa / land / shop / pin / building),
-  /// softly floating and staggered in after the text so it reads as an
-  /// orbit, not clutter.
+  /// One badge in the constellation around the wordmark — a real
+  /// property-themed icon, entrance-staggered in, then left to slowly and
+  /// continuously revolve around the mark for the rest of the reveal so the
+  /// whole thing reads as alive, not a static poster.
   Widget _orbitIcon({
     required IconData icon,
-    required Alignment alignment,
-    required double bob,
+    required double baseAngle,
+    required double radiusX,
+    required double radiusY,
     required int delayMs,
     double size = 34,
   }) {
+    return AnimatedBuilder(
+      animation: _orbitSpin,
+      builder: (context, child) {
+        final angle = baseAngle + _orbitSpin.value * 2 * math.pi;
+        return Align(
+          alignment: Alignment(math.cos(angle) * radiusX, math.sin(angle) * radiusY),
+          child: child,
+        );
+      },
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: AppColors.brandGradient,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.2),
+          boxShadow: [BoxShadow(color: AppColors.emerald.withOpacity(0.28), blurRadius: 14, offset: const Offset(0, 5))],
+        ),
+        child: Icon(icon, size: size * 0.48, color: Colors.white),
+      )
+          .animate(delay: delayMs.ms)
+          .fadeIn(duration: 650.ms, curve: AppMotion.emphasized)
+          .scale(begin: const Offset(0.5, 0.5), end: const Offset(1, 1), curve: AppMotion.emphasized, duration: 750.ms),
+    );
+  }
+
+  /// A single tiny twinkling highlight — purely decorative sparkle that
+  /// loops for as long as the splash is on screen.
+  Widget _sparkle({required Alignment alignment, required int delayMs, required Duration period, double size = 5}) {
     return Align(
       alignment: alignment,
-      child: Transform.translate(
-        offset: Offset(0, bob),
-        child: Container(
-          width: size,
-          height: size,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: AppColors.brandGradient,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.2),
-            boxShadow: [BoxShadow(color: AppColors.emerald.withOpacity(0.28), blurRadius: 14, offset: const Offset(0, 5))],
-          ),
-          child: Icon(icon, size: size * 0.48, color: Colors.white),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.goldLight,
+          boxShadow: [BoxShadow(color: AppColors.goldLight.withOpacity(0.8), blurRadius: size * 1.6)],
         ),
-      ),
-    )
-        .animate(delay: delayMs.ms)
-        .fadeIn(duration: 650.ms, curve: AppMotion.emphasized)
-        .scale(begin: const Offset(0.5, 0.5), end: const Offset(1, 1), curve: AppMotion.emphasized, duration: 750.ms);
+      )
+          .animate(delay: delayMs.ms, onPlay: (c) => c.repeat(reverse: true))
+          .fade(begin: 0.1, end: 0.95, duration: period, curve: Curves.easeInOut)
+          .scale(begin: const Offset(0.6, 0.6), end: const Offset(1.15, 1.15), duration: period, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -144,20 +189,36 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         builder: (context, child) {
           final ambient = reduceMotion ? 0.5 : _ambient.value;
           final bob = reduceMotion ? 0.0 : (ambient - 0.5) * 14;
+          final glow = reduceMotion ? 0.5 : _ambient.value;
           return Stack(
             fit: StackFit.expand,
             children: [
+              // Two slowly counter-drifting color washes — emerald and gold —
+              // for a richer, more "alive" ambient light than a single tint.
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: Alignment(-0.2 + ambient * 0.1, -0.3),
+                    center: Alignment(-0.2 + ambient * 0.16, -0.32),
                     radius: 1.3,
                     colors: [
-                      AppColors.emeraldLight.withOpacity(0.16),
+                      AppColors.emeraldLight.withOpacity(0.18),
                       palette.background,
                       palette.background,
                     ],
                     stops: const [0, 0.5, 1],
+                  ),
+                ),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0.35 - ambient * 0.16, 0.4),
+                    radius: 1.1,
+                    colors: [
+                      AppColors.goldLight.withOpacity(0.10),
+                      Colors.transparent,
+                    ],
+                    stops: const [0, 1],
                   ),
                 ),
               ),
@@ -175,45 +236,96 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       children: [
                         SizedBox(
                           width: 340,
-                          height: 190,
+                          height: 220,
                           child: Stack(
                             alignment: Alignment.center,
                             clipBehavior: Clip.none,
                             children: [
                               if (!reduceMotion) ...[
-                                _orbitIcon(icon: Icons.home_rounded, alignment: const Alignment(-0.95, -0.78), bob: bob, delayMs: 650),
-                                _orbitIcon(icon: Icons.villa_rounded, alignment: const Alignment(0.98, -0.7), bob: -bob, delayMs: 760),
-                                _orbitIcon(icon: Icons.terrain_rounded, alignment: const Alignment(-1.08, 0.15), bob: -bob, delayMs: 870, size: 30),
-                                _orbitIcon(icon: Icons.storefront_rounded, alignment: const Alignment(1.1, 0.1), bob: bob, delayMs: 980, size: 30),
-                                _orbitIcon(icon: Icons.location_on_rounded, alignment: const Alignment(-0.88, 0.9), bob: -bob, delayMs: 1090, size: 30),
-                                _orbitIcon(icon: Icons.apartment_rounded, alignment: const Alignment(0.92, 0.85), bob: bob, delayMs: 1200, size: 30),
+                                _sparkle(alignment: const Alignment(-0.62, -1.02), delayMs: 1400, period: 1400.ms),
+                                _sparkle(alignment: const Alignment(0.7, -0.86), delayMs: 1900, period: 1700.ms, size: 4),
+                                _sparkle(alignment: const Alignment(0.86, 0.62), delayMs: 2100, period: 1500.ms),
+                                _sparkle(alignment: const Alignment(-0.9, 0.5), delayMs: 1650, period: 1850.ms, size: 4),
+
+                                _orbitIcon(icon: _orbitIcons[0], baseAngle: -2.5, radiusX: 1.05, radiusY: 0.86, delayMs: 650),
+                                _orbitIcon(icon: _orbitIcons[1], baseAngle: -0.7, radiusX: 1.08, radiusY: 0.84, delayMs: 760),
+                                _orbitIcon(icon: _orbitIcons[2], baseAngle: 2.75, radiusX: 1.12, radiusY: 0.9, delayMs: 870, size: 30),
+                                _orbitIcon(icon: _orbitIcons[3], baseAngle: 0.35, radiusX: 1.12, radiusY: 0.9, delayMs: 980, size: 30),
+                                _orbitIcon(icon: _orbitIcons[4], baseAngle: 2.0, radiusX: 1.0, radiusY: 0.95, delayMs: 1090, size: 30),
+                                _orbitIcon(icon: _orbitIcons[5], baseAngle: 1.0, radiusX: 1.0, radiusY: 0.95, delayMs: 1200, size: 30),
                               ],
-                              ShaderMask(
-                                shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
-                                child: Text(
-                                  'app_name'.tr(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 72,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
+
+                              // Soft breathing halo behind the mark/wordmark.
+                              Transform.scale(
+                                scale: 1 + glow * 0.1,
+                                child: Container(
+                                  width: 190,
+                                  height: 190,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        AppColors.emeraldLight.withOpacity(0.22 + glow * 0.14),
+                                        Colors.transparent,
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              )
-                                  .animate()
-                                  .fadeIn(duration: 850.ms, curve: AppMotion.emphasized)
-                                  .scale(begin: const Offset(0.82, 0.82), end: const Offset(1, 1), curve: AppMotion.emphasized, duration: 900.ms)
-                                  .then(delay: 300.ms)
-                                  .shimmer(duration: 1300.ms, color: AppColors.goldLight.withOpacity(0.7)),
+                              ),
+
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // The mark literally draws itself on first
+                                  // frame — architectural doorway + gold dots.
+                                  AnimatedBuilder(
+                                    animation: _logoDraw,
+                                    builder: (context, child) => ShikodarMark(
+                                      size: 64,
+                                      showShadow: true,
+                                      progress: Curves.easeOutCubic.transform(_logoDraw.value),
+                                    ),
+                                  ).animate().fadeIn(duration: 260.ms),
+                                  const SizedBox(height: 14),
+                                  // "MULK" cascades in one letter at a time —
+                                  // each with its own delayed fade/rise/scale
+                                  // — instead of popping in as one block.
+                                  ShaderMask(
+                                    shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        for (var i = 0; i < _wordmark.length; i++)
+                                          Text(
+                                            _wordmark[i],
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 64,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 2,
+                                            ),
+                                          )
+                                              .animate(delay: (1150 + i * 110).ms)
+                                              .fadeIn(duration: 460.ms, curve: AppMotion.emphasized)
+                                              .slideY(begin: 0.55, end: 0, duration: 520.ms, curve: AppMotion.emphasized)
+                                              .scale(begin: const Offset(0.6, 0.6), end: const Offset(1, 1), duration: 520.ms, curve: AppMotion.emphasized),
+                                      ],
+                                    ),
+                                  )
+                                      .animate(delay: 1150.ms)
+                                      .shimmer(delay: 550.ms, duration: 1300.ms, color: AppColors.goldLight.withOpacity(0.75)),
+                                ],
+                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Container(
-                          width: 34,
-                          height: 2.4,
-                          decoration: BoxDecoration(color: palette.gold, borderRadius: BorderRadius.circular(99)),
-                        ).animate(delay: 600.ms).fadeIn(duration: 500.ms).scaleX(begin: 0, end: 1, curve: AppMotion.emphasized),
+                        const SizedBox(height: 4),
+                        ShaderMask(
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: [Colors.transparent, palette.gold, Colors.transparent],
+                          ).createShader(bounds),
+                          child: Container(width: 64, height: 2.4, color: Colors.white),
+                        ).animate(delay: 1750.ms).fadeIn(duration: 500.ms).scaleX(begin: 0, end: 1, curve: AppMotion.emphasized),
                         const SizedBox(height: 16),
                         Text(
                           'splash.tagline'.tr(),
@@ -223,7 +335,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.2,
                           ),
-                        ).animate(delay: 720.ms).fadeIn(duration: 600.ms).slideY(begin: 0.15, end: 0, curve: AppMotion.emphasized),
+                        )
+                            .animate(delay: 1900.ms)
+                            .fadeIn(duration: 650.ms)
+                            .slideY(begin: 0.18, end: 0, curve: AppMotion.emphasized),
                       ],
                     ),
                   ),
