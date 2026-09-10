@@ -67,6 +67,9 @@ flutter:
     - family: Dashling
       fonts:
         - asset: assets/fonts/Quicksand_Dash.otf
+    - family: Yellowtail
+      fonts:
+        - asset: assets/fonts/Yellowtail-Regular.ttf
     - family: Quicksand
       fonts:
         - asset: assets/fonts/Quicksand_Light.otf

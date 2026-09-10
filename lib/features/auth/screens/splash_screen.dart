@@ -18,12 +18,11 @@ import 'onboarding_screen.dart';
 
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
 
-/// App entry point — a cinematic wordmark reveal ("MULK" cascades in letter
-/// by letter, each one a retro stepped-extrusion stack of brand colors,
-/// under a breathing glow) orbited by eight jeweled property-icon medallions
-/// slowly revolving full-circle around it, while a previous session restores
-/// in the background, then a cross-fade into onboarding or straight into
-/// the app.
+/// App entry point — a cinematic wordmark reveal ("MULK" set as one flowing
+/// hand-lettered script under a breathing glow, framed above and below by
+/// two scattered bands of twenty gently-bobbing, jeweled property-icon
+/// medallions) while a previous session restores in the background, then a
+/// cross-fade into onboarding or straight into the app.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -33,7 +32,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late final AnimationController _ambient;
-  late final AnimationController _orbitSpin;
 
   /// Kicked off immediately so it resolves alongside (not after) the brief
   /// wordmark reveal below — a previously signed-in user shouldn't have to
@@ -45,20 +43,22 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   /// the incoming page's own fade-in.
   bool _leaving = false;
 
-  static const _wordmark = ['M', 'U', 'L', 'K'];
+  /// Size of the wordmark stage — wide enough to fan out ten badges per
+  /// icon band without crowding.
+  static const _stageWidth = 420.0;
+  static const _stageHeight = 290.0;
 
-  /// Eight badges evenly spaced around a full circle (starting straight up),
-  /// so the constellation reads above AND below the wordmark, not just to
-  /// its sides.
-  static const _orbitIcons = [
+  /// Cycled through to fill both icon bands — repeating the same handful of
+  /// property glyphs (like a repeated bird/tree motif on a hand-lettered
+  /// badge) reads as a deliberate pattern rather than needing 20 distinct
+  /// icons.
+  static const _icons = [
     Icons.home_rounded,
-    Icons.vpn_key_rounded,
     Icons.villa_rounded,
-    Icons.storefront_rounded,
     Icons.apartment_rounded,
+    Icons.storefront_rounded,
     Icons.location_on_rounded,
     Icons.terrain_rounded,
-    Icons.business_rounded,
   ];
 
   @override
@@ -66,7 +66,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.initState();
     _restoreSessionFuture = context.read<AuthRepository>().restoreSession();
     _ambient = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))..repeat(reverse: true);
-    _orbitSpin = AnimationController(vsync: this, duration: const Duration(seconds: 46))..repeat();
     _bootstrap();
   }
 
@@ -118,35 +117,34 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   void dispose() {
     _ambient.dispose();
-    _orbitSpin.dispose();
     super.dispose();
   }
 
-  /// One jeweled badge in the constellation around the wordmark — a real
-  /// property-themed icon in a glass-highlighted, gold-ringed medallion,
-  /// entrance-staggered in, then left to slowly and continuously revolve
-  /// around the mark for the rest of the reveal so the whole thing reads as
-  /// alive, not a static poster. Alternates emerald/gold medallions for
-  /// jeweled variety instead of one flat repeated color.
-  Widget _orbitIcon({
+  /// One small badge in either icon band (above or below the wordmark) — a
+  /// real property-themed glyph in a glass-highlighted, jeweled medallion.
+  /// Fades/pops in on entrance, then gently bobs in place for the rest of
+  /// the reveal — it never drifts toward the sides, staying strictly in its
+  /// horizontal band above or below the lettering.
+  Widget _iconBadge({
     required IconData icon,
-    required double baseAngle,
-    required double radiusX,
-    required double radiusY,
+    required double dx,
+    required double dy,
     required int delayMs,
-    double size = 38,
+    required double bobPhase,
+    double size = 26,
     bool goldVariant = false,
   }) {
     final gradient = goldVariant
         ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.goldLight, AppColors.gold, AppColors.goldDark])
         : AppColors.brandGradient;
     return AnimatedBuilder(
-      animation: _orbitSpin,
+      animation: _ambient,
       builder: (context, child) {
-        final angle = baseAngle + _orbitSpin.value * 2 * math.pi;
-        return Align(
-          alignment: Alignment(math.cos(angle) * radiusX, math.sin(angle) * radiusY),
-          child: child,
+        final bob = math.sin((_ambient.value + bobPhase) * math.pi) * 3.5;
+        return Positioned(
+          left: dx,
+          top: dy + bob,
+          child: child!,
         );
       },
       child: Container(
@@ -155,24 +153,24 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         decoration: BoxDecoration(
           gradient: gradient,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.6),
-          boxShadow: [BoxShadow(color: AppColors.emeraldDark.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 6))],
+          border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.3),
+          boxShadow: [BoxShadow(color: AppColors.emeraldDark.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Icon(icon, size: size * 0.46, color: Colors.white),
+            Icon(icon, size: size * 0.5, color: Colors.white),
             // A small glassy highlight near the top-left, so each medallion
-            // reads as a polished sphere rather than a flat painted disc.
+            // reads as a polished bead rather than a flat painted disc.
             Positioned(
               top: size * 0.14,
-              left: size * 0.18,
+              left: size * 0.16,
               child: Container(
-                width: size * 0.34,
-                height: size * 0.18,
+                width: size * 0.32,
+                height: size * 0.16,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(size),
-                  gradient: LinearGradient(colors: [Colors.white.withOpacity(0.65), Colors.white.withOpacity(0)]),
+                  gradient: LinearGradient(colors: [Colors.white.withOpacity(0.6), Colors.white.withOpacity(0)]),
                 ),
               ),
             ),
@@ -180,29 +178,42 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         ),
       )
           .animate(delay: delayMs.ms)
-          .fadeIn(duration: 650.ms, curve: AppMotion.emphasized)
-          .scale(begin: const Offset(0.5, 0.5), end: const Offset(1, 1), curve: AppMotion.emphasized, duration: 750.ms),
+          .fadeIn(duration: 550.ms, curve: AppMotion.emphasized)
+          .scale(begin: const Offset(0.4, 0.4), end: const Offset(1, 1), curve: AppMotion.emphasized, duration: 620.ms),
     );
   }
 
-  /// A single letter of the wordmark, rendered as a stack of the same glyph
-  /// offset diagonally in deepening emerald shades — the retro "block
-  /// extrusion" look (a stepped drop-shadow of solid color layers) applied
-  /// to MULK in the app's own brand palette instead of a rainbow.
-  Widget _retroLetter(String letter) {
-    const style = TextStyle(fontFamily: 'Quicksand', fontSize: 92, fontWeight: FontWeight.w700, height: 1);
-    return Padding(
-      padding: const EdgeInsets.only(right: 9, bottom: 9),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Transform.translate(offset: const Offset(9, 9), child: Text(letter, style: style.copyWith(color: AppColors.emeraldDark))),
-          Transform.translate(offset: const Offset(6, 6), child: Text(letter, style: style.copyWith(color: AppColors.emerald))),
-          Transform.translate(offset: const Offset(3, 3), child: Text(letter, style: style.copyWith(color: AppColors.goldDark))),
-          Text(letter, style: style.copyWith(color: AppColors.creamOnDark)),
-        ],
-      ),
-    );
+  /// Twenty of [_iconBadge] laid out as two loose scattered rows — one above
+  /// the wordmark, one below — never at its sides. [stageWidth]/[stageHeight]
+  /// are the size of the enclosing Stack, used to convert the -1..1 spread
+  /// below into actual pixel positions.
+  List<Widget> _iconBands({required double stageWidth, required double stageHeight}) {
+    const perRow = 10;
+    final widgets = <Widget>[];
+    for (var row = 0; row < 2; row++) {
+      final isTop = row == 0;
+      for (var i = 0; i < perRow; i++) {
+        final icon = _icons[i % _icons.length];
+        final t = i / (perRow - 1); // 0..1 across the row
+        final x = stageWidth * (0.06 + t * 0.88) - 13;
+        // A gentle scattered arc instead of a razor-straight line — every
+        // third badge sits a little further from the wordmark.
+        final jitter = (i % 3 == 0) ? 14.0 : (i % 3 == 1 ? 0.0 : 7.0);
+        final y = isTop ? jitter : stageHeight - 26 - jitter;
+        widgets.add(
+          _iconBadge(
+            icon: icon,
+            dx: x,
+            dy: y,
+            delayMs: 500 + i * 55 + (isTop ? 0 : 400),
+            bobPhase: i * 0.31 + (isTop ? 0 : 0.5),
+            size: i.isEven ? 27 : 22,
+            goldVariant: i.isOdd,
+          ),
+        );
+      }
+    }
+    return widgets;
   }
 
   /// A single tiny twinkling highlight — purely decorative sparkle that
@@ -282,64 +293,70 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 380,
-                          height: 240,
+                          width: _stageWidth,
+                          height: _stageHeight,
                           child: Stack(
-                            alignment: Alignment.center,
                             clipBehavior: Clip.none,
                             children: [
-                              if (!reduceMotion) ...[
-                                _sparkle(alignment: const Alignment(-0.62, -1.02), delayMs: 1400, period: 1400.ms),
-                                _sparkle(alignment: const Alignment(0.7, -0.86), delayMs: 1900, period: 1700.ms, size: 4),
-                                _sparkle(alignment: const Alignment(0.86, 0.62), delayMs: 2100, period: 1500.ms),
-                                _sparkle(alignment: const Alignment(-0.9, 0.5), delayMs: 1650, period: 1850.ms, size: 4),
-
-                                for (var i = 0; i < _orbitIcons.length; i++)
-                                  _orbitIcon(
-                                    icon: _orbitIcons[i],
-                                    baseAngle: -math.pi / 2 + i * (math.pi / 4),
-                                    radiusX: 1.18,
-                                    radiusY: 1.02,
-                                    delayMs: 650 + i * 80,
-                                    size: i.isEven ? 40 : 34,
-                                    goldVariant: i.isOdd,
-                                  ),
-                              ],
+                              // Twenty icon badges in two scattered bands —
+                              // strictly above and below the wordmark, never
+                              // at its sides.
+                              if (!reduceMotion) ..._iconBands(stageWidth: _stageWidth, stageHeight: _stageHeight),
 
                               // Soft breathing halo behind the wordmark.
-                              Transform.scale(
-                                scale: 1 + glow * 0.1,
-                                child: Container(
-                                  width: 230,
-                                  height: 230,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        AppColors.emeraldLight.withOpacity(0.22 + glow * 0.14),
-                                        Colors.transparent,
-                                      ],
+                              Positioned(
+                                left: _stageWidth / 2 - 115,
+                                top: _stageHeight / 2 - 115,
+                                child: Transform.scale(
+                                  scale: 1 + glow * 0.1,
+                                  child: Container(
+                                    width: 230,
+                                    height: 230,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: RadialGradient(
+                                        colors: [
+                                          AppColors.emeraldLight.withOpacity(0.22 + glow * 0.14),
+                                          Colors.transparent,
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
 
-                              // "MULK" cascades in one letter at a time —
-                              // each letter itself a stepped stack of
-                              // offset color layers (the retro block-
-                              // extrusion look) — instead of popping in as
-                              // one flat block.
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (var i = 0; i < _wordmark.length; i++)
-                                    _retroLetter(_wordmark[i])
-                                        .animate(delay: (350 + i * 160).ms)
-                                        .fadeIn(duration: 520.ms, curve: AppMotion.emphasized)
-                                        .slideY(begin: 0.55, end: 0, duration: 600.ms, curve: AppMotion.emphasized)
-                                        .scale(begin: const Offset(0.6, 0.6), end: const Offset(1, 1), duration: 600.ms, curve: AppMotion.emphasized),
-                                ],
-                              ).animate(delay: 350.ms).shimmer(delay: 900.ms, duration: 1300.ms, color: Colors.white.withOpacity(0.55)),
+                              if (!reduceMotion) ...[
+                                _sparkle(alignment: const Alignment(-0.5, -0.3), delayMs: 1400, period: 1400.ms),
+                                _sparkle(alignment: const Alignment(0.55, -0.22), delayMs: 1900, period: 1700.ms, size: 4),
+                                _sparkle(alignment: const Alignment(0.48, 0.32), delayMs: 2100, period: 1500.ms),
+                                _sparkle(alignment: const Alignment(-0.44, 0.26), delayMs: 1650, period: 1850.ms, size: 4),
+                              ],
+
+                              // "MULK" set as one flowing hand-lettered
+                              // script — Yellowtail — instead of boxed
+                              // block letters, so the connecting swashes
+                              // between letters read naturally.
+                              Positioned.fill(
+                                child: Center(
+                                  child: ShaderMask(
+                                    shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
+                                    child: const Text(
+                                      'MULK',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Yellowtail',
+                                        fontSize: 108,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  )
+                                      .animate()
+                                      .fadeIn(delay: 350.ms, duration: 700.ms, curve: AppMotion.emphasized)
+                                      .scale(delay: 350.ms, begin: const Offset(0.72, 0.72), end: const Offset(1, 1), duration: 780.ms, curve: AppMotion.emphasized)
+                                      .then(delay: 250.ms)
+                                      .shimmer(duration: 1300.ms, color: Colors.white.withOpacity(0.7)),
+                                ),
+                              ),
                             ],
                           ),
                         ),
