@@ -217,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            if (isBusiness) _businessHeader(palette, role) else _clientHeader(palette),
+            if (isBusiness) _businessHeader(palette, role) else _clientHeader(palette, session),
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -355,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   // ── Headers ────────────────────────────────────────────────────────────
 
-  Widget _clientHeader(AppPalette palette) {
+  Widget _clientHeader(AppPalette palette, UserSession session) {
     return Column(
       children: [
         Padding(
@@ -368,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
         ),
         const SizedBox(height: 6),
-        _avatar(palette, size: 84, isBusiness: false),
+        _avatar(palette, size: 84, isBusiness: false, networkImageUrl: session.profilePhotoUrl),
       ],
     );
   }
@@ -381,6 +381,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       AccountRole.complex => Icons.location_city_rounded,
       _ => Icons.storefront_rounded,
     };
+    final session = context.watch<UserSession>();
+    // The account's own cover/profile photo (admin-set, unrelated to the
+    // agency's separate public logo) takes priority when present; falls
+    // back to the brand gradient / agency logo so nothing looks broken for
+    // accounts that haven't had one set yet.
+    final coverUrl = session.coverUrl;
+    final hasCover = coverUrl != null && coverUrl.isNotEmpty;
+    final avatarUrl = session.profilePhotoUrl ?? session.logoUrl;
     return SizedBox(
       height: coverHeight + avatarSize / 2 + 8,
       child: Stack(
@@ -391,26 +399,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             left: 0,
             right: 0,
             height: coverHeight,
-            // No real "cover photo" exists on an agency's profile — this is
-            // the brand's own emerald gradient (same family as the admin
-            // panel's sign-in scene) instead of a placeholder stock photo,
-            // so every business looks distinctly "Shikodar" here, not like
-            // whichever royalty-free image happened to be hardcoded in.
             child: ClipRect(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.brandGradient)),
-                  Positioned(
-                    top: -40,
-                    left: -30,
-                    child: _glowBlob(color: AppColors.gold.withOpacity(0.28), size: 160),
-                  ),
-                  Positioned(
-                    bottom: -50,
-                    right: -20,
-                    child: _glowBlob(color: AppColors.emeraldLight.withOpacity(0.35), size: 190),
-                  ),
+                  if (hasCover)
+                    CachedNetworkImage(
+                      imageUrl: coverUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.brandGradient)),
+                      errorWidget: (_, __, ___) => const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.brandGradient)),
+                    )
+                  else ...[
+                    // No real cover photo set yet — the brand's own emerald
+                    // gradient (same family as the admin panel's sign-in
+                    // scene) instead of a placeholder stock photo, so every
+                    // business looks distinctly "MULK" here.
+                    const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.brandGradient)),
+                    Positioned(
+                      top: -40,
+                      left: -30,
+                      child: _glowBlob(color: AppColors.gold.withOpacity(0.28), size: 160),
+                    ),
+                    Positioned(
+                      bottom: -50,
+                      right: -20,
+                      child: _glowBlob(color: AppColors.emeraldLight.withOpacity(0.35), size: 190),
+                    ),
+                  ],
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -430,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             top: coverHeight - avatarSize / 2,
             left: 0,
             right: 0,
-            child: Center(child: _avatar(palette, size: avatarSize, isBusiness: true, icon: avatarIcon, networkImageUrl: context.watch<UserSession>().logoUrl)),
+            child: Center(child: _avatar(palette, size: avatarSize, isBusiness: true, icon: avatarIcon, networkImageUrl: avatarUrl)),
           ),
         ],
       ),

@@ -70,6 +70,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             logoUrl: restored.logoUrl,
             agencyPhone: restored.agencyPhone,
             agencyWhatsapp: restored.agencyWhatsapp,
+            profilePhotoUrl: restored.profilePhotoUrl,
+            coverUrl: restored.coverUrl,
           );
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       context.read<PushRepository>().registerDevice();

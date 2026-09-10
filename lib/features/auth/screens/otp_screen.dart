@@ -77,6 +77,8 @@ class _OtpScreenState extends State<OtpScreen> {
             logoUrl: result.logoUrl,
             agencyPhone: result.agencyPhone,
             agencyWhatsapp: result.agencyWhatsapp,
+            profilePhotoUrl: result.profilePhotoUrl,
+            coverUrl: result.coverUrl,
           );
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       context.read<PushRepository>().registerDevice();

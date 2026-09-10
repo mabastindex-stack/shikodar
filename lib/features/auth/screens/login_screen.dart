@@ -86,6 +86,8 @@ class _LoginScreenState extends State<LoginScreen> {
             logoUrl: result.logoUrl,
             agencyPhone: result.agencyPhone,
             agencyWhatsapp: result.agencyWhatsapp,
+            profilePhotoUrl: result.profilePhotoUrl,
+            coverUrl: result.coverUrl,
           );
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       context.read<PushRepository>().registerDevice();

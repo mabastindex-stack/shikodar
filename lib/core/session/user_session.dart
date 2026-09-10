@@ -47,6 +47,12 @@ class UserSession extends ChangeNotifier {
   String? agencyPhone;
   String? agencyWhatsapp;
 
+  /// The signed-in account's OWN profile/cover photo — set directly on the
+  /// user record (admin panel), independent of the agency logo above. Every
+  /// role (client, agency, company, complex, admin) can have these.
+  String? profilePhotoUrl;
+  String? coverUrl;
+
   bool get isAgency => role == AccountRole.agency;
   bool get isCompany => role == AccountRole.company;
   bool get isComplex => role == AccountRole.complex;
@@ -67,6 +73,8 @@ class UserSession extends ChangeNotifier {
     String? logoUrl,
     String? agencyPhone,
     String? agencyWhatsapp,
+    String? profilePhotoUrl,
+    String? coverUrl,
   }) {
     role = newRole;
     isLoggedIn = true;
@@ -77,6 +85,8 @@ class UserSession extends ChangeNotifier {
     this.logoUrl = logoUrl;
     this.agencyPhone = agencyPhone;
     this.agencyWhatsapp = agencyWhatsapp;
+    this.profilePhotoUrl = profilePhotoUrl;
+    this.coverUrl = coverUrl;
     notifyListeners();
   }
 
@@ -90,6 +100,8 @@ class UserSession extends ChangeNotifier {
     logoUrl = null;
     agencyPhone = null;
     agencyWhatsapp = null;
+    profilePhotoUrl = null;
+    coverUrl = null;
     notifyListeners();
   }
 

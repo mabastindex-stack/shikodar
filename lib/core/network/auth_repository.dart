@@ -30,6 +30,12 @@ class AuthResult {
   final String? agencyPhone;
   final String? agencyWhatsapp;
 
+  /// The signed-in account's OWN profile/cover photo — set directly on the
+  /// user record (admin panel), unrelated to the agency's logo above. Any
+  /// role can have these, not just business accounts.
+  final String? profilePhotoUrl;
+  final String? coverUrl;
+
   const AuthResult({
     required this.role,
     required this.token,
@@ -40,6 +46,8 @@ class AuthResult {
     this.logoUrl,
     this.agencyPhone,
     this.agencyWhatsapp,
+    this.profilePhotoUrl,
+    this.coverUrl,
   });
 }
 
@@ -130,6 +138,8 @@ class AuthRepository {
         logoUrl: agency?['logo_url'],
         agencyPhone: agency?['phone'],
         agencyWhatsapp: agency?['whatsapp'],
+        profilePhotoUrl: response.data['profile_photo_url'],
+        coverUrl: response.data['cover_url'],
       );
     } on DioException {
       await prefs.remove('auth_token');
@@ -166,6 +176,8 @@ class AuthRepository {
       logoUrl: agency?['logo_url'],
       agencyPhone: agency?['phone'],
       agencyWhatsapp: agency?['whatsapp'],
+      profilePhotoUrl: data['user']['profile_photo_url'],
+      coverUrl: data['user']['cover_url'],
     );
   }
 
