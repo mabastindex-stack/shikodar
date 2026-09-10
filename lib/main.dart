@@ -77,7 +77,11 @@ Future<void> main() async {
       ],
       path: 'assets/translations',
       fallbackLocale: const Locale('ku'),
-      startLocale: const Locale('ku'),
+      // Only used before the visitor has ever picked a language (or saved
+      // one) — once they choose Kurdish/Arabic/English/Turkmen in Settings,
+      // easy_localization persists and restores that choice on every later
+      // launch, overriding this default.
+      startLocale: const Locale('en'),
       child: MultiProvider(
         providers: [
           Provider<ApiClient>.value(value: apiClient),

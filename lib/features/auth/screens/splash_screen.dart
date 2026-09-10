@@ -17,10 +17,11 @@ import 'onboarding_screen.dart';
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
 
 /// App entry point — a quiet, confident reveal: the real logo artwork large
-/// over a softly breathing glow, "MULK" beneath it in an elegant Playfair
-/// Display serif, and an English tagline — nothing else competing for
-/// attention — while a previous session restores in the background, then a
-/// cross-fade into onboarding or straight into the app.
+/// over a softly breathing glow, the app name beneath it (Playfair Display
+/// serif for Latin script) and its tagline — both following the visitor's
+/// chosen language (English by default before they ever pick one) — nothing
+/// else competing for attention, while a previous session restores in the
+/// background, then a cross-fade into onboarding or straight into the app.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -104,6 +105,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final palette = context.palette;
     final reduceMotion = AppMotion.reduce(context);
+    final isLatinScript = context.locale.languageCode == 'en' || context.locale.languageCode == 'tk';
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -171,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               // The real logo artwork, large and unclipped —
                               // nothing else on stage to compete with it.
                               Image.asset(
-                                'assets/branding/app_icon_transparent.png',
+                                'assets/branding/app_logo_mark.png',
                                 width: 220,
                                 height: 220,
                                 fit: BoxFit.contain,
@@ -183,19 +185,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           ),
                         ),
                         const SizedBox(height: 6),
-                        // "MULK" set in Playfair Display — an elegant,
-                        // high-contrast serif for a genuinely special,
-                        // upscale wordmark instead of a plain UI sans.
+                        // The wordmark follows the active app language once
+                        // the visitor has picked one (English by default
+                        // before that) — set in Playfair Display, an
+                        // elegant high-contrast serif, for Latin script;
+                        // wide letter-spacing is skipped for Kurdish/Arabic
+                        // so it doesn't break their connected letterforms.
                         ShaderMask(
                           shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
-                          child: const Text(
-                            'MULK',
+                          child: Text(
+                            'app_name'.tr(),
                             style: TextStyle(
                               color: Colors.white,
-                              fontFamily: 'PlayfairDisplay',
+                              fontFamily: isLatinScript ? 'PlayfairDisplay' : null,
                               fontSize: 64,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 1.5,
+                              letterSpacing: isLatinScript ? 1.5 : 0,
                               height: 1,
                             ),
                           ),
@@ -213,17 +218,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           child: Container(width: 64, height: 2.4, color: Colors.white),
                         ).animate(delay: 1050.ms).fadeIn(duration: 500.ms).scaleX(begin: 0, end: 1, curve: AppMotion.emphasized),
                         const SizedBox(height: 16),
-                        // The English tagline, always in English here
-                        // regardless of the active app locale — the
-                        // wordmark moment is deliberately international.
+                        // Same story for the tagline — localized, not
+                        // hardcoded English, so it switches the moment the
+                        // visitor picks a language in Settings.
                         Text(
-                          'MAKE YOUR DREAMS COME TRUE',
+                          'splash.tagline'.tr(),
                           style: TextStyle(
                             color: palette.textSecondary,
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 2.4,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: isLatinScript ? 0.6 : 0.2,
                           ),
                         )
                             .animate(delay: 1200.ms)

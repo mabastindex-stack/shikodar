@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 /// The MULK brand mark — the real logo artwork (assets/branding), not a
-/// code-drawn shape. Kept as a small reusable widget (rather than inlining
-/// `Image.asset` at each call site) so every screen that shows the mark
-/// stays in sync if the artwork or its styling ever changes again.
+/// code-drawn shape. Rendered on its own transparent PNG (no card/background
+/// baked in) so it sits cleanly on whatever surface it's placed over. Kept
+/// as a small reusable widget (rather than inlining `Image.asset` at each
+/// call site) so every screen that shows the mark stays in sync if the
+/// artwork ever changes again.
 class ShikodarMark extends StatelessWidget {
   const ShikodarMark({
     super.key,
@@ -19,38 +21,21 @@ class ShikodarMark extends StatelessWidget {
   /// need to change.
   final double progress;
 
+  /// Unused now that the mark is a transparent, irregularly-shaped PNG — a
+  /// rectangular drop shadow doesn't read correctly behind it. Kept only so
+  /// existing call sites don't need to change.
   final bool showShadow;
 
   @override
   Widget build(BuildContext context) {
-    final radius = size * 0.28;
     return Semantics(
       image: true,
       label: 'MULK',
-      child: Container(
+      child: Image.asset(
+        'assets/branding/app_logo_mark.png',
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(radius),
-          boxShadow: showShadow
-              ? const [
-                  BoxShadow(
-                    color: Color(0x52083B34),
-                    blurRadius: 34,
-                    offset: Offset(0, 18),
-                  ),
-                ]
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          child: Image.asset(
-            'assets/branding/app_icon_transparent.png',
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-          ),
-        ),
+        fit: BoxFit.contain,
       ),
     );
   }
