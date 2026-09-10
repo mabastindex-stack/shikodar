@@ -70,6 +70,12 @@ flutter:
     - family: Yellowtail
       fonts:
         - asset: assets/fonts/Yellowtail-Regular.ttf
+    - family: PlayfairDisplay
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlayfairDisplay-ExtraBold.ttf
+          weight: 800
     - family: Quicksand
       fonts:
         - asset: assets/fonts/Quicksand_Light.otf

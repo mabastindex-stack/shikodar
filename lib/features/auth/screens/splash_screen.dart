@@ -16,10 +16,11 @@ import 'onboarding_screen.dart';
 
 const _hasSeenOnboardingKey = 'has_seen_onboarding';
 
-/// App entry point — a quiet, confident wordmark reveal: "MULK" set as one
-/// flowing hand-lettered script over a softly breathing glow, nothing else
-/// competing for attention, while a previous session restores in the
-/// background, then a cross-fade into onboarding or straight into the app.
+/// App entry point — a quiet, confident reveal: the real logo artwork large
+/// over a softly breathing glow, "MULK" beneath it in an elegant Playfair
+/// Display serif, and an English tagline — nothing else competing for
+/// attention — while a previous session restores in the background, then a
+/// cross-fade into onboarding or straight into the app.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -143,18 +144,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 300,
-                          height: 200,
+                          width: 260,
+                          height: 260,
                           child: Stack(
                             alignment: Alignment.center,
                             clipBehavior: Clip.none,
                             children: [
-                              // Soft breathing halo behind the wordmark.
+                              // Soft breathing halo behind the logo.
                               Transform.scale(
                                 scale: 1 + glow * 0.1,
                                 child: Container(
-                                  width: 230,
-                                  height: 230,
+                                  width: 260,
+                                  height: 260,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: RadialGradient(
@@ -167,32 +168,44 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                 ),
                               ),
 
-                              // "MULK" set in the app's own English
-                              // typeface (Plus Jakarta Sans) — nothing else
-                              // on stage to compete with it.
-                              ShaderMask(
-                                shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
-                                child: const Text(
-                                  'MULK',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 72,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1,
-                                    height: 1,
-                                  ),
-                                ),
+                              // The real logo artwork, large and unclipped —
+                              // nothing else on stage to compete with it.
+                              Image.asset(
+                                'assets/branding/app_icon_transparent.png',
+                                width: 220,
+                                height: 220,
+                                fit: BoxFit.contain,
                               )
                                   .animate()
-                                  .fadeIn(duration: 750.ms, curve: AppMotion.emphasized)
-                                  .scale(begin: const Offset(0.7, 0.7), end: const Offset(1, 1), duration: 820.ms, curve: AppMotion.emphasized)
-                                  .then(delay: 250.ms)
-                                  .shimmer(duration: 1300.ms, color: Colors.white.withOpacity(0.7)),
+                                  .fadeIn(duration: 700.ms, curve: AppMotion.emphasized)
+                                  .scale(begin: const Offset(0.7, 0.7), end: const Offset(1, 1), duration: 780.ms, curve: AppMotion.emphasized),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
+                        // "MULK" set in Playfair Display — an elegant,
+                        // high-contrast serif for a genuinely special,
+                        // upscale wordmark instead of a plain UI sans.
+                        ShaderMask(
+                          shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
+                          child: const Text(
+                            'MULK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'PlayfairDisplay',
+                              fontSize: 64,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                              height: 1,
+                            ),
+                          ),
+                        )
+                            .animate(delay: 500.ms)
+                            .fadeIn(duration: 650.ms, curve: AppMotion.emphasized)
+                            .slideY(begin: 0.25, end: 0, duration: 700.ms, curve: AppMotion.emphasized)
+                            .then(delay: 250.ms)
+                            .shimmer(duration: 1300.ms, color: Colors.white.withOpacity(0.7)),
+                        const SizedBox(height: 10),
                         ShaderMask(
                           shaderCallback: (bounds) => LinearGradient(
                             colors: [Colors.transparent, palette.gold, Colors.transparent],
@@ -200,13 +213,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           child: Container(width: 64, height: 2.4, color: Colors.white),
                         ).animate(delay: 1050.ms).fadeIn(duration: 500.ms).scaleX(begin: 0, end: 1, curve: AppMotion.emphasized),
                         const SizedBox(height: 16),
+                        // The English tagline, always in English here
+                        // regardless of the active app locale — the
+                        // wordmark moment is deliberately international.
                         Text(
-                          'splash.tagline'.tr(),
+                          'MAKE YOUR DREAMS COME TRUE',
                           style: TextStyle(
                             color: palette.textSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.2,
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2.4,
                           ),
                         )
                             .animate(delay: 1200.ms)
