@@ -64,6 +64,7 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
 
   void togglePlayPause() {
     final c = _controller;
+    debugPrint('[reel-tap] togglePlayPause called, controller=${c != null}, ready=$_ready, isPlaying=${c?.value.isPlaying}');
     if (c == null || !_ready) return;
     setState(() {
       c.value.isPlaying ? c.pause() : c.play();
