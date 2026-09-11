@@ -30,6 +30,17 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
   bool _failed = false;
   bool _showPauseFlash = false;
 
+  /// Where the finger went down, so onPointerUp can tell a real tap from
+  /// the start of a swipe. A plain GestureDetector's onTap loses this to
+  /// the parent PageView's vertical-drag recognizer almost every time —
+  /// both sit in the same gesture arena, and the scroll view claims the
+  /// pointer before a tap can win, which is what was dragging the whole
+  /// page instead of toggling playback. Listener's pointer callbacks fire
+  /// unconditionally outside that arena, so tracking the tap by hand here
+  /// sidesteps the conflict entirely while still letting real swipes reach
+  /// the PageView untouched.
+  Offset? _pointerDownPosition;
+
   @override
   void initState() {
     super.initState();
@@ -140,10 +151,21 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
         // never reliably receives taps (a known Flutter/Android
         // limitation). As a sibling stacked on top instead, it sits above
         // the video in the compositor and actually gets the touch.
+        //
+        // Listener instead of GestureDetector.onTap — see
+        // _pointerDownPosition's doc comment for why.
         Positioned.fill(
-          child: GestureDetector(
-            onTap: togglePlayPause,
+          child: Listener(
             behavior: HitTestBehavior.opaque,
+            onPointerDown: (event) => _pointerDownPosition = event.position,
+            onPointerUp: (event) {
+              final start = _pointerDownPosition;
+              if (start != null && (event.position - start).distance < 18) {
+                togglePlayPause();
+              }
+              _pointerDownPosition = null;
+            },
+            onPointerCancel: (_) => _pointerDownPosition = null,
             child: const ColoredBox(color: Colors.transparent),
           ),
         ),
