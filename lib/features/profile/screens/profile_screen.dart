@@ -384,11 +384,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       _ => Icons.storefront_rounded,
     };
     final session = context.watch<UserSession>();
-    // The account's own cover/profile photo (admin-set, unrelated to the
-    // agency's separate public logo) takes priority when present; falls
-    // back to the brand gradient / agency logo so nothing looks broken for
-    // accounts that haven't had one set yet.
-    final coverUrl = session.coverUrl;
+    // The account's own cover photo takes priority when set; falls back to
+    // the agency's own cover (set via the admin panel's agency form) so a
+    // business whose owner never uploaded a *personal* cover still shows
+    // its real one instead of the plain brand gradient.
+    final coverUrl = session.coverUrl ?? session.agencyCoverUrl;
     final hasCover = coverUrl != null && coverUrl.isNotEmpty;
     final avatarUrl = session.profilePhotoUrl ?? session.logoUrl;
     return SizedBox(
@@ -552,14 +552,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   // ── Stats + tabs ───────────────────────────────────────────────────────
 
   Widget _statsRow(AppPalette palette, {required bool isCompany, required bool isComplex, required Project? myComplex}) {
+    final session = context.watch<UserSession>();
     final firstStat = isComplex
         ? (Icons.door_front_door_outlined, '${myComplex?.unitTypes.length ?? 0}', 'profile_page.stat_unit'.tr())
         : (isCompany ? (Icons.apartment_rounded, '${_myProjects.length}', 'profile_page.stat_project'.tr()) : (Icons.home_work_outlined, '${_myListings.length}', 'profile_page.stat_listing'.tr()));
+    // Real agency stats (admin panel) instead of the placeholder numbers
+    // this row used to ship with — 0/'—' for an agency that hasn't had
+    // these filled in yet, rather than a fake 4.8/214/9.
     final stats = [
       firstStat,
-      (Icons.star_rounded, '4.8', 'profile_page.stat_rating'.tr()),
-      (Icons.handshake_rounded, '214', 'profile_page.stat_deal'.tr()),
-      (Icons.schedule_rounded, '9', 'profile_page.stat_year'.tr()),
+      (Icons.star_rounded, session.rating != null ? session.rating!.toStringAsFixed(1) : '—', 'profile_page.stat_rating'.tr()),
+      (Icons.handshake_rounded, '${session.dealsCompleted ?? 0}', 'profile_page.stat_deal'.tr()),
+      (Icons.schedule_rounded, '${session.yearsActive ?? 0}', 'profile_page.stat_year'.tr()),
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),

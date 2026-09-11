@@ -70,6 +70,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             logoUrl: restored.logoUrl,
             agencyPhone: restored.agencyPhone,
             agencyWhatsapp: restored.agencyWhatsapp,
+            agencyCoverUrl: restored.agencyCoverUrl,
+            rating: restored.rating,
+            reviewCount: restored.reviewCount,
+            yearsActive: restored.yearsActive,
+            dealsCompleted: restored.dealsCompleted,
             profilePhotoUrl: restored.profilePhotoUrl,
             coverUrl: restored.coverUrl,
           );

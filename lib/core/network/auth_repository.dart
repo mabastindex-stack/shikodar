@@ -30,6 +30,18 @@ class AuthResult {
   final String? agencyPhone;
   final String? agencyWhatsapp;
 
+  /// The agency's own cover photo (admin panel, AgencyResource) — distinct
+  /// from the user's personal coverUrl below. profile_screen.dart falls
+  /// back to this when the signed-in user hasn't set their own.
+  final String? agencyCoverUrl;
+
+  /// The agency's real stats (admin panel) — shown on ProfileScreen's
+  /// stat row instead of the placeholder numbers it used to ship with.
+  final double? rating;
+  final int? reviewCount;
+  final int? yearsActive;
+  final int? dealsCompleted;
+
   /// The signed-in account's OWN profile/cover photo — set directly on the
   /// user record (admin panel), unrelated to the agency's logo above. Any
   /// role can have these, not just business accounts.
@@ -46,6 +58,11 @@ class AuthResult {
     this.logoUrl,
     this.agencyPhone,
     this.agencyWhatsapp,
+    this.agencyCoverUrl,
+    this.rating,
+    this.reviewCount,
+    this.yearsActive,
+    this.dealsCompleted,
     this.profilePhotoUrl,
     this.coverUrl,
   });
@@ -138,6 +155,11 @@ class AuthRepository {
         logoUrl: agency?['logo_url'],
         agencyPhone: agency?['phone'],
         agencyWhatsapp: agency?['whatsapp'],
+        agencyCoverUrl: agency?['cover_url'],
+        rating: (agency?['rating'] as num?)?.toDouble(),
+        reviewCount: agency?['review_count'],
+        yearsActive: agency?['years_active'],
+        dealsCompleted: agency?['deals_completed'],
         profilePhotoUrl: response.data['profile_photo_url'],
         coverUrl: response.data['cover_url'],
       );
@@ -176,6 +198,11 @@ class AuthRepository {
       logoUrl: agency?['logo_url'],
       agencyPhone: agency?['phone'],
       agencyWhatsapp: agency?['whatsapp'],
+      agencyCoverUrl: agency?['cover_url'],
+      rating: (agency?['rating'] as num?)?.toDouble(),
+      reviewCount: agency?['review_count'],
+      yearsActive: agency?['years_active'],
+      dealsCompleted: agency?['deals_completed'],
       profilePhotoUrl: data['user']['profile_photo_url'],
       coverUrl: data['user']['cover_url'],
     );

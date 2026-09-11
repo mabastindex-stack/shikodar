@@ -47,6 +47,18 @@ class UserSession extends ChangeNotifier {
   String? agencyPhone;
   String? agencyWhatsapp;
 
+  /// The agency's own cover photo (admin panel) — fallback for the
+  /// business header's cover when the signed-in user hasn't set their own
+  /// personal coverUrl below.
+  String? agencyCoverUrl;
+
+  /// The agency's real stats (admin panel) — read by ProfileScreen's stat
+  /// row instead of the placeholder numbers it used to ship with.
+  double? rating;
+  int? reviewCount;
+  int? yearsActive;
+  int? dealsCompleted;
+
   /// The signed-in account's OWN profile/cover photo — set directly on the
   /// user record (admin panel), independent of the agency logo above. Every
   /// role (client, agency, company, complex, admin) can have these.
@@ -73,6 +85,11 @@ class UserSession extends ChangeNotifier {
     String? logoUrl,
     String? agencyPhone,
     String? agencyWhatsapp,
+    String? agencyCoverUrl,
+    double? rating,
+    int? reviewCount,
+    int? yearsActive,
+    int? dealsCompleted,
     String? profilePhotoUrl,
     String? coverUrl,
   }) {
@@ -85,6 +102,11 @@ class UserSession extends ChangeNotifier {
     this.logoUrl = logoUrl;
     this.agencyPhone = agencyPhone;
     this.agencyWhatsapp = agencyWhatsapp;
+    this.agencyCoverUrl = agencyCoverUrl;
+    this.rating = rating;
+    this.reviewCount = reviewCount;
+    this.yearsActive = yearsActive;
+    this.dealsCompleted = dealsCompleted;
     this.profilePhotoUrl = profilePhotoUrl;
     this.coverUrl = coverUrl;
     notifyListeners();
@@ -100,6 +122,11 @@ class UserSession extends ChangeNotifier {
     logoUrl = null;
     agencyPhone = null;
     agencyWhatsapp = null;
+    agencyCoverUrl = null;
+    rating = null;
+    reviewCount = null;
+    yearsActive = null;
+    dealsCompleted = null;
     profilePhotoUrl = null;
     coverUrl = null;
     notifyListeners();

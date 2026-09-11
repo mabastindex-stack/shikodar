@@ -77,6 +77,11 @@ class _OtpScreenState extends State<OtpScreen> {
             logoUrl: result.logoUrl,
             agencyPhone: result.agencyPhone,
             agencyWhatsapp: result.agencyWhatsapp,
+            agencyCoverUrl: result.agencyCoverUrl,
+            rating: result.rating,
+            reviewCount: result.reviewCount,
+            yearsActive: result.yearsActive,
+            dealsCompleted: result.dealsCompleted,
             profilePhotoUrl: result.profilePhotoUrl,
             coverUrl: result.coverUrl,
           );
