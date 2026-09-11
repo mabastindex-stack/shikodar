@@ -21,7 +21,7 @@ class ReelsScreen extends StatefulWidget {
   State<ReelsScreen> createState() => ReelsScreenState();
 }
 
-class ReelsScreenState extends State<ReelsScreen> with RouteAware {
+class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindingObserver {
   final _pageController = PageController();
   final _searchController = TextEditingController();
   final Map<int, GlobalKey<ReelVideoPlayerState>> _playerKeys = {};
@@ -47,7 +47,24 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     refresh();
+  }
+
+  /// Backgrounding the whole app (home button, app switcher, phone lock)
+  /// is a separate code path from in-app navigation — pause here too, or
+  /// a reel's audio keeps playing while the app isn't even on screen.
+  /// Goes straight to the controller rather than pauseActive()/resumeActive()
+  /// so this never flips _isTabActive — foregrounding the app should only
+  /// resume playback if Reels was genuinely the visible tab when it got
+  /// backgrounded, not whichever tab happens to be selected right now.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _keyFor(_activeIndex).currentState?.controller?.pause();
+    } else if (state == AppLifecycleState.resumed && _isTabActive) {
+      _keyFor(_activeIndex).currentState?.controller?.play();
+    }
   }
 
   @override
@@ -79,6 +96,12 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware {
     });
   }
 
+  /// Whether Reels is the actual visible tab right now (as opposed to just
+  /// mounted-but-hidden in HomeShell's IndexedStack) — tracked so an app
+  /// foreground/background cycle (see didChangeAppLifecycleState) never
+  /// resumes a reel the visitor had already navigated away from.
+  bool _isTabActive = true;
+
   /// Pauses the currently on-screen reel's video — called by HomeShell the
   /// instant the visitor switches to a different bottom-nav tab. Without
   /// this, the reel (and its audio) kept playing invisibly in the
@@ -86,12 +109,14 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware {
   /// rather than being disposed on tab switch, so nothing else ever told
   /// its VideoPlayerController to stop.
   void pauseActive() {
+    _isTabActive = false;
     _keyFor(_activeIndex).currentState?.controller?.pause();
   }
 
   /// Resumes the on-screen reel — called by HomeShell right after
   /// switching back to this tab, mirroring pauseActive().
   void resumeActive() {
+    _isTabActive = true;
     _keyFor(_activeIndex).currentState?.controller?.play();
   }
 
@@ -118,6 +143,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
     _searchController.dispose();
     _pageController.dispose();
