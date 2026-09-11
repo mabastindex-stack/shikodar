@@ -100,45 +100,56 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: togglePlayPause,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Real photo always underneath — never a flat black screen.
-          _photoBackground(),
-          // Shows the video at its own real aspect ratio (contain, not
-          // cover) — a vertical clip still fills the screen edge to edge,
-          // but a horizontal or square one is no longer cropped/zoomed to
-          // force-fill a 9:16 frame; the photo behind it fills the rest,
-          // the same way TikTok letterboxes a non-vertical video.
-          if (_ready && _controller != null)
-            Center(
-              child: AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: VideoPlayer(_controller!),
-              ),
-            )
-          else if (!_failed)
-            const Center(child: CircularProgressIndicator(color: AppColors.gold, strokeWidth: 2.4))
-          else
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: Colors.black.withOpacity(0.45), borderRadius: BorderRadius.circular(20)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.wifi_off_rounded, color: Colors.white70, size: 15),
-                    const SizedBox(width: 6),
-                    Text('reels.video_load_failed'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
-                  ],
-                ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Real photo always underneath — never a flat black screen.
+        _photoBackground(),
+        // Shows the video at its own real aspect ratio (contain, not
+        // cover) — a vertical clip still fills the screen edge to edge,
+        // but a horizontal or square one is no longer cropped/zoomed to
+        // force-fill a 9:16 frame; the photo behind it fills the rest,
+        // the same way TikTok letterboxes a non-vertical video.
+        if (_ready && _controller != null)
+          Center(
+            child: AspectRatio(
+              aspectRatio: _controller!.value.aspectRatio,
+              child: VideoPlayer(_controller!),
+            ),
+          )
+        else if (!_failed)
+          const Center(child: CircularProgressIndicator(color: AppColors.gold, strokeWidth: 2.4))
+        else
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.45), borderRadius: BorderRadius.circular(20)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.wifi_off_rounded, color: Colors.white70, size: 15),
+                  const SizedBox(width: 6),
+                  Text('reels.video_load_failed'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
+                ],
               ),
             ),
-          if (_showPauseFlash)
-            Center(
+          ),
+        // A transparent tap layer painted OVER the video, not wrapped
+        // around it — on Android, VideoPlayer renders through a platform
+        // view/texture, and a GestureDetector that's an ANCESTOR of one
+        // never reliably receives taps (a known Flutter/Android
+        // limitation). As a sibling stacked on top instead, it sits above
+        // the video in the compositor and actually gets the touch.
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: togglePlayPause,
+            behavior: HitTestBehavior.opaque,
+            child: const ColoredBox(color: Colors.transparent),
+          ),
+        ),
+        if (_showPauseFlash)
+          Center(
+            child: IgnorePointer(
               child: AnimatedOpacity(
                 opacity: _showPauseFlash ? 1 : 0,
                 duration: const Duration(milliseconds: 200),
@@ -153,8 +164,8 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
