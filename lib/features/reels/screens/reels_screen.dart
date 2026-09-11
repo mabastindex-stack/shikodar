@@ -99,8 +99,13 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   /// Whether Reels is the actual visible tab right now (as opposed to just
   /// mounted-but-hidden in HomeShell's IndexedStack) — tracked so an app
   /// foreground/background cycle (see didChangeAppLifecycleState) never
-  /// resumes a reel the visitor had already navigated away from.
-  bool _isTabActive = true;
+  /// resumes a reel the visitor had already navigated away from. Starts
+  /// false: HomeShell's IndexedStack builds every tab (including this one)
+  /// immediately at launch, but its default visible tab is Home, not
+  /// Reels — starting this true made the very first reel autoplay (with
+  /// sound) the instant the app opened, well before the visitor ever
+  /// switched to this tab.
+  bool _isTabActive = false;
 
   /// Pauses the currently on-screen reel's video — called by HomeShell the
   /// instant the visitor switches to a different bottom-nav tab. Without
@@ -185,7 +190,11 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
                 key: ValueKey(reels[i].id),
                 reel: reels[i],
                 playerKey: _keyFor(i),
-                isActive: i == _activeIndex,
+                // Gated by _isTabActive too, not just the page index — this
+                // PageView gets built (and would otherwise autoplay its
+                // first item) the moment HomeShell mounts every tab into
+                // its IndexedStack, long before Reels is the one on screen.
+                isActive: i == _activeIndex && _isTabActive,
                 muted: _muted,
               ),
             ),
