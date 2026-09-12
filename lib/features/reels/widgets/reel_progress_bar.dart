@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// A thin, story-style progress track for the currently active reel.
 class ReelProgressBar extends StatelessWidget {
-  final VideoPlayerController? controller;
-  const ReelProgressBar({super.key, required this.controller});
+  final Player? player;
+  const ReelProgressBar({super.key, required this.player});
 
   @override
   Widget build(BuildContext context) {
-    final c = controller;
-    if (c == null) {
+    final p = player;
+    if (p == null) {
       return Container(height: 3, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(3)));
     }
-    return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: c,
-      builder: (context, value, child) {
-        final total = value.duration.inMilliseconds;
-        final pos = value.position.inMilliseconds;
+    return StreamBuilder<Duration>(
+      stream: p.stream.position,
+      initialData: p.state.position,
+      builder: (context, snapshot) {
+        final total = p.state.duration.inMilliseconds;
+        final pos = (snapshot.data ?? Duration.zero).inMilliseconds;
         final progress = total > 0 ? (pos / total).clamp(0.0, 1.0) : 0.0;
         return ClipRRect(
           borderRadius: BorderRadius.circular(3),

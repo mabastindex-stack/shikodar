@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/listing_image.dart';
 
@@ -13,6 +14,16 @@ import '../../../shared/widgets/listing_image.dart';
 /// listing's real photo shows underneath at all times — while the video
 /// buffers, and as a graceful fallback if playback ever fails — so the
 /// screen is never just a dark box.
+///
+/// Built on media_kit rather than video_player: on the device this was
+/// debugged against (a Samsung Galaxy S23 Ultra), a Material+InkWell placed
+/// directly over a video_player-rendered video produced no ripple at all on
+/// tap — proof the touch never reached Flutter's gesture system in that
+/// screen region, regardless of which Dart-side widget wrapped it. That
+/// pointed at video_player_android's SurfaceProducer output surface being
+/// excluded from normal touch dispatch on this hardware. media_kit_video
+/// renders through a different Android output path and doesn't share that
+/// failure mode.
 class ReelVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final String thumbnailUrl;
@@ -25,10 +36,12 @@ class ReelVideoPlayer extends StatefulWidget {
 }
 
 class ReelVideoPlayerState extends State<ReelVideoPlayer> {
-  VideoPlayerController? _controller;
+  Player? _player;
+  VideoController? _videoController;
   bool _ready = false;
   bool _failed = false;
   bool _showPauseFlash = false;
+  bool _isPlaying = false;
 
   @override
   void initState() {
@@ -37,14 +50,22 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
   }
 
   Future<void> _init() async {
-    final c = isNetworkImage(widget.videoUrl) ? VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl)) : VideoPlayerController.file(File(widget.videoUrl));
-    _controller = c;
+    final player = Player();
+    _player = player;
+    _videoController = VideoController(player);
+    player.stream.playing.listen((playing) {
+      if (mounted) setState(() => _isPlaying = playing);
+    });
     try {
-      await c.initialize();
-      await c.setLooping(true);
-      await c.setVolume(widget.muted ? 0 : 1);
+      // .single loops the current media indefinitely; .loop would restart
+      // a whole (here, one-item) playlist instead — same visible effect
+      // for us, but .single is the mode actually meant for this.
+      await player.setPlaylistMode(PlaylistMode.single);
+      await player.setVolume(widget.muted ? 0 : 100);
+      final media = isNetworkImage(widget.videoUrl) ? Media(widget.videoUrl) : Media(File(widget.videoUrl).uri.toString());
+      await player.open(media, play: false);
       if (mounted) setState(() => _ready = true);
-      if (widget.isActive) c.play();
+      if (widget.isActive) player.play();
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }
@@ -53,27 +74,23 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
   @override
   void didUpdateWidget(covariant ReelVideoPlayer old) {
     super.didUpdateWidget(old);
-    if (_controller == null) return;
-    // play()/pause()/setVolume() synchronously notify the controller's
-    // listeners (including the ReelProgressBar's ValueListenableBuilder),
-    // and didUpdateWidget itself runs mid-build — calling them directly
-    // here trips "setState() called during build" (seen live in a device
-    // log as an uncaught FlutterError on this exact line). Deferring to
-    // the next frame keeps the actual pause/play/volume change but lets
-    // the current build finish first.
+    if (_player == null) return;
+    // Deferred to the next frame so a play()/pause() triggered from here
+    // (didUpdateWidget runs mid-build) never lands while the framework is
+    // still in the middle of building this same subtree.
     final isActive = widget.isActive;
     final wasActive = old.isActive;
     final muted = widget.muted;
     final wasMuted = old.muted;
     if (isActive != wasActive || muted != wasMuted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final c = _controller;
-        if (c == null) return;
+        final p = _player;
+        if (p == null) return;
         if (isActive != wasActive) {
-          isActive ? c.play() : c.pause();
+          isActive ? p.play() : p.pause();
         }
         if (muted != wasMuted) {
-          c.setVolume(muted ? 0 : 1);
+          p.setVolume(muted ? 0 : 100);
         }
       });
     }
@@ -85,13 +102,10 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
     // without this the keyboard just sat there until the visitor found
     // the search field again to dismiss it manually.
     FocusManager.instance.primaryFocus?.unfocus();
-    final c = _controller;
-    debugPrint('[reel-tap] fired, ready=$_ready, isPlaying=${c?.value.isPlaying}');
-    if (c == null || !_ready) return;
-    setState(() {
-      c.value.isPlaying ? c.pause() : c.play();
-      _showPauseFlash = true;
-    });
+    final p = _player;
+    if (p == null || !_ready) return;
+    _isPlaying ? p.pause() : p.play();
+    setState(() => _showPauseFlash = true);
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) setState(() => _showPauseFlash = false);
     });
@@ -99,7 +113,7 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -127,18 +141,13 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
       children: [
         // Real photo always underneath — never a flat black screen.
         _photoBackground(),
-        // Shows the video at its own real aspect ratio (contain, not
-        // cover) — a vertical clip still fills the screen edge to edge,
-        // but a horizontal or square one is no longer cropped/zoomed to
-        // force-fill a 9:16 frame; the photo behind it fills the rest,
-        // the same way TikTok letterboxes a non-vertical video.
-        if (_ready && _controller != null)
-          Center(
-            child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
-              child: VideoPlayer(_controller!),
-            ),
-          )
+        // BoxFit.contain shows the video at its own real aspect ratio — a
+        // vertical clip still fills the screen edge to edge, but a
+        // horizontal or square one is no longer cropped/zoomed to
+        // force-fill a 9:16 frame; the photo behind it fills the rest, the
+        // same way TikTok letterboxes a non-vertical video.
+        if (_ready && _videoController != null)
+          Video(controller: _videoController!, fit: BoxFit.contain, controls: NoVideoControls)
         else if (!_failed)
           const Center(child: CircularProgressIndicator(color: AppColors.gold, strokeWidth: 2.4))
         else
@@ -157,18 +166,9 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
             ),
           ),
         // A transparent tap layer painted OVER the video, not wrapped
-        // around it — on Android, VideoPlayer renders through a platform
-        // view/texture, and a GestureDetector that's an ANCESTOR of one
-        // never reliably receives taps (a known Flutter/Android
-        // limitation). As a sibling stacked on top instead, it sits above
-        // the video in the compositor and actually gets the touch.
-        //
-        // InkWell instead of a bare GestureDetector — same tap-vs-drag
-        // arena behavior, but its splash is real, visible proof of
-        // whether a touch here is reaching Flutter at all (a ripple with
-        // no pause means the tap lands but something after it is wrong; no
-        // ripple at all means the touch never arrives, a platform issue no
-        // amount of Dart-side gesture tuning can fix).
+        // around it, so it sits above the video in the compositor and
+        // actually gets the touch. InkWell (not a bare GestureDetector) so
+        // its splash gives real visible proof taps are landing here.
         Positioned.fill(
           child: Material(
             color: Colors.transparent,
@@ -189,7 +189,7 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), shape: BoxShape.circle),
                   child: Icon(
-                    (_controller?.value.isPlaying ?? false) ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                    _isPlaying ? Icons.play_arrow_rounded : Icons.pause_rounded,
                     color: Colors.white,
                     size: 44,
                   ),
@@ -201,5 +201,5 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
     );
   }
 
-  VideoPlayerController? get controller => _controller;
+  Player? get player => _player;
 }

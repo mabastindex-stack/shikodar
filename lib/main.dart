@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 
 import 'core/navigation/app_route_observer.dart';
@@ -41,6 +42,7 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   await EasyLocalization.ensureInitialized();
 
   // Not initialized on web — there's no google-services.json equivalent

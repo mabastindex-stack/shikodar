@@ -64,7 +64,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _pauseAll();
     } else if (state == AppLifecycleState.resumed && _isTabActive) {
-      _keyFor(_activeIndex).currentState?.controller?.play();
+      _keyFor(_activeIndex).currentState?.player?.play();
     }
   }
 
@@ -76,7 +76,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   /// active.
   void _pauseAll() {
     for (final key in _playerKeys.values) {
-      key.currentState?.controller?.pause();
+      key.currentState?.player?.pause();
     }
   }
 
@@ -140,7 +140,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   /// this, the reel (and its audio) kept playing invisibly in the
   /// background: this screen stays mounted inside HomeShell's IndexedStack
   /// rather than being disposed on tab switch, so nothing else ever told
-  /// its VideoPlayerController to stop.
+  /// its media_kit Player to stop.
   void pauseActive() {
     _isTabActive = false;
     _pauseAll();
@@ -156,7 +156,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   /// switching back to this tab, mirroring pauseActive().
   void resumeActive() {
     _isTabActive = true;
-    _keyFor(_activeIndex).currentState?.controller?.play();
+    _keyFor(_activeIndex).currentState?.player?.play();
   }
 
   void _resetToTop() {
@@ -309,7 +309,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.only(top: 62, left: 16, right: 16),
-                child: ReelProgressBar(controller: _keyFor(_activeIndex).currentState?.controller),
+                child: ReelProgressBar(player: _keyFor(_activeIndex).currentState?.player),
               ).entrance(base: 180.ms),
             ),
         ],

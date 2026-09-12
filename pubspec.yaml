@@ -26,12 +26,22 @@ dependencies:
   # Pinned as a direct (not just transitive) dependency: `video_player`
   # 2.10.1's own constraint was satisfied by the older 2.8.15 platform
   # package, so a plain `flutter pub upgrade` never moved past it even
-  # though 2.12.x exists — and 2.8.15 is squarely inside the run of
-  # SurfaceProducer releases with reported touch/rendering regressions on
-  # Samsung devices (reel taps here never reached Dart at all on an S23
-  # Ultra). Forcing the newer platform package directly is the only way
-  # to actually pick up those upstream fixes.
+  # though 2.12.x exists.
   video_player_android: ^2.12.0
+  # Reels' own player only — everything above stays on video_player.
+  # Upgrading video_player_android to 2.12.x did not fix it: on the test
+  # device (a Samsung Galaxy S23 Ultra), a Material+InkWell placed
+  # directly over the reel video produced literally no ripple on tap —
+  # proof the touch never reached Flutter at all in that screen region,
+  # regardless of which Dart-side gesture widget wrapped it. That points
+  # at video_player_android's SurfaceProducer output surface itself being
+  # excluded from normal touch dispatch on this hardware, not at
+  # anything fixable by rearranging widgets. media_kit_video renders
+  # through a different Android output path (not SurfaceProducer) and
+  # doesn't share that failure mode.
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.5
   video_compress: ^3.1.4
   video_trimmer: ^5.0.0
   shimmer: ^3.0.0
