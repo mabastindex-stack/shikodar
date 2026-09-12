@@ -66,6 +66,12 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       backgroundColor: palette.background,
       extendBody: true,
+      // Without this, focusing Reels' search field made THIS Scaffold (the
+      // ancestor of every tab, not just Reels' own nested one) squeeze its
+      // whole IndexedStack upward to clear the keyboard — the reel video
+      // visibly shrank even after Reels' own Scaffold got the same fix,
+      // because this outer one was resizing the body first.
+      resizeToAvoidBottomInset: false,
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: SafeArea(
         top: false,

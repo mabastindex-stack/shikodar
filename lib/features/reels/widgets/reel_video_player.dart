@@ -30,17 +30,6 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
   bool _failed = false;
   bool _showPauseFlash = false;
 
-  /// Where the finger went down, so onPointerUp can tell a real tap from
-  /// the start of a swipe. A plain GestureDetector's onTap loses this to
-  /// the parent PageView's vertical-drag recognizer almost every time —
-  /// both sit in the same gesture arena, and the scroll view claims the
-  /// pointer before a tap can win, which is what was dragging the whole
-  /// page instead of toggling playback. Listener's pointer callbacks fire
-  /// unconditionally outside that arena, so tracking the tap by hand here
-  /// sidesteps the conflict entirely while still letting real swipes reach
-  /// the PageView untouched.
-  Offset? _pointerDownPosition;
-
   @override
   void initState() {
     super.initState();
@@ -74,8 +63,12 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
   }
 
   void togglePlayPause() {
+    // Closes the reels search keyboard on the same tap, if it was open —
+    // tapping the video is the natural "I'm done searching" gesture, and
+    // without this the keyboard just sat there until the visitor found
+    // the search field again to dismiss it manually.
+    FocusManager.instance.primaryFocus?.unfocus();
     final c = _controller;
-    debugPrint('[reel-tap] togglePlayPause called, controller=${c != null}, ready=$_ready, isPlaying=${c?.value.isPlaying}');
     if (c == null || !_ready) return;
     setState(() {
       c.value.isPlaying ? c.pause() : c.play();
@@ -152,20 +145,19 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
         // limitation). As a sibling stacked on top instead, it sits above
         // the video in the compositor and actually gets the touch.
         //
-        // Listener instead of GestureDetector.onTap — see
-        // _pointerDownPosition's doc comment for why.
+        // Plain GestureDetector.onTap, not Listener — a Listener never
+        // enters the gesture arena, so it can't stop the parent PageView's
+        // own vertical-drag recognizer from treating the same touch as a
+        // scroll attempt and visibly nudging the page on every tap (that
+        // was the "glitch behind the reel" a Listener-based version of
+        // this caused). A real GestureDetector's tap recognizer properly
+        // competes for and wins a stationary tap, so the page never
+        // reacts; a genuine swipe still loses that contest and reaches
+        // the PageView exactly as before.
         Positioned.fill(
-          child: Listener(
+          child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) => _pointerDownPosition = event.position,
-            onPointerUp: (event) {
-              final start = _pointerDownPosition;
-              if (start != null && (event.position - start).distance < 18) {
-                togglePlayPause();
-              }
-              _pointerDownPosition = null;
-            },
-            onPointerCancel: (_) => _pointerDownPosition = null,
+            onTap: togglePlayPause,
             child: const ColoredBox(color: Colors.transparent),
           ),
         ),
