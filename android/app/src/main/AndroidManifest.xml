@@ -21,6 +21,18 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Every reel-tap log we captured showed the Impeller/Vulkan
+                 backend active ("Using the Impeller rendering backend
+                 (Vulkan)") and no tap ever reaching Dart, no matter how the
+                 tap-detection widget was structured — consistent with a
+                 known class of Impeller + video_player touch-forwarding
+                 bugs on Android (the plugin's Impeller-compatible surface
+                 path has gone through several add/revert cycles upstream).
+                 Falling back to the older Skia renderer for this platform
+                 avoids that surface path entirely. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.EnableImpeller"
+              android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
