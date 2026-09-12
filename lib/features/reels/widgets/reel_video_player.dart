@@ -54,11 +54,28 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
   void didUpdateWidget(covariant ReelVideoPlayer old) {
     super.didUpdateWidget(old);
     if (_controller == null) return;
-    if (widget.isActive != old.isActive) {
-      widget.isActive ? _controller!.play() : _controller!.pause();
-    }
-    if (widget.muted != old.muted) {
-      _controller!.setVolume(widget.muted ? 0 : 1);
+    // play()/pause()/setVolume() synchronously notify the controller's
+    // listeners (including the ReelProgressBar's ValueListenableBuilder),
+    // and didUpdateWidget itself runs mid-build — calling them directly
+    // here trips "setState() called during build" (seen live in a device
+    // log as an uncaught FlutterError on this exact line). Deferring to
+    // the next frame keeps the actual pause/play/volume change but lets
+    // the current build finish first.
+    final isActive = widget.isActive;
+    final wasActive = old.isActive;
+    final muted = widget.muted;
+    final wasMuted = old.muted;
+    if (isActive != wasActive || muted != wasMuted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final c = _controller;
+        if (c == null) return;
+        if (isActive != wasActive) {
+          isActive ? c.play() : c.pause();
+        }
+        if (muted != wasMuted) {
+          c.setVolume(muted ? 0 : 1);
+        }
+      });
     }
   }
 
