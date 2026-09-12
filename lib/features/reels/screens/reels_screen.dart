@@ -61,9 +61,21 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      _keyFor(_activeIndex).currentState?.controller?.pause();
+      _pauseAll();
     } else if (state == AppLifecycleState.resumed && _isTabActive) {
       _keyFor(_activeIndex).currentState?.controller?.play();
+    }
+  }
+
+  /// Pauses every reel player PageView has ever built (not just the one at
+  /// _activeIndex) — PageView.builder keeps a page or two alive just
+  /// outside the viewport for smooth swiping, so if bookkeeping ever drifts
+  /// from what's actually on screen, this is the guarantee that leaving the
+  /// tab genuinely silences every video instead of just the one we think is
+  /// active.
+  void _pauseAll() {
+    for (final key in _playerKeys.values) {
+      key.currentState?.controller?.pause();
     }
   }
 
@@ -115,7 +127,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   /// its VideoPlayerController to stop.
   void pauseActive() {
     _isTabActive = false;
-    _keyFor(_activeIndex).currentState?.controller?.pause();
+    _pauseAll();
   }
 
   /// Resumes the on-screen reel — called by HomeShell right after
