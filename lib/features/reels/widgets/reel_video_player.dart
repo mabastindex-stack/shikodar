@@ -146,20 +146,20 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
         // limitation). As a sibling stacked on top instead, it sits above
         // the video in the compositor and actually gets the touch.
         //
-        // Plain GestureDetector.onTap, not Listener — a Listener never
-        // enters the gesture arena, so it can't stop the parent PageView's
-        // own vertical-drag recognizer from treating the same touch as a
-        // scroll attempt and visibly nudging the page on every tap (that
-        // was the "glitch behind the reel" a Listener-based version of
-        // this caused). A real GestureDetector's tap recognizer properly
-        // competes for and wins a stationary tap, so the page never
-        // reacts; a genuine swipe still loses that contest and reaches
-        // the PageView exactly as before.
+        // InkWell instead of a bare GestureDetector — same tap-vs-drag
+        // arena behavior, but its splash is real, visible proof of
+        // whether a touch here is reaching Flutter at all (a ripple with
+        // no pause means the tap lands but something after it is wrong; no
+        // ripple at all means the touch never arrives, a platform issue no
+        // amount of Dart-side gesture tuning can fix).
         Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: togglePlayPause,
-            child: const ColoredBox(color: Colors.transparent),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: togglePlayPause,
+              splashColor: Colors.white24,
+              highlightColor: Colors.white10,
+            ),
           ),
         ),
         if (_showPauseFlash)
