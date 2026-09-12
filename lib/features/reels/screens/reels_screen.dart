@@ -24,6 +24,7 @@ class ReelsScreen extends StatefulWidget {
 class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindingObserver {
   final _pageController = PageController();
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   final Map<int, GlobalKey<ReelVideoPlayerState>> _playerKeys = {};
   ListingPurpose? _purpose; // null = both
   String _type = 'all';
@@ -143,6 +144,12 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
   void pauseActive() {
     _isTabActive = false;
     _pauseAll();
+    // Reels stays mounted (just offstage) inside HomeShell's IndexedStack,
+    // so the search field's focus — and the keyboard it opened — would
+    // otherwise survive the tab switch untouched and pop back up as soon
+    // as the visitor returns here, even after a completely unrelated trip
+    // through another tab.
+    _searchFocusNode.unfocus();
   }
 
   /// Resumes the on-screen reel — called by HomeShell right after
@@ -178,6 +185,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
     WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -254,6 +262,7 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
                               Expanded(
                                 child: TextField(
                                   controller: _searchController,
+                                  focusNode: _searchFocusNode,
                                   onChanged: (v) => setState(() => _query = v),
                                   style: const TextStyle(color: Colors.white, fontSize: 13),
                                   decoration: InputDecoration(

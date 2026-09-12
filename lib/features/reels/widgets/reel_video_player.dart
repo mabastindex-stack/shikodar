@@ -69,6 +69,7 @@ class ReelVideoPlayerState extends State<ReelVideoPlayer> {
     // the search field again to dismiss it manually.
     FocusManager.instance.primaryFocus?.unfocus();
     final c = _controller;
+    debugPrint('[reel-tap] fired, ready=$_ready, isPlaying=${c?.value.isPlaying}');
     if (c == null || !_ready) return;
     setState(() {
       c.value.isPlaying ? c.pause() : c.play();
