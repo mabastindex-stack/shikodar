@@ -201,6 +201,12 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
 
     return Scaffold(
       backgroundColor: Colors.black,
+      // Without this, Scaffold's default behavior squeezes the whole body
+      // (video included) upward to stay clear of the keyboard the instant
+      // the search field is focused — the reel visibly shrinks and
+      // recomposes. The keyboard should just float over the video like it
+      // does on TikTok, not resize the page underneath it.
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           if (_isLoading)
