@@ -85,16 +85,31 @@ class ReelsScreenState extends State<ReelsScreen> with RouteAware, WidgetsBindin
     routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
   }
 
-  /// Another screen was just pushed on top of this one (e.g. tapping
-  /// through to a listing or agency profile from a reel) — pause so its
-  /// video/audio doesn't keep running behind the new screen.
-  @override
-  void didPushNext() => pauseActive();
+  /// Whether Reels was genuinely the visible tab at the moment something
+  /// got pushed on top — remembered here because didPushNext always sets
+  /// _isTabActive false (via pauseActive), which would otherwise erase the
+  /// one piece of information didPopNext actually needs.
+  bool _wasTabActiveBeforePush = false;
 
-  /// Back on top again after that screen was popped — resume where we
-  /// left off.
+  /// ReelsScreen lives inside HomeShell's IndexedStack, and HomeShell has
+  /// exactly one enclosing route no matter which bottom-nav tab is showing
+  /// — so this fires for EVERY push/pop in the whole app, not just ones
+  /// that happen while Reels is on screen (e.g. opening a listing from the
+  /// Home tab). Only react when Reels was actually the visible tab, or a
+  /// push made from some other tab would wrongly resume/replay a reel the
+  /// visitor was never even looking at once they pop back.
   @override
-  void didPopNext() => resumeActive();
+  void didPushNext() {
+    _wasTabActiveBeforePush = _isTabActive;
+    if (_isTabActive) pauseActive();
+  }
+
+  /// Back on top again after that screen was popped — resume only if Reels
+  /// was really what the visitor left, per didPushNext's note above.
+  @override
+  void didPopNext() {
+    if (_wasTabActiveBeforePush) resumeActive();
+  }
 
   /// Kept alive by the bottom nav's IndexedStack, so it never rebuilds on
   /// its own when a reel is published elsewhere and the visitor switches
