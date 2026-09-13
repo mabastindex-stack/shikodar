@@ -591,6 +591,8 @@
     "details_title": "Package Details",
     "logo_highlight": "This package includes a special logo",
     "video_highlight": "Special video — tap to watch",
+    "home_image_label": "Home page image",
+    "video_section_title": "Package video",
     "starter_tagline": "The best start for new brokers",
     "starter_listings_limit": "10 listings",
     "starter_reels_limit": "2 reels",

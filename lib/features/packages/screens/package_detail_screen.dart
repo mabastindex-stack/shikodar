@@ -41,7 +41,10 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final heroImage = package.homeImageUrl ?? package.imageUrl;
+    // The hero uses the package's own image only — home_image_url gets its
+    // own big showcase block further down, per the admin's explicit request
+    // to keep the two visually distinct rather than falling back between them.
+    final heroImage = package.imageUrl;
     return Scaffold(
       backgroundColor: palette.background,
       body: CustomScrollView(
@@ -134,16 +137,75 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> with SingleTi
                       ],
                     ),
                   ).animate(delay: 100.ms).fadeIn(duration: 320.ms),
+                  if (package.homeImageUrl != null) ...[
+                    const SizedBox(height: 20),
+                    Text('packages.home_image_label'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800))
+                        .animate(delay: 130.ms)
+                        .fadeIn(duration: 300.ms),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: SizedBox(
+                        height: 200,
+                        width: double.infinity,
+                        child: CachedNetworkImage(
+                          imageUrl: package.homeImageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                          errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+                        ),
+                      ),
+                    ).animate(delay: 160.ms).fadeIn(duration: 340.ms).slideY(begin: 0.06, end: 0),
+                  ],
+                  if (package.logoUrl != null) ...[
+                    const SizedBox(height: 22),
+                    Center(
+                      child: Container(
+                        width: 128,
+                        height: 128,
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: palette.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: color.withOpacity(0.35), width: 2),
+                          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.18), blurRadius: 22, offset: const Offset(0, 10))],
+                        ),
+                        child: ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: package.logoUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                            errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+                          ),
+                        ),
+                      ),
+                    ).animate(delay: 200.ms).fadeIn(duration: 340.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), curve: Curves.easeOutBack),
+                  ],
                   if (package.description != null) ...[
                     const SizedBox(height: 22),
-                    Text('packages.details_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)).animate(delay: 140.ms).fadeIn(duration: 300.ms),
+                    Text('packages.details_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)).animate(delay: 220.ms).fadeIn(duration: 300.ms),
                     const SizedBox(height: 8),
                     Text(package.description!, style: TextStyle(color: palette.textSecondary, fontSize: 13, height: 1.6))
-                        .animate(delay: 170.ms)
+                        .animate(delay: 250.ms)
                         .fadeIn(duration: 300.ms),
                   ],
+                  if (package.videoUrl != null) ...[
+                    const SizedBox(height: 22),
+                    Text('packages.video_section_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)).animate(delay: 260.ms).fadeIn(duration: 300.ms),
+                    const SizedBox(height: 10),
+                    _InlineAutoplayVideo(videoUrl: package.videoUrl!).animate(delay: 290.ms).fadeIn(duration: 340.ms).slideY(begin: 0.06, end: 0),
+                  ],
                   const SizedBox(height: 22),
-                  ..._buildDetailRows(context),
+                  _highlightRow(
+                    package.listingsLimit == null ? 'packages.unlimited_listings'.tr() : 'packages.listings_limit_label'.tr(args: [package.listingsLimit.toString()]),
+                    0,
+                    icon: Icons.home_work_outlined,
+                  ),
+                  _highlightRow(
+                    package.reelsLimit == null ? 'packages.unlimited_reels'.tr() : 'packages.reels_limit_label'.tr(args: [package.reelsLimit.toString()]),
+                    1,
+                    icon: Icons.play_circle_outline,
+                  ),
                   const SizedBox(height: 30),
                   Material(
                     color: Colors.transparent,
@@ -175,100 +237,6 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> with SingleTi
     );
   }
 
-  /// Logo and video (each only when the package has one) come first as their
-  /// own media rows, then the listings/reels limits — same pattern used for
-  /// Offer's optional media, all sharing one running animation-delay index.
-  List<Widget> _buildDetailRows(BuildContext context) {
-    final rows = <Widget>[];
-    var index = 0;
-    if (package.logoUrl != null) {
-      rows.add(_logoHighlightRow(index++));
-    }
-    if (package.videoUrl != null) {
-      rows.add(_videoHighlightRow(context, index++));
-    }
-    rows.add(_highlightRow(
-      package.listingsLimit == null ? 'packages.unlimited_listings'.tr() : 'packages.listings_limit_label'.tr(args: [package.listingsLimit.toString()]),
-      index++,
-      icon: Icons.home_work_outlined,
-    ));
-    rows.add(_highlightRow(
-      package.reelsLimit == null ? 'packages.unlimited_reels'.tr() : 'packages.reels_limit_label'.tr(args: [package.reelsLimit.toString()]),
-      index++,
-      icon: Icons.play_circle_outline,
-    ));
-    return rows;
-  }
-
-  Widget _logoHighlightRow(int index) {
-    final palette = context.palette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: CachedNetworkImage(imageUrl: package.logoUrl!, width: 44, height: 44, fit: BoxFit.cover),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text('packages.logo_highlight'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600))),
-          ],
-        ),
-      ),
-    ).animate(delay: (200 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
-  }
-
-  Widget _videoHighlightRow(BuildContext context, int index) {
-    final palette = context.palette;
-    final thumbnail = package.imageUrl ?? package.homeImageUrl;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => _PackageVideoPage(videoUrl: package.videoUrl!))),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))]),
-            child: Row(
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: thumbnail != null
-                          ? CachedNetworkImage(imageUrl: thumbnail, width: 56, height: 44, fit: BoxFit.cover)
-                          : Container(width: 56, height: 44, color: color.withOpacity(0.15)),
-                    ),
-                    Container(
-                      width: 26,
-                      height: 26,
-                      decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(child: Text('packages.video_highlight'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600))),
-                Icon(Icons.chevron_left_rounded, size: 18, color: palette.textMuted),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ).animate(delay: (200 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
-  }
-
   Widget _highlightRow(String text, int index, {IconData icon = Icons.check_rounded}) {
     final palette = context.palette;
     return Padding(
@@ -295,7 +263,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> with SingleTi
           ],
         ),
       ),
-    ).animate(delay: (200 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
+    ).animate(delay: (320 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
   }
 
   Widget _circleBtn(IconData icon, VoidCallback onTap) {
@@ -318,62 +286,50 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> with SingleTi
   }
 }
 
-/// Full-screen playback for a package's promo video — same simple
-/// tap-to-play pattern as the offer detail screen's video.
-class _PackageVideoPage extends StatefulWidget {
+/// Plays a package's promo video right on the page — autoplaying, muted,
+/// looping, no tap required — instead of the tap-to-open full-screen
+/// player used elsewhere, per the admin's explicit request for this screen.
+class _InlineAutoplayVideo extends StatefulWidget {
   final String videoUrl;
-  const _PackageVideoPage({required this.videoUrl});
+  const _InlineAutoplayVideo({required this.videoUrl});
 
   @override
-  State<_PackageVideoPage> createState() => _PackageVideoPageState();
+  State<_InlineAutoplayVideo> createState() => _InlineAutoplayVideoState();
 }
 
-class _PackageVideoPageState extends State<_PackageVideoPage> {
-  late final VideoPlayerController _controller;
+class _InlineAutoplayVideoState extends State<_InlineAutoplayVideo> {
+  VideoPlayerController? _controller;
   bool _ready = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() => _ready = true);
-        _controller.play();
-      });
+    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    _controller = controller;
+    controller.initialize().then((_) async {
+      if (!mounted) return;
+      await controller.setLooping(true);
+      await controller.setVolume(0);
+      setState(() => _ready = true);
+      controller.play();
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (_ready)
-            GestureDetector(
-              onTap: () => setState(() => _controller.value.isPlaying ? _controller.pause() : _controller.play()),
-              child: AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller)),
-            )
-          else
-            const CircularProgressIndicator(color: Colors.white),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: SafeArea(
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
-              ),
-            ),
-          ),
-        ],
+    final palette = context.palette;
+    final controller = _controller;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: AspectRatio(
+        aspectRatio: (_ready && controller != null) ? controller.value.aspectRatio : 16 / 9,
+        child: (_ready && controller != null) ? VideoPlayer(controller) : Container(color: palette.surfaceElevated),
       ),
     );
   }
