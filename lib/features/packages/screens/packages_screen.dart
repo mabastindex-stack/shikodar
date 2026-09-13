@@ -3,11 +3,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/package_repository.dart';
-import '../../../core/shikodar_contact.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+import 'package_detail_screen.dart';
 
 class Package {
   final String id;
@@ -75,7 +74,6 @@ class PackagesScreen extends StatefulWidget {
 class _PackagesScreenState extends State<PackagesScreen> {
   List<Package> _packages = [];
   bool _isLoading = true;
-  int _selected = 0;
 
   @override
   void initState() {
@@ -137,7 +135,6 @@ class _PackagesScreenState extends State<PackagesScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: (_isLoading || packages.isEmpty) ? null : _ctaBar(palette),
     );
   }
 
@@ -146,34 +143,27 @@ class _PackagesScreenState extends State<PackagesScreen> {
     final package = _packages[i];
     final color = _tierColor(i);
     final deepColor = Color.lerp(color, Colors.black, 0.28)!;
-    final selected = i == _selected;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
-      child: GestureDetector(
-        onTap: () => setState(() => _selected = i),
-        child: AnimatedScale(
-          scale: selected ? 1.0 : 0.985,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeOutCubic,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => PackageDetailScreen(package: package, color: color, icon: _tierIcon(i))),
+          ),
+          child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: [palette.surface, Color.lerp(palette.surface, color, selected ? 0.14 : 0.06)!],
+                colors: [palette.surface, Color.lerp(palette.surface, color, 0.08)!],
               ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: selected ? color : color.withOpacity(0.18), width: selected ? 2 : 1),
-              boxShadow: [
-                BoxShadow(
-                  color: (selected ? color : palette.shadow).withOpacity(selected ? 0.35 : 0.12),
-                  blurRadius: selected ? 26 : 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              border: Border.all(color: color.withOpacity(0.18)),
+              boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
             ),
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -196,30 +186,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  package.title,
-                                  style: TextStyle(color: palette.textPrimary, fontSize: 17.5, fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 220),
-                                child: selected
-                                    ? Container(
-                                        key: const ValueKey('selected'),
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(colors: [color, deepColor]),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Text('packages.selected_badge'.tr(), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
-                                      )
-                                    : const SizedBox.shrink(key: ValueKey('unselected')),
-                              ),
-                            ],
-                          ),
+                          Text(package.title, style: TextStyle(color: palette.textPrimary, fontSize: 17.5, fontWeight: FontWeight.w800)),
                           if (package.description != null) ...[
                             const SizedBox(height: 2),
                             Text(package.description!, style: TextStyle(color: palette.textSecondary, fontSize: 11)),
@@ -237,6 +204,8 @@ class _PackagesScreenState extends State<PackagesScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_left_rounded, size: 20, color: palette.textMuted),
                   ],
                 ),
                 if (package.imageUrl != null) ...[
@@ -322,153 +291,6 @@ class _PackagesScreenState extends State<PackagesScreen> {
         ),
         if (!isLast) Divider(height: 1, indent: 10, endIndent: 10, color: palette.divider),
       ],
-    );
-  }
-
-  void _showContactSheet(Package package) {
-    final color = _tierColor(_selected);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final sheetPalette = sheetContext.palette;
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
-          child: Container(
-            padding: EdgeInsets.fromLTRB(22, 20, 22, 22 + MediaQuery.of(sheetContext).padding.bottom),
-            decoration: BoxDecoration(color: sheetPalette.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 18),
-                    decoration: BoxDecoration(color: sheetPalette.divider, borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
-                      child: Icon(_tierIcon(_selected), color: Colors.white, size: 21),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('packages.plan_title'.tr(args: [package.title]), style: TextStyle(color: sheetPalette.textPrimary, fontSize: 15.5, fontWeight: FontWeight.w800)),
-                          Text(package.formattedPrice, style: TextStyle(color: sheetPalette.textSecondary, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Text('packages.contact_to_activate'.tr(), style: TextStyle(color: sheetPalette.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => launchUrl(
-                      Uri.parse('https://wa.me/$shikodarPhoneDigits?text=${Uri.encodeComponent('packages.whatsapp_message'.tr(args: [package.title]))}'),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    icon: const Icon(Icons.chat, size: 18),
-                    label: Text('packages.contact_via_whatsapp'.tr()),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.whatsapp,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('tel:+$shikodarPhoneDigits')),
-                    icon: Icon(Icons.phone, size: 18, color: sheetPalette.primary),
-                    label: Text('packages.call_action'.tr(), style: TextStyle(color: sheetPalette.primary)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: sheetPalette.primary.withOpacity(0.4)),
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _ctaBar(AppPalette palette) {
-    final package = _packages[_selected];
-    final color = _tierColor(_selected);
-    final deepColor = Color.lerp(color, Colors.black, 0.28)!;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + MediaQuery.of(context).padding.bottom),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        border: Border(top: BorderSide(color: palette.divider)),
-      ),
-      child: Row(
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 260),
-            transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: FadeTransition(opacity: animation, child: child)),
-            child: Container(
-              key: ValueKey(package.id),
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color, deepColor]),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 5))],
-              ),
-              child: Icon(_tierIcon(_selected), color: Colors.white, size: 22),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: Column(
-                key: ValueKey(package.id),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(package.title, style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
-                  Text(package.formattedPrice, style: TextStyle(color: deepColor, fontSize: 12, fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: () => _showContactSheet(package),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
-            ),
-            child: Text('packages.choose_action'.tr(), style: const TextStyle(fontWeight: FontWeight.w800)),
-          ),
-        ],
-      ),
     );
   }
 }
