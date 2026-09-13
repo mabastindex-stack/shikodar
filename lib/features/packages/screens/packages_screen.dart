@@ -145,123 +145,160 @@ class _PackagesScreenState extends State<PackagesScreen> {
     final palette = context.palette;
     final package = _packages[i];
     final color = _tierColor(i);
+    final deepColor = Color.lerp(color, Colors.black, 0.28)!;
     final selected = i == _selected;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18),
       child: GestureDetector(
         onTap: () => setState(() => _selected = i),
-        child: Container(
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border(right: BorderSide(color: color, width: 6)),
-            boxShadow: [
-              BoxShadow(
-                color: (selected ? color : palette.shadow).withOpacity(selected ? 0.3 : 0.1),
-                blurRadius: selected ? 20 : 10,
-                offset: const Offset(0, 6),
+        child: AnimatedScale(
+          scale: selected ? 1.0 : 0.985,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [palette.surface, Color.lerp(palette.surface, color, selected ? 0.14 : 0.06)!],
               ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
-                    child: Icon(_tierIcon(i), color: Colors.white, size: 21),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                package.title,
-                                style: TextStyle(color: palette.textPrimary, fontSize: 17, fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            if (selected) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-                                child: Text('packages.selected_badge'.tr(), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
-                              ),
-                            ],
-                          ],
-                        ),
-                        if (package.description != null) ...[
-                          const SizedBox(height: 2),
-                          Text(package.description!, style: TextStyle(color: palette.textSecondary, fontSize: 11)),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(package.formattedPrice, style: TextStyle(color: palette.textPrimary, fontSize: 19, fontWeight: FontWeight.w800)),
-                      Text(
-                        package.durationDays == null ? 'packages.unlimited_duration'.tr() : 'packages.duration_days'.tr(args: [package.durationDays.toString()]),
-                        style: TextStyle(color: palette.textMuted, fontSize: 10),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (package.imageUrl != null) ...[
-                const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: SizedBox(
-                    height: 110,
-                    width: double.infinity,
-                    child: CachedNetworkImage(
-                      imageUrl: package.imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: palette.surfaceElevated),
-                      errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
-                    ),
-                  ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: selected ? color : color.withOpacity(0.18), width: selected ? 2 : 1),
+              boxShadow: [
+                BoxShadow(
+                  color: (selected ? color : palette.shadow).withOpacity(selected ? 0.35 : 0.12),
+                  blurRadius: selected ? 26 : 14,
+                  offset: const Offset(0, 8),
                 ),
               ],
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(16)),
-                child: Column(
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    _detailRow(
-                      palette,
-                      Icons.home_work_outlined,
-                      package.listingsLimit == null ? 'packages.unlimited_listings'.tr() : 'packages.listings_limit_label'.tr(args: [package.listingsLimit.toString()]),
-                      color,
-                      isFirst: true,
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color, deepColor]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 16, offset: const Offset(0, 6))],
+                      ),
+                      child: Icon(_tierIcon(i), color: Colors.white, size: 24),
                     ),
-                    _detailRow(
-                      palette,
-                      Icons.play_circle_outline,
-                      package.reelsLimit == null ? 'packages.unlimited_reels'.tr() : 'packages.reels_limit_label'.tr(args: [package.reelsLimit.toString()]),
-                      color,
-                      isLast: true,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  package.title,
+                                  style: TextStyle(color: palette.textPrimary, fontSize: 17.5, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 220),
+                                child: selected
+                                    ? Container(
+                                        key: const ValueKey('selected'),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(colors: [color, deepColor]),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text('packages.selected_badge'.tr(), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                                      )
+                                    : const SizedBox.shrink(key: ValueKey('unselected')),
+                              ),
+                            ],
+                          ),
+                          if (package.description != null) ...[
+                            const SizedBox(height: 2),
+                            Text(package.description!, style: TextStyle(color: palette.textSecondary, fontSize: 11)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(package.formattedPrice, style: TextStyle(color: deepColor, fontSize: 20, fontWeight: FontWeight.w900)),
+                        Text(
+                          package.durationDays == null ? 'packages.unlimited_duration'.tr() : 'packages.duration_days'.tr(args: [package.durationDays.toString()]),
+                          style: TextStyle(color: palette.textMuted, fontSize: 10),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-            ],
+                if (package.imageUrl != null) ...[
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: SizedBox(
+                      height: 170,
+                      width: double.infinity,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: package.imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                            errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+                          ),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(height: 5, decoration: BoxDecoration(gradient: LinearGradient(colors: [color, deepColor]))),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(18)),
+                  child: Column(
+                    children: [
+                      _detailRow(
+                        palette,
+                        Icons.home_work_outlined,
+                        package.listingsLimit == null ? 'packages.unlimited_listings'.tr() : 'packages.listings_limit_label'.tr(args: [package.listingsLimit.toString()]),
+                        color,
+                        isFirst: true,
+                      ),
+                      _detailRow(
+                        palette,
+                        Icons.play_circle_outline,
+                        package.reelsLimit == null ? 'packages.unlimited_reels'.tr() : 'packages.reels_limit_label'.tr(args: [package.reelsLimit.toString()]),
+                        color,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ).animate(delay: (60 * i).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
+    )
+        .animate(delay: (90 * i).ms)
+        .fadeIn(duration: 420.ms, curve: Curves.easeOut)
+        .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic)
+        .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1), curve: Curves.easeOutBack, duration: 460.ms);
   }
 
   Widget _detailRow(AppPalette palette, IconData icon, String label, Color accent, {bool isFirst = false, bool isLast = false}) {
@@ -377,7 +414,10 @@ class _PackagesScreenState extends State<PackagesScreen> {
   Widget _ctaBar(AppPalette palette) {
     final package = _packages[_selected];
     final color = _tierColor(_selected);
-    return Container(
+    final deepColor = Color.lerp(color, Colors.black, 0.28)!;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
       padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
         color: palette.surface,
@@ -385,21 +425,34 @@ class _PackagesScreenState extends State<PackagesScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
-            child: Icon(_tierIcon(_selected), color: Colors.white, size: 22),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: FadeTransition(opacity: animation, child: child)),
+            child: Container(
+              key: ValueKey(package.id),
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color, deepColor]),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 5))],
+              ),
+              child: Icon(_tierIcon(_selected), color: Colors.white, size: 22),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(package.title, style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
-                Text(package.formattedPrice, style: TextStyle(color: palette.textSecondary, fontSize: 11.5)),
-              ],
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: Column(
+                key: ValueKey(package.id),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(package.title, style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
+                  Text(package.formattedPrice, style: TextStyle(color: deepColor, fontSize: 12, fontWeight: FontWeight.w700)),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -410,6 +463,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
             ),
             child: Text('packages.choose_action'.tr(), style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
