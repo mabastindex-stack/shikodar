@@ -789,68 +789,84 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final hasPackage = stats?.packageTitle != null;
     final listingsLimit = stats?.listingsLimit;
     final reelsLimit = stats?.reelsLimit;
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackagesScreen())),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [AppColors.ink, Color(0xFF2A2620)]),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.gold.withOpacity(0.4)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(gradient: AppColors.goldGradient, borderRadius: BorderRadius.circular(13)),
-                  child: const Icon(Icons.workspace_premium_rounded, color: AppColors.ink, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hasPackage ? 'profile_page.package_title'.tr(args: [stats!.packageTitle!]) : 'profile_page.no_active_package_title'.tr(),
-                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        !hasPackage
-                            ? 'profile_page.no_active_package_subtitle'.tr()
-                            : (expiry != null ? 'profile_page.package_expiry'.tr(args: [_formatDate(expiry)]) : 'profile_page.package_expiry_unknown'.tr()),
-                        style: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: AppColors.gold, size: 22),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (hasPackage) ...[
-              isCompany
-                  ? _usageRow('profile_page.usage_projects_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$postsCount']), 1.0)
-                  : _usageRow(
-                      'profile_page.usage_listings_label'.tr(),
-                      listingsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$postsCount']) : '$postsCount/$listingsLimit',
-                      listingsLimit == null ? 1.0 : (postsCount / listingsLimit).clamp(0.0, 1.0),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackagesScreen())),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.ink, Color(0xFF2A2620)]),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.gold.withOpacity(0.45)),
+            boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.18), blurRadius: 24, offset: const Offset(0, 10))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.goldGradient,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.5), blurRadius: 16, offset: const Offset(0, 6))],
                     ),
-              const SizedBox(height: 12),
-              _usageRow(
-                'profile_page.usage_reels_label'.tr(),
-                reelsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$reelsCount']) : '$reelsCount/$reelsLimit',
-                reelsLimit == null ? 1.0 : (reelsCount / reelsLimit).clamp(0.0, 1.0),
+                    child: const Icon(Icons.workspace_premium_rounded, color: AppColors.ink, size: 24),
+                  ).animate().scale(duration: 420.ms, curve: Curves.easeOutBack).fadeIn(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasPackage ? 'profile_page.package_title'.tr(args: [stats!.packageTitle!]) : 'profile_page.no_active_package_title'.tr(),
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          !hasPackage
+                              ? 'profile_page.no_active_package_subtitle'.tr()
+                              : (expiry != null ? 'profile_page.package_expiry'.tr(args: [_formatDate(expiry)]) : 'profile_page.package_expiry_unknown'.tr()),
+                          style: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
+                    child: const Icon(Icons.chevron_right_rounded, color: AppColors.gold, size: 20),
+                  ),
+                ],
               ),
+              if (hasPackage) ...[
+                const SizedBox(height: 18),
+                Container(height: 1, color: Colors.white.withOpacity(0.08)),
+                const SizedBox(height: 16),
+                isCompany
+                    ? _usageRow('profile_page.usage_projects_label'.tr(), 'profile_page.unlimited_count'.tr(args: ['$postsCount']), 1.0)
+                    : _usageRow(
+                        'profile_page.usage_listings_label'.tr(),
+                        listingsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$postsCount']) : '$postsCount/$listingsLimit',
+                        listingsLimit == null ? 1.0 : (postsCount / listingsLimit).clamp(0.0, 1.0),
+                      ),
+                const SizedBox(height: 14),
+                _usageRow(
+                  'profile_page.usage_reels_label'.tr(),
+                  reelsLimit == null ? 'profile_page.unlimited_count'.tr(args: ['$reelsCount']) : '$reelsCount/$reelsLimit',
+                  reelsLimit == null ? 1.0 : (reelsCount / reelsLimit).clamp(0.0, 1.0),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 380.ms).slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic);
   }
 
   Widget _usageRow(String label, String valueLabel, double progress) {
@@ -860,18 +876,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            Text(valueLabel, style: const TextStyle(color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.w700)),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
+              child: Text(valueLabel, style: const TextStyle(color: AppColors.gold, fontSize: 11.5, fontWeight: FontWeight.w800)),
+            ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 7,
-            backgroundColor: Colors.white.withOpacity(0.12),
-            valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+          borderRadius: BorderRadius.circular(8),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: progress),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) => LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              backgroundColor: Colors.white.withOpacity(0.1),
+              valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+            ),
           ),
         ),
       ],
