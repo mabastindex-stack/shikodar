@@ -19,6 +19,7 @@ import 'core/network/home_placement_repository.dart';
 import 'core/network/listing_repository.dart';
 import 'core/network/notification_repository.dart';
 import 'core/network/offer_repository.dart';
+import 'core/network/package_repository.dart';
 import 'core/network/project_repository.dart';
 import 'core/network/push_repository.dart';
 import 'core/network/reel_repository.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
   final projectRepository = ProjectRepository(apiClient);
   final reelRepository = ReelRepository(apiClient);
   final offerRepository = OfferRepository(apiClient);
+  final packageRepository = PackageRepository(apiClient);
   final favoriteRepository = FavoriteRepository(apiClient);
   final feedbackRepository = FeedbackRepository(apiClient);
   final uploadRepository = UploadRepository(apiClient);
@@ -93,6 +95,7 @@ Future<void> main() async {
           Provider<ProjectRepository>.value(value: projectRepository),
           Provider<ReelRepository>.value(value: reelRepository),
           Provider<OfferRepository>.value(value: offerRepository),
+          Provider<PackageRepository>.value(value: packageRepository),
           Provider<FavoriteRepository>.value(value: favoriteRepository),
           Provider<FeedbackRepository>.value(value: feedbackRepository),
           Provider<UploadRepository>.value(value: uploadRepository),

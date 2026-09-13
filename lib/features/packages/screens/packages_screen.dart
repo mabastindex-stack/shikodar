@@ -2,101 +2,68 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/network/package_repository.dart';
 import '../../../core/shikodar_contact.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 
-class _PackagePlan {
-  final String name;
-  final int price;
-  final String tagline;
-  final String listingsLimit;
-  final String reelsLimit;
-  final List<String> features;
-  final bool isEnterprise;
-  const _PackagePlan({
-    required this.name,
+class Package {
+  final String id;
+  final String title;
+  final String? description;
+  final int? listingsLimit;
+  final int? reelsLimit;
+  final double price;
+  final String currency;
+  final int? durationDays;
+  final String? imageUrl;
+  final String? homeImageUrl;
+  final String? logoUrl;
+  final String? videoUrl;
+
+  const Package({
+    required this.id,
+    required this.title,
+    this.description,
+    this.listingsLimit,
+    this.reelsLimit,
     required this.price,
-    required this.tagline,
-    required this.listingsLimit,
-    required this.reelsLimit,
-    required this.features,
-    this.isEnterprise = false,
+    this.currency = 'usd',
+    this.durationDays,
+    this.imageUrl,
+    this.homeImageUrl,
+    this.logoUrl,
+    this.videoUrl,
   });
+
+  /// Mirrors Package::formattedPrice() on the backend.
+  String get formattedPrice => currency == 'usd' ? '\$${price.toStringAsFixed(2)}' : '${price.toStringAsFixed(0)} د.ع';
+
+  factory Package.fromJson(Map<String, dynamic> json) => Package(
+        id: json['id'].toString(),
+        title: json['title'] ?? '',
+        description: (json['description'] as String?)?.isNotEmpty == true ? json['description'] as String : null,
+        listingsLimit: json['listings_limit'] == null ? null : int.tryParse(json['listings_limit'].toString()),
+        reelsLimit: json['reels_limit'] == null ? null : int.tryParse(json['reels_limit'].toString()),
+        price: double.tryParse(json['price'].toString()) ?? 0,
+        currency: json['currency'] as String? ?? 'usd',
+        durationDays: json['duration_days'] == null ? null : int.tryParse(json['duration_days'].toString()),
+        imageUrl: (json['image_url'] as String?)?.isNotEmpty == true ? json['image_url'] as String : null,
+        homeImageUrl: (json['home_image_url'] as String?)?.isNotEmpty == true ? json['home_image_url'] as String : null,
+        logoUrl: (json['logo_url'] as String?)?.isNotEmpty == true ? json['logo_url'] as String : null,
+        videoUrl: (json['video_url'] as String?)?.isNotEmpty == true ? json['video_url'] as String : null,
+      );
 }
 
-List<_PackagePlan> get _plans => [
-      _PackagePlan(
-        name: 'Starter',
-        price: 50,
-        tagline: 'packages.starter_tagline'.tr(),
-        listingsLimit: 'packages.starter_listings_limit'.tr(),
-        reelsLimit: 'packages.starter_reels_limit'.tr(),
-        features: ['packages.starter_feature_1'.tr()],
-      ),
-      _PackagePlan(
-        name: 'Basic',
-        price: 100,
-        tagline: 'packages.basic_tagline'.tr(),
-        listingsLimit: 'packages.basic_listings_limit'.tr(),
-        reelsLimit: 'packages.basic_reels_limit'.tr(),
-        features: ['packages.basic_feature_1'.tr(), 'packages.basic_feature_2'.tr()],
-      ),
-      _PackagePlan(
-        name: 'Business',
-        price: 175,
-        tagline: 'packages.business_tagline'.tr(),
-        listingsLimit: 'packages.business_listings_limit'.tr(),
-        reelsLimit: 'packages.business_reels_limit'.tr(),
-        features: ['packages.business_feature_1'.tr(), 'packages.business_feature_2'.tr()],
-      ),
-      _PackagePlan(
-        name: 'Premium',
-        price: 250,
-        tagline: 'packages.premium_tagline'.tr(),
-        listingsLimit: 'packages.premium_listings_limit'.tr(),
-        reelsLimit: 'packages.premium_reels_limit'.tr(),
-        features: ['packages.premium_feature_1'.tr(), 'packages.premium_feature_2'.tr()],
-      ),
-      _PackagePlan(
-        name: 'Enterprise',
-        price: 400,
-        tagline: 'packages.enterprise_tagline'.tr(),
-        listingsLimit: 'packages.enterprise_listings_limit'.tr(),
-        reelsLimit: 'packages.enterprise_reels_limit'.tr(),
-        features: [
-          'packages.enterprise_feature_1'.tr(),
-          'packages.enterprise_feature_2'.tr(),
-          'packages.enterprise_feature_3'.tr(),
-        ],
-        isEnterprise: true,
-      ),
-    ];
-
+/// Packages have no admin-picked icon (unlike Offer) — cycle a fixed set so
+/// cards stay visually distinct at a glance regardless of how many exist.
 const _tierIcons = [Icons.eco_rounded, Icons.trending_up_rounded, Icons.handshake_rounded, Icons.workspace_premium_rounded, Icons.auto_awesome_rounded];
-const _tierImages = [
-  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=900&q=80',
-  'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&q=80',
-  'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=900&q=80',
-  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=900&q=80',
-  'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=80',
-];
+const _tierColors = [AppColors.tierStarter, AppColors.tierBasic, AppColors.tierBusiness, AppColors.tierPremium, AppColors.tierEnterprise];
 
-Color _tierColor(int i) {
-  switch (i) {
-    case 0:
-      return AppColors.tierStarter;
-    case 1:
-      return AppColors.tierBasic;
-    case 2:
-      return AppColors.tierBusiness;
-    case 3:
-      return AppColors.tierPremium;
-    default:
-      return AppColors.tierEnterprise;
-  }
-}
+Color _tierColor(int i) => _tierColors[i % _tierColors.length];
+IconData _tierIcon(int i) => _tierIcons[i % _tierIcons.length];
 
 class PackagesScreen extends StatefulWidget {
   const PackagesScreen({super.key});
@@ -106,11 +73,24 @@ class PackagesScreen extends StatefulWidget {
 }
 
 class _PackagesScreenState extends State<PackagesScreen> {
-  int _selected = 3; // Premium pre-selected as the "recommended" anchor
+  List<Package> _packages = [];
+  bool _isLoading = true;
+  int _selected = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<PackageRepository>().fetchAll().then((packages) {
+      if (mounted) setState(() { _packages = packages; _isLoading = false; });
+    }).catchError((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final packages = _packages;
     return Scaffold(
       backgroundColor: palette.background,
       body: SafeArea(
@@ -144,22 +124,26 @@ class _PackagesScreenState extends State<PackagesScreen> {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                itemCount: _plans.length,
-                itemBuilder: (context, i) => _tierCard(context, i),
-              ),
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator(color: palette.primary))
+                  : packages.isEmpty
+                      ? Center(child: Text('packages.empty'.tr(), style: TextStyle(color: palette.textSecondary)))
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                          itemCount: packages.length,
+                          itemBuilder: (context, i) => _tierCard(context, i),
+                        ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _ctaBar(palette),
+      bottomNavigationBar: (_isLoading || packages.isEmpty) ? null : _ctaBar(palette),
     );
   }
 
   Widget _tierCard(BuildContext context, int i) {
     final palette = context.palette;
-    final plan = _plans[i];
+    final package = _packages[i];
     final color = _tierColor(i);
     final selected = i == _selected;
 
@@ -169,7 +153,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
         onTap: () => setState(() => _selected = i),
         child: Container(
           decoration: BoxDecoration(
-            color: plan.isEnterprise ? AppColors.ink : palette.surface,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(22),
             border: Border(right: BorderSide(color: color, width: 6)),
             boxShadow: [
@@ -190,7 +174,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
-                    child: Icon(_tierIcons[i], color: Colors.white, size: 21),
+                    child: Icon(_tierIcon(i), color: Colors.white, size: 21),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -199,14 +183,12 @@ class _PackagesScreenState extends State<PackagesScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              plan.name,
-                              style: TextStyle(color: plan.isEnterprise ? AppColors.gold : palette.textPrimary, fontSize: 17, fontWeight: FontWeight.w800),
+                            Expanded(
+                              child: Text(
+                                package.title,
+                                style: TextStyle(color: palette.textPrimary, fontSize: 17, fontWeight: FontWeight.w800),
+                              ),
                             ),
-                            if (plan.isEnterprise) ...[
-                              const SizedBox(width: 5),
-                              const Icon(Icons.auto_awesome_rounded, color: AppColors.gold, size: 15),
-                            ],
                             if (selected) ...[
                               const SizedBox(width: 6),
                               Container(
@@ -217,50 +199,61 @@ class _PackagesScreenState extends State<PackagesScreen> {
                             ],
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          plan.tagline,
-                          style: TextStyle(color: plan.isEnterprise ? Colors.white70 : palette.textSecondary, fontSize: 11),
-                        ),
+                        if (package.description != null) ...[
+                          const SizedBox(height: 2),
+                          Text(package.description!, style: TextStyle(color: palette.textSecondary, fontSize: 11)),
+                        ],
                       ],
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('\$${plan.price}', style: TextStyle(color: plan.isEnterprise ? Colors.white : palette.textPrimary, fontSize: 19, fontWeight: FontWeight.w800)),
-                      Text('packages.per_month'.tr(), style: TextStyle(color: plan.isEnterprise ? Colors.white54 : palette.textMuted, fontSize: 10)),
+                      Text(package.formattedPrice, style: TextStyle(color: palette.textPrimary, fontSize: 19, fontWeight: FontWeight.w800)),
+                      Text(
+                        package.durationDays == null ? 'packages.unlimited_duration'.tr() : 'packages.duration_days'.tr(args: [package.durationDays.toString()]),
+                        style: TextStyle(color: palette.textMuted, fontSize: 10),
+                      ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(
-                  height: 110,
-                  width: double.infinity,
-                  child: CachedNetworkImage(
-                    imageUrl: _tierImages[i],
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: palette.surfaceElevated),
-                    errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+              if (package.imageUrl != null) ...[
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    height: 110,
+                    width: double.infinity,
+                    child: CachedNetworkImage(
+                      imageUrl: package.imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                      errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: plan.isEnterprise ? Colors.white.withOpacity(0.05) : palette.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(16)),
                 child: Column(
                   children: [
-                    _detailRow(palette, Icons.home_work_outlined, plan.listingsLimit, plan.isEnterprise, color, isFirst: true),
-                    _detailRow(palette, Icons.play_circle_outline, plan.reelsLimit, plan.isEnterprise, color),
-                    for (var f = 0; f < plan.features.length; f++)
-                      _detailRow(palette, Icons.check_circle_outline, plan.features[f], plan.isEnterprise, color, isLast: f == plan.features.length - 1),
+                    _detailRow(
+                      palette,
+                      Icons.home_work_outlined,
+                      package.listingsLimit == null ? 'packages.unlimited_listings'.tr() : 'packages.listings_limit_label'.tr(args: [package.listingsLimit.toString()]),
+                      color,
+                      isFirst: true,
+                    ),
+                    _detailRow(
+                      palette,
+                      Icons.play_circle_outline,
+                      package.reelsLimit == null ? 'packages.unlimited_reels'.tr() : 'packages.reels_limit_label'.tr(args: [package.reelsLimit.toString()]),
+                      color,
+                      isLast: true,
+                    ),
                   ],
                 ),
               ),
@@ -271,7 +264,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
     ).animate(delay: (60 * i).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
   }
 
-  Widget _detailRow(AppPalette palette, IconData icon, String label, bool onDark, Color accent, {bool isFirst = false, bool isLast = false}) {
+  Widget _detailRow(AppPalette palette, IconData icon, String label, Color accent, {bool isFirst = false, bool isLast = false}) {
     return Column(
       children: [
         Padding(
@@ -281,23 +274,21 @@ class _PackagesScreenState extends State<PackagesScreen> {
               Container(
                 width: 30,
                 height: 30,
-                decoration: BoxDecoration(color: onDark ? Colors.white.withOpacity(0.1) : accent.withOpacity(0.14), borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, size: 16, color: onDark ? AppColors.gold : accent),
+                decoration: BoxDecoration(color: accent.withOpacity(0.14), borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, size: 16, color: accent),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text(label, style: TextStyle(color: onDark ? Colors.white : palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-              ),
-              Icon(Icons.check_rounded, size: 16, color: onDark ? AppColors.gold : accent),
+              Expanded(child: Text(label, style: TextStyle(color: palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w600))),
+              Icon(Icons.check_rounded, size: 16, color: accent),
             ],
           ),
         ),
-        if (!isLast) Divider(height: 1, indent: 10, endIndent: 10, color: onDark ? Colors.white.withOpacity(0.08) : palette.divider),
+        if (!isLast) Divider(height: 1, indent: 10, endIndent: 10, color: palette.divider),
       ],
     );
   }
 
-  void _showContactSheet(_PackagePlan plan) {
+  void _showContactSheet(Package package) {
     final color = _tierColor(_selected);
     showModalBottomSheet(
       context: context,
@@ -327,15 +318,15 @@ class _PackagesScreenState extends State<PackagesScreen> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
-                      child: Icon(_tierIcons[_selected], color: Colors.white, size: 21),
+                      child: Icon(_tierIcon(_selected), color: Colors.white, size: 21),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('packages.plan_title'.tr(args: [plan.name]), style: TextStyle(color: sheetPalette.textPrimary, fontSize: 15.5, fontWeight: FontWeight.w800)),
-                          Text('\$${plan.price} ${'packages.per_month'.tr()}', style: TextStyle(color: sheetPalette.textSecondary, fontSize: 12)),
+                          Text('packages.plan_title'.tr(args: [package.title]), style: TextStyle(color: sheetPalette.textPrimary, fontSize: 15.5, fontWeight: FontWeight.w800)),
+                          Text(package.formattedPrice, style: TextStyle(color: sheetPalette.textSecondary, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -348,7 +339,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => launchUrl(
-                      Uri.parse('https://wa.me/$shikodarPhoneDigits?text=${Uri.encodeComponent('packages.whatsapp_message'.tr(args: [plan.name]))}'),
+                      Uri.parse('https://wa.me/$shikodarPhoneDigits?text=${Uri.encodeComponent('packages.whatsapp_message'.tr(args: [package.title]))}'),
                       mode: LaunchMode.externalApplication,
                     ),
                     icon: const Icon(Icons.chat, size: 18),
@@ -384,7 +375,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
   }
 
   Widget _ctaBar(AppPalette palette) {
-    final plan = _plans[_selected];
+    final package = _packages[_selected];
     final color = _tierColor(_selected);
     return Container(
       padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + MediaQuery.of(context).padding.bottom),
@@ -398,7 +389,7 @@ class _PackagesScreenState extends State<PackagesScreen> {
             width: 46,
             height: 46,
             decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
-            child: Icon(_tierIcons[_selected], color: Colors.white, size: 22),
+            child: Icon(_tierIcon(_selected), color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -406,14 +397,14 @@ class _PackagesScreenState extends State<PackagesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(plan.name, style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
-                Text('\$${plan.price} ${'packages.per_month'.tr()}', style: TextStyle(color: palette.textSecondary, fontSize: 11.5)),
+                Text(package.title, style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
+                Text(package.formattedPrice, style: TextStyle(color: palette.textSecondary, fontSize: 11.5)),
               ],
             ),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () => _showContactSheet(plan),
+            onPressed: () => _showContactSheet(package),
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
               foregroundColor: Colors.white,
