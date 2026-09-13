@@ -560,7 +560,12 @@
     "special_offer_badge": "ئۆفەری تایبەت",
     "active_until": "چالاکە تا {}",
     "details_title": "وردەکاری ئۆفەر",
-    "contact_to_redeem": "پەیوەندی بۆ وەرگرتنی ئۆفەر"
+    "contact_to_redeem": "پەیوەندی بۆ وەرگرتنی ئۆفەر",
+    "all_business_accounts": "هەموو هەژمارە بازرگانییەکان",
+    "starts_at": "کاتی دەستپێک",
+    "ends_at": "کاتی کۆتایی",
+    "listings_limit_highlight": "بۆ {} ئیلان",
+    "reels_limit_highlight": "بۆ {} ڕیل"
   },
   "packages": {
     "title": "پاکێجەکان",

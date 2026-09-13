@@ -19,6 +19,15 @@ class Offer {
   final String audience;
   final String validUntil;
   final String imageUrl;
+  final String? logoUrl;
+  final String? videoUrl;
+  final int? listingsLimit;
+  final int? reelsLimit;
+  final String? currency;
+  final double? price;
+  final DateTime? startsAt;
+  final DateTime? endsAt;
+  final List<String> targetRoles;
   final bool isNew;
   const Offer({
     required this.id,
@@ -30,6 +39,15 @@ class Offer {
     required this.audience,
     required this.validUntil,
     required this.imageUrl,
+    this.logoUrl,
+    this.videoUrl,
+    this.listingsLimit,
+    this.reelsLimit,
+    this.currency,
+    this.price,
+    this.startsAt,
+    this.endsAt,
+    this.targetRoles = const [],
     this.isNew = false,
   });
 
@@ -54,8 +72,24 @@ class Offer {
         audience: audience ?? this.audience,
         validUntil: validUntil ?? this.validUntil,
         imageUrl: imageUrl ?? this.imageUrl,
+        logoUrl: logoUrl,
+        videoUrl: videoUrl,
+        listingsLimit: listingsLimit,
+        reelsLimit: reelsLimit,
+        currency: currency,
+        price: price,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        targetRoles: targetRoles,
         isNew: isNew ?? this.isNew,
       );
+
+  /// Mirrors Offer::formattedPrice() on the backend — null when no price was set.
+  String? get formattedPrice {
+    final p = price;
+    if (p == null) return null;
+    return currency == 'usd' ? '\$${p.toStringAsFixed(2)}' : '${p.toStringAsFixed(0)} د.ع';
+  }
 
   factory Offer.fromJson(Map<String, dynamic> json) => Offer(
         id: json['id'].toString(),
@@ -67,8 +101,47 @@ class Offer {
         audience: json['audience'] ?? '',
         validUntil: json['valid_until'] ?? '',
         imageUrl: json['image_url'] ?? '',
+        logoUrl: (json['logo_url'] as String?)?.isNotEmpty == true ? json['logo_url'] as String : null,
+        videoUrl: (json['video_url'] as String?)?.isNotEmpty == true ? json['video_url'] as String : null,
+        listingsLimit: json['listings_limit'] == null ? null : int.tryParse(json['listings_limit'].toString()),
+        reelsLimit: json['reels_limit'] == null ? null : int.tryParse(json['reels_limit'].toString()),
+        currency: json['currency'] as String?,
+        price: json['price'] == null ? null : double.tryParse(json['price'].toString()),
+        startsAt: json['starts_at'] == null ? null : DateTime.tryParse(json['starts_at'].toString())?.toLocal(),
+        endsAt: json['ends_at'] == null ? null : DateTime.tryParse(json['ends_at'].toString())?.toLocal(),
+        targetRoles: (json['target_roles'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         isNew: json['is_new'] ?? false,
       );
+}
+
+/// Zero-padded d/m/y — avoids intl's DateFormat, which throws on locale
+/// 'ku' (Kurdish isn't in its ICU data).
+String formatOfferDate(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+const Map<String, String> offerTargetRoleLabels = {
+  'agency': 'عقارات',
+  'company': 'کۆمپانیا',
+  'complex': 'مجمع سکنی',
+};
+
+/// The badge text shown for who an offer is for — falls back to the legacy
+/// free-text `audience` field for offers created before target_roles existed.
+String offerAudienceLabel(Offer offer) {
+  final roles = offer.targetRoles;
+  if (roles.isEmpty || roles.contains('all')) {
+    return offer.audience.isNotEmpty ? offer.audience : 'offers.all_business_accounts'.tr();
+  }
+  return roles.map((r) => offerTargetRoleLabels[r] ?? r).join('، ');
+}
+
+/// Prefers the new `ends_at` schedule field, falling back to the legacy
+/// free-text `valid_until` for offers created before scheduling existed.
+/// Null means neither is set, so the caller should hide the badge entirely.
+String? offerValidUntilText(Offer offer) {
+  if (offer.endsAt != null) return formatOfferDate(offer.endsAt!);
+  if (offer.validUntil.isNotEmpty) return offer.validUntil;
+  return null;
 }
 
 /// Maps the backend's icon-name string (admin picks one when creating an
@@ -238,17 +311,34 @@ class _OffersListScreenState extends State<OffersListScreen> {
                         child: Text('offers.new_badge'.tr(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
                       ),
                     ),
-                  Positioned(
-                    left: 14,
-                    bottom: 12,
-                    child: Row(
-                      children: [
-                        const Icon(Icons.schedule_rounded, size: 12, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(offer.validUntil, style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
-                      ],
+                  if (offerValidUntilText(offer) != null)
+                    Positioned(
+                      left: 14,
+                      bottom: 12,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.schedule_rounded, size: 12, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(offerValidUntilText(offer)!, style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
                     ),
-                  ),
+                  if (offer.formattedPrice != null)
+                    Positioned(
+                      right: 14,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(color: AppColors.priceAccent, borderRadius: BorderRadius.circular(20)),
+                        child: Text(offer.formattedPrice!, style: const TextStyle(color: AppColors.ink, fontSize: 11, fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                  if (offer.videoUrl != null)
+                    const Positioned.fill(
+                      child: Center(
+                        child: Icon(Icons.play_circle_fill_rounded, size: 46, color: Colors.white70),
+                      ),
+                    ),
                 ],
               ),
               Padding(
@@ -284,7 +374,7 @@ class _OffersListScreenState extends State<OffersListScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(20)),
-                                child: Text(offer.audience, style: TextStyle(color: palette.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                                child: Text(offerAudienceLabel(offer), style: TextStyle(color: palette.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
                               ),
                               const Spacer(),
                               Icon(Icons.arrow_forward_ios_rounded, size: 11, color: palette.textMuted),

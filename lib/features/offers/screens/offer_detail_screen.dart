@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import '../../../core/shikodar_contact.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -74,19 +75,63 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                       ),
                     ),
                   ),
-                  Center(
-                    child: Container(
-                      width: 84,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.goldGradient,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.45), blurRadius: 26, spreadRadius: 2)],
+                  if (offer.videoUrl != null)
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => _OfferVideoPage(videoUrl: offer.videoUrl!)),
+                        ),
+                        child: Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.goldGradient,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.45), blurRadius: 26, spreadRadius: 2)],
+                          ),
+                          child: const Icon(Icons.play_arrow_rounded, color: AppColors.ink, size: 42),
+                        ),
+                      ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn(),
+                    )
+                  else
+                    Center(
+                      child: Container(
+                        width: 84,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.goldGradient,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.45), blurRadius: 26, spreadRadius: 2)],
+                        ),
+                        child: Icon(offer.icon, color: AppColors.ink, size: 38),
+                      ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn(),
+                    ),
+                  if (offer.logoUrl != null)
+                    Positioned(
+                      right: 16,
+                      bottom: 16,
+                      child: Container(
+                        width: 46,
+                        height: 46,
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: AppColors.cardShadow),
+                        child: ClipOval(
+                          child: CachedNetworkImage(imageUrl: offer.logoUrl!, fit: BoxFit.cover),
+                        ),
                       ),
-                      child: Icon(offer.icon, color: AppColors.ink, size: 38),
-                    ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn(),
-                  ),
+                    ).animate(delay: 120.ms).fadeIn(duration: 300.ms),
+                  if (offer.formattedPrice != null)
+                    Positioned(
+                      left: 16,
+                      bottom: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(color: AppColors.priceAccent, borderRadius: BorderRadius.circular(20)),
+                        child: Text(offer.formattedPrice!, style: const TextStyle(color: AppColors.ink, fontSize: 14, fontWeight: FontWeight.w800)),
+                      ),
+                    ).animate(delay: 120.ms).fadeIn(duration: 300.ms),
                 ],
               ),
             ),
@@ -108,7 +153,7 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(20)),
-                        child: Text(offer.audience, style: TextStyle(color: palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600)),
+                        child: Text(offerAudienceLabel(offer), style: TextStyle(color: palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ).animate().fadeIn(duration: 300.ms),
@@ -118,17 +163,26 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                       .fadeIn(duration: 320.ms)
                       .slideX(begin: -0.04, end: 0),
                   const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(14)),
-                    child: Row(
+                  if (offer.startsAt != null || offer.endsAt != null)
+                    Row(
                       children: [
-                        const Icon(Icons.schedule_rounded, size: 17, color: AppColors.goldDark),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text('offers.active_until'.tr(args: [offer.validUntil]), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600))),
+                        if (offer.startsAt != null) Expanded(child: _scheduleChip(palette, Icons.play_circle_outline_rounded, 'offers.starts_at'.tr(), formatOfferDate(offer.startsAt!))),
+                        if (offer.startsAt != null && offer.endsAt != null) const SizedBox(width: 10),
+                        if (offer.endsAt != null) Expanded(child: _scheduleChip(palette, Icons.event_busy_rounded, 'offers.ends_at'.tr(), formatOfferDate(offer.endsAt!))),
                       ],
-                    ),
-                  ).animate(delay: 100.ms).fadeIn(duration: 320.ms),
+                    ).animate(delay: 100.ms).fadeIn(duration: 320.ms)
+                  else if (offerValidUntilText(offer) != null)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(14)),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.schedule_rounded, size: 17, color: AppColors.goldDark),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('offers.active_until'.tr(args: [offerValidUntilText(offer)!]), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600))),
+                        ],
+                      ),
+                    ).animate(delay: 100.ms).fadeIn(duration: 320.ms),
                   const SizedBox(height: 22),
                   Text('offers.details_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)).animate(delay: 140.ms).fadeIn(duration: 300.ms),
                   const SizedBox(height: 8),
@@ -136,7 +190,11 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                       .animate(delay: 170.ms)
                       .fadeIn(duration: 300.ms),
                   const SizedBox(height: 16),
-                  ...List.generate(offer.highlights.length, (i) => _highlightRow(palette, offer.highlights[i], i)),
+                  if (offer.listingsLimit != null)
+                    _highlightRow(palette, 'offers.listings_limit_highlight'.tr(args: [offer.listingsLimit.toString()]), 0, icon: Icons.format_list_bulleted_rounded),
+                  if (offer.reelsLimit != null)
+                    _highlightRow(palette, 'offers.reels_limit_highlight'.tr(args: [offer.reelsLimit.toString()]), 1, icon: Icons.video_camera_back_rounded),
+                  ...List.generate(offer.highlights.length, (i) => _highlightRow(palette, offer.highlights[i], i + 2)),
                   const SizedBox(height: 30),
                   Material(
                     color: Colors.transparent,
@@ -165,7 +223,7 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
     );
   }
 
-  Widget _highlightRow(AppPalette palette, String text, int index) {
+  Widget _highlightRow(AppPalette palette, String text, int index, {IconData icon = Icons.check_rounded}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
@@ -183,7 +241,7 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
               height: 26,
               margin: const EdgeInsets.only(top: 1),
               decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.check_rounded, size: 15, color: AppColors.goldDark),
+              child: Icon(icon, size: 15, color: AppColors.goldDark),
             ),
             const SizedBox(width: 10),
             Expanded(child: Text(text, style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.5))),
@@ -191,6 +249,28 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
         ),
       ),
     ).animate(delay: (200 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
+  }
+
+  Widget _scheduleChip(AppPalette palette, IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.goldDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: palette.textSecondary, fontSize: 9.5, fontWeight: FontWeight.w600)),
+                Text(value, style: TextStyle(color: palette.textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _circleBtn(IconData icon, VoidCallback onTap) {
@@ -208,6 +288,69 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
             child: Icon(icon, size: 17, color: AppColors.ink),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Full-screen playback for an offer's promo video — a simple tap-to-play
+/// modal, not the reels feed, so the plain `video_player` package (already
+/// used elsewhere for one-off video, e.g. project showcases) is fine here;
+/// no need for media_kit's touch-handling workaround.
+class _OfferVideoPage extends StatefulWidget {
+  final String videoUrl;
+  const _OfferVideoPage({required this.videoUrl});
+
+  @override
+  State<_OfferVideoPage> createState() => _OfferVideoPageState();
+}
+
+class _OfferVideoPageState extends State<_OfferVideoPage> {
+  late final VideoPlayerController _controller;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() => _ready = true);
+        _controller.play();
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (_ready)
+            GestureDetector(
+              onTap: () => setState(() => _controller.value.isPlaying ? _controller.pause() : _controller.play()),
+              child: AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller)),
+            )
+          else
+            const CircularProgressIndicator(color: Colors.white),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

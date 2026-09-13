@@ -560,7 +560,12 @@
     "special_offer_badge": "عرض خاص",
     "active_until": "فعّال حتى {}",
     "details_title": "تفاصيل العرض",
-    "contact_to_redeem": "تواصل للحصول على العرض"
+    "contact_to_redeem": "تواصل للحصول على العرض",
+    "all_business_accounts": "جميع الحسابات التجارية",
+    "starts_at": "وقت البدء",
+    "ends_at": "وقت الانتهاء",
+    "listings_limit_highlight": "لـ {} إعلان",
+    "reels_limit_highlight": "لـ {} ريل"
   },
   "packages": {
     "title": "الباقات",

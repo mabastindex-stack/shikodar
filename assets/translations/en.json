@@ -560,7 +560,12 @@
     "special_offer_badge": "Special Offer",
     "active_until": "Active until {}",
     "details_title": "Offer Details",
-    "contact_to_redeem": "Contact to redeem the offer"
+    "contact_to_redeem": "Contact to redeem the offer",
+    "all_business_accounts": "All business accounts",
+    "starts_at": "Starts at",
+    "ends_at": "Ends at",
+    "listings_limit_highlight": "For {} listings",
+    "reels_limit_highlight": "For {} reels"
   },
   "packages": {
     "title": "Packages",

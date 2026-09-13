@@ -560,7 +560,12 @@
     "special_offer_badge": "Özel fırsat",
     "active_until": "{} tarihine kadar aktif",
     "details_title": "Fırsat detayları",
-    "contact_to_redeem": "Fırsattan yararlanmak için iletişime geçin"
+    "contact_to_redeem": "Fırsattan yararlanmak için iletişime geçin",
+    "all_business_accounts": "Tüm ticari hesaplar",
+    "starts_at": "Başlangıç zamanı",
+    "ends_at": "Bitiş zamanı",
+    "listings_limit_highlight": "{} ilan için",
+    "reels_limit_highlight": "{} reel için"
   },
   "packages": {
     "title": "Paketler",
