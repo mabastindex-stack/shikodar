@@ -565,7 +565,9 @@
     "starts_at": "Başlangıç zamanı",
     "ends_at": "Bitiş zamanı",
     "listings_limit_highlight": "{} ilan için",
-    "reels_limit_highlight": "{} reel için"
+    "reels_limit_highlight": "{} reel için",
+    "logo_highlight": "Bu fırsata özel bir logo dahildir",
+    "video_highlight": "Özel video — izlemek için dokunun"
   },
   "packages": {
     "title": "Paketler",

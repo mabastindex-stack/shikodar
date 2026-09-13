@@ -565,7 +565,9 @@
     "starts_at": "وقت البدء",
     "ends_at": "وقت الانتهاء",
     "listings_limit_highlight": "لـ {} إعلان",
-    "reels_limit_highlight": "لـ {} ريل"
+    "reels_limit_highlight": "لـ {} ريل",
+    "logo_highlight": "يتضمن هذا العرض شعارًا خاصًا",
+    "video_highlight": "فيديو خاص — اضغط للمشاهدة"
   },
   "packages": {
     "title": "الباقات",

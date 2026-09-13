@@ -565,7 +565,9 @@
     "starts_at": "کاتی دەستپێک",
     "ends_at": "کاتی کۆتایی",
     "listings_limit_highlight": "بۆ {} ئیلان",
-    "reels_limit_highlight": "بۆ {} ڕیل"
+    "reels_limit_highlight": "بۆ {} ڕیل",
+    "logo_highlight": "لۆگۆی تایبەت لەگەڵ ئۆفەرەکەدایە",
+    "video_highlight": "ڤیدیۆی تایبەت — کرتە بکە بۆ بینین"
   },
   "packages": {
     "title": "پاکێجەکان",

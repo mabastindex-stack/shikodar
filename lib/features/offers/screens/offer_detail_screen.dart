@@ -75,53 +75,19 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                       ),
                     ),
                   ),
-                  if (offer.videoUrl != null)
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => _OfferVideoPage(videoUrl: offer.videoUrl!)),
-                        ),
-                        child: Container(
-                          width: 84,
-                          height: 84,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.goldGradient,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
-                            boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.45), blurRadius: 26, spreadRadius: 2)],
-                          ),
-                          child: const Icon(Icons.play_arrow_rounded, color: AppColors.ink, size: 42),
-                        ),
-                      ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn(),
-                    )
-                  else
-                    Center(
-                      child: Container(
-                        width: 84,
-                        height: 84,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.goldGradient,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.45), blurRadius: 26, spreadRadius: 2)],
-                        ),
-                        child: Icon(offer.icon, color: AppColors.ink, size: 38),
-                      ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn(),
-                    ),
-                  if (offer.logoUrl != null)
-                    Positioned(
-                      right: 16,
-                      bottom: 16,
-                      child: Container(
-                        width: 46,
-                        height: 46,
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: AppColors.cardShadow),
-                        child: ClipOval(
-                          child: CachedNetworkImage(imageUrl: offer.logoUrl!, fit: BoxFit.cover),
-                        ),
+                  Center(
+                    child: Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.goldGradient,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.45), blurRadius: 26, spreadRadius: 2)],
                       ),
-                    ).animate(delay: 120.ms).fadeIn(duration: 300.ms),
+                      child: Icon(offer.icon, color: AppColors.ink, size: 38),
+                    ).animate().scale(duration: 450.ms, curve: Curves.easeOutBack).fadeIn(),
+                  ),
                   if (offer.formattedPrice != null)
                     Positioned(
                       left: 16,
@@ -190,11 +156,7 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
                       .animate(delay: 170.ms)
                       .fadeIn(duration: 300.ms),
                   const SizedBox(height: 16),
-                  if (offer.listingsLimit != null)
-                    _highlightRow(palette, 'offers.listings_limit_highlight'.tr(args: [offer.listingsLimit.toString()]), 0, icon: Icons.format_list_bulleted_rounded),
-                  if (offer.reelsLimit != null)
-                    _highlightRow(palette, 'offers.reels_limit_highlight'.tr(args: [offer.reelsLimit.toString()]), 1, icon: Icons.video_camera_back_rounded),
-                  ...List.generate(offer.highlights.length, (i) => _highlightRow(palette, offer.highlights[i], i + 2)),
+                  ..._buildDetailRows(context, palette),
                   const SizedBox(height: 30),
                   Material(
                     color: Colors.transparent,
@@ -221,6 +183,95 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> with SingleTicker
         ],
       ),
     );
+  }
+
+  /// Builds every row in the "وردەکاری ئۆفەر" list: the logo and video (each
+  /// only when the offer has one) come first as their own media rows, then
+  /// the listings/reels limits, then the admin's free-text highlights —
+  /// all sharing one running animation-delay index so they stagger in order.
+  List<Widget> _buildDetailRows(BuildContext context, AppPalette palette) {
+    final rows = <Widget>[];
+    var index = 0;
+    if (offer.logoUrl != null) {
+      rows.add(_logoHighlightRow(palette, offer.logoUrl!, index++));
+    }
+    if (offer.videoUrl != null) {
+      rows.add(_videoHighlightRow(context, palette, offer.videoUrl!, offer.imageUrl, index++));
+    }
+    if (offer.listingsLimit != null) {
+      rows.add(_highlightRow(palette, 'offers.listings_limit_highlight'.tr(args: [offer.listingsLimit.toString()]), index++, icon: Icons.format_list_bulleted_rounded));
+    }
+    if (offer.reelsLimit != null) {
+      rows.add(_highlightRow(palette, 'offers.reels_limit_highlight'.tr(args: [offer.reelsLimit.toString()]), index++, icon: Icons.video_camera_back_rounded));
+    }
+    for (final text in offer.highlights) {
+      rows.add(_highlightRow(palette, text, index++));
+    }
+    return rows;
+  }
+
+  Widget _logoHighlightRow(AppPalette palette, String logoUrl, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: CachedNetworkImage(imageUrl: logoUrl, width: 44, height: 44, fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text('offers.logo_highlight'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600))),
+          ],
+        ),
+      ),
+    ).animate(delay: (200 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
+  }
+
+  Widget _videoHighlightRow(BuildContext context, AppPalette palette, String videoUrl, String thumbnailUrl, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => _OfferVideoPage(videoUrl: videoUrl))),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))]),
+            child: Row(
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: CachedNetworkImage(imageUrl: thumbnailUrl, width: 56, height: 44, fit: BoxFit.cover),
+                    ),
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text('offers.video_highlight'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600))),
+                Icon(Icons.chevron_left_rounded, size: 18, color: palette.textMuted),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate(delay: (200 + 70 * index).ms).fadeIn(duration: 320.ms).slideX(begin: 0.06, end: 0);
   }
 
   Widget _highlightRow(AppPalette palette, String text, int index, {IconData icon = Icons.check_rounded}) {

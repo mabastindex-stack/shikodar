@@ -565,7 +565,9 @@
     "starts_at": "Starts at",
     "ends_at": "Ends at",
     "listings_limit_highlight": "For {} listings",
-    "reels_limit_highlight": "For {} reels"
+    "reels_limit_highlight": "For {} reels",
+    "logo_highlight": "This offer includes a special logo",
+    "video_highlight": "Special video — tap to watch"
   },
   "packages": {
     "title": "Packages",
