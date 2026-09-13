@@ -439,6 +439,7 @@
     "empty_listings": "You haven't published any listings yet",
     "empty_reels": "You haven't published any reels yet",
     "edit_my_complex_tile": "Edit My Residential Complex",
+    "packages_tile": "Packages",
     "offers_tile": "Offers",
     "package_title": "{} Package",
     "package_expiry": "Active until {}",

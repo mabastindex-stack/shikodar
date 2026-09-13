@@ -755,6 +755,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           else
             _tile(palette, Icons.home_work_outlined, 'profile.my_listings'.tr(), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyListingsScreen()))),
           _tile(palette, Icons.play_circle_outline, 'profile.my_reels'.tr(), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyReelsScreen()))),
+          _tile(palette, Icons.card_membership_outlined, 'profile_page.packages_tile'.tr(), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackagesScreen()))),
           _tile(palette, Icons.local_offer_outlined, 'profile_page.offers_tile'.tr(), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OffersListScreen())), isLast: true),
         ]),
       ],
