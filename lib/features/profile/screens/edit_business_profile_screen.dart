@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
@@ -141,18 +142,34 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
         backgroundColor: palette.background,
         title: Text('edit_business_profile.title'.tr(), style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: palette.primary))
-                : Text('common.save'.tr(), style: TextStyle(color: palette.primary, fontWeight: FontWeight.w800)),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 4),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: _saving ? null : _save,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [palette.primary, Color.lerp(palette.primary, Colors.black, 0.2)!]),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: palette.primary.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 5))],
+                  ),
+                  child: _saving
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text('common.save'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                ),
+              ),
+            ),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
-          _label(palette, 'edit_business_profile.contact_label'.tr()),
+          _label(palette, 'edit_business_profile.contact_label'.tr(), icon: Icons.call_rounded, iconColor: palette.primary),
           const SizedBox(height: 4),
           Text('edit_business_profile.contact_hint'.tr(), style: TextStyle(color: palette.textMuted, fontSize: 11)),
           const SizedBox(height: 10),
@@ -182,9 +199,9 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
                 ),
               ],
             ),
-          ),
+          ).animate().fadeIn(duration: 340.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutCubic),
           const SizedBox(height: 26),
-          _label(palette, 'edit_business_profile.about_company_label'.tr()),
+          _label(palette, 'edit_business_profile.about_company_label'.tr(), icon: Icons.info_outline_rounded, iconColor: AppColors.gold),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
@@ -205,20 +222,26 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
                 contentPadding: const EdgeInsets.all(16),
               ),
             ),
-          ),
+          ).animate(delay: 60.ms).fadeIn(duration: 340.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutCubic),
           const SizedBox(height: 24),
-          _label(palette, 'edit_business_profile.specialties_label'.tr()),
+          _label(palette, 'edit_business_profile.specialties_label'.tr(), icon: Icons.category_rounded, iconColor: AppColors.emerald),
           const SizedBox(height: 10),
-          _chipWrap(palette, options: _specialtyOptions, selected: _specialties, onToggle: (v) => setState(() => _specialties.contains(v) ? _specialties.remove(v) : _specialties.add(v)), labelBuilder: _specialtyLabel),
+          _chipWrap(palette, options: _specialtyOptions, selected: _specialties, onToggle: (v) => setState(() => _specialties.contains(v) ? _specialties.remove(v) : _specialties.add(v)), labelBuilder: _specialtyLabel)
+              .animate(delay: 120.ms)
+              .fadeIn(duration: 340.ms)
+              .slideY(begin: 0.05, end: 0, curve: Curves.easeOutCubic),
           const SizedBox(height: 24),
-          _label(palette, 'edit_business_profile.service_areas_label'.tr()),
+          _label(palette, 'edit_business_profile.service_areas_label'.tr(), icon: Icons.location_on_rounded, iconColor: palette.primary),
           const SizedBox(height: 10),
-          _chipWrap(palette, options: _zoneOptions, selected: _serviceAreas, onToggle: (v) => setState(() => _serviceAreas.contains(v) ? _serviceAreas.remove(v) : _serviceAreas.add(v)), labelBuilder: _zoneLabel),
+          _chipWrap(palette, options: _zoneOptions, selected: _serviceAreas, onToggle: (v) => setState(() => _serviceAreas.contains(v) ? _serviceAreas.remove(v) : _serviceAreas.add(v)), labelBuilder: _zoneLabel)
+              .animate(delay: 160.ms)
+              .fadeIn(duration: 340.ms)
+              .slideY(begin: 0.05, end: 0, curve: Curves.easeOutCubic),
           if (widget.isCompany) ...[
             const SizedBox(height: 28),
             Row(
               children: [
-                Expanded(child: _label(palette, 'edit_business_profile.experience_label'.tr())),
+                Expanded(child: _label(palette, 'edit_business_profile.experience_label'.tr(), icon: Icons.timeline_rounded, iconColor: AppColors.gold)),
                 TextButton.icon(
                   onPressed: _addMilestone,
                   icon: Icon(Icons.add_rounded, color: palette.primary, size: 18),
@@ -265,7 +288,7 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
                         ],
                       ),
                     ),
-                  );
+                  ).animate(delay: (200 + 60 * i).ms).fadeIn(duration: 300.ms).slideX(begin: 0.05, end: 0);
                 }),
               ),
             ),
@@ -275,7 +298,24 @@ class _EditBusinessProfileScreenState extends State<EditBusinessProfileScreen> {
     );
   }
 
-  Widget _label(AppPalette palette, String text) => Text(text, style: TextStyle(color: palette.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600));
+  Widget _label(AppPalette palette, String text, {IconData? icon, Color? iconColor}) {
+    if (icon == null) {
+      return Text(text, style: TextStyle(color: palette.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600));
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(color: (iconColor ?? palette.primary).withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, size: 13, color: iconColor ?? palette.primary),
+        ),
+        const SizedBox(width: 8),
+        Text(text, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w800)),
+      ],
+    );
+  }
 
   Widget _contactField(
     AppPalette palette, {
