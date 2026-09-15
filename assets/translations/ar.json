@@ -94,6 +94,9 @@
   "favorites_page": {
     "tab_posts": "المنشورات المفضلة ({})",
     "tab_accounts": "الحسابات المفضلة ({})",
+    "posts_label": "المنشورات المفضلة",
+    "accounts_label": "الحسابات المفضلة",
+    "empty_short": "لا يوجد شيء",
     "empty_posts": "لم تضف أي منشور إلى المفضلة بعد",
     "empty_accounts": "لم تضف أي حساب إلى المفضلة بعد"
   },
@@ -440,6 +443,9 @@
     "become_company_title": "هل أنت شركة تطوير عقاري؟",
     "become_company_subtitle": "أدر مجمعاتك السكنية كمدينة خاصة بك",
     "become_complex_title": "هل تمتلك مجمعاً سكنياً؟",
+    "become_agency_title_short": "وسيط عقاري",
+    "become_company_title_short": "شركة تطوير",
+    "become_complex_title_short": "مالك مجمع",
     "favorites_subtitle": "شاهد الحسابات والمنشورات المفضلة لديك من هنا",
     "change_cover_label": "تغيير الغلاف",
     "stat_unit": "وحدة",

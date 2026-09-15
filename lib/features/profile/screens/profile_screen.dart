@@ -12,6 +12,7 @@ import '../../../core/models/project.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
 import '../../../core/network/dashboard_repository.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/project_repository.dart';
 import '../../../core/network/reel_repository.dart';
@@ -61,17 +62,42 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   DashboardStats? _dashboardStats;
   bool _isLoadingContent = true;
 
+  /// A client's own favorited posts/accounts — just for the two preview
+  /// columns on this page (see _favoritesPreviewRow); the full lists live
+  /// in FavoritesScreen, which these columns deep-link into.
+  List<FavoriteEntry> _favoriteEntries = [];
+
   @override
   void initState() {
     super.initState();
     _glow = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
     _loadContentIfBusiness();
+    _loadFavoritesPreview();
     // ProfileScreen is kept alive inside HomeShell's IndexedStack, so
     // initState only ever runs once — often while still browsing as a
     // guest, well before signing in. Without this listener, logging in
-    // later would never re-trigger the fetch above, leaving posts/stats
-    // permanently empty for the rest of the session.
-    context.read<UserSession>().addListener(_loadContentIfBusiness);
+    // later would never re-trigger the fetches above, leaving
+    // posts/stats/favorites permanently empty for the rest of the session.
+    context.read<UserSession>().addListener(_onSessionChanged);
+  }
+
+  void _onSessionChanged() {
+    _loadContentIfBusiness();
+    _loadFavoritesPreview();
+  }
+
+  Future<void> _loadFavoritesPreview() async {
+    final session = context.read<UserSession>();
+    if (!session.isLoggedIn || session.role != AccountRole.client) {
+      if (_favoriteEntries.isNotEmpty && mounted) setState(() => _favoriteEntries = []);
+      return;
+    }
+    try {
+      final entries = await context.read<FavoriteRepository>().fetchAll();
+      if (mounted) setState(() => _favoriteEntries = entries);
+    } catch (_) {
+      // Offline, or the request failed — the preview columns just stay empty.
+    }
   }
 
   Future<void> _loadContentIfBusiness() async {
@@ -115,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void dispose() {
     _glow.dispose();
-    context.read<UserSession>().removeListener(_loadContentIfBusiness);
+    context.read<UserSession>().removeListener(_onSessionChanged);
     super.dispose();
   }
 
@@ -320,36 +346,43 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   children: [
                     if (isAdmin)
                       _adminNoticeCard(palette)
-                    else ...[
-                      _becomeBusinessCard(
-                        context,
-                        palette,
-                        role: AccountRole.agency,
-                        icon: Icons.storefront_rounded,
-                        title: 'profile_page.become_agency_title'.tr(),
-                        subtitle: 'profile_page.become_agency_subtitle'.tr(),
+                    else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _becomeBusinessCompactCard(
+                              context,
+                              palette,
+                              icon: Icons.storefront_rounded,
+                              label: 'profile_page.become_agency_title_short'.tr(),
+                              sheetTitle: 'profile_page.become_agency_title'.tr(),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _becomeBusinessCompactCard(
+                              context,
+                              palette,
+                              icon: Icons.apartment_rounded,
+                              label: 'profile_page.become_company_title_short'.tr(),
+                              sheetTitle: 'profile_page.become_company_title'.tr(),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _becomeBusinessCompactCard(
+                              context,
+                              palette,
+                              icon: Icons.location_city_rounded,
+                              label: 'profile_page.become_complex_title_short'.tr(),
+                              sheetTitle: 'profile_page.become_complex_title'.tr(),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      _becomeBusinessCard(
-                        context,
-                        palette,
-                        role: AccountRole.company,
-                        icon: Icons.apartment_rounded,
-                        title: 'profile_page.become_company_title'.tr(),
-                        subtitle: 'profile_page.become_company_subtitle'.tr(),
-                      ),
-                      const SizedBox(height: 12),
-                      _becomeBusinessCard(
-                        context,
-                        palette,
-                        role: AccountRole.complex,
-                        icon: Icons.location_city_rounded,
-                        title: 'profile_page.become_complex_title'.tr(),
-                        subtitle: 'auth.complex_benefit'.tr(),
-                      ),
-                    ],
                     const SizedBox(height: 18),
-                    _favoritesCard(context, palette),
+                    _favoritesPreviewRow(context, palette),
                   ],
                 ),
               ),
@@ -989,88 +1022,168 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     ).animate(delay: 60.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
   }
 
-  Widget _becomeBusinessCard(
+  /// Compact become-business card — icon over a short label, three of
+  /// these sit side by side in one row instead of stacking full-width.
+  /// [sheetTitle] is the full question shown once the contact sheet opens;
+  /// [label] is just the short name shown on the card itself.
+  Widget _becomeBusinessCompactCard(
     BuildContext context,
     AppPalette palette, {
-    required AccountRole role,
     required IconData icon,
-    required String title,
-    required String subtitle,
+    required String label,
+    required String sheetTitle,
   }) {
     return GestureDetector(
-      onTap: () => _showBusinessContactSheet(context, title),
+      onTap: () => _showBusinessContactSheet(context, sheetTitle),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
         decoration: BoxDecoration(
           color: palette.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 14, offset: const Offset(0, 6))],
           border: Border.all(color: AppColors.gold.withOpacity(0.3)),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(gradient: AppColors.goldGradient, borderRadius: BorderRadius.circular(13)),
-              child: Icon(icon, color: AppColors.ink, size: 22),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(gradient: AppColors.goldGradient, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: AppColors.ink, size: 19),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(color: palette.textSecondary, fontSize: 11)),
-                ],
-              ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: palette.textPrimary, fontSize: 10.5, fontWeight: FontWeight.w800, height: 1.25),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.goldDark, size: 22),
           ],
         ),
       ),
     ).animate(delay: 60.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
   }
 
-  /// Entry point into FavoritesScreen — styled like the become-business
-  /// cards above it (icon chip + title/subtitle + chevron) instead of a
-  /// bare list row, and calls out that it now covers both favorited
-  /// accounts and favorited posts.
-  Widget _favoritesCard(BuildContext context, AppPalette palette) {
+  /// Two side-by-side preview cards — favorited posts and favorited
+  /// accounts — each showing up to 2 items and deep-linking into the
+  /// matching FavoritesScreen tab, instead of one link-out row.
+  Widget _favoritesPreviewRow(BuildContext context, AppPalette palette) {
+    final posts = _favoriteEntries.where((e) => e.type == 'listing' || e.type == 'project').toList();
+    final accounts = _favoriteEntries.where((e) => e.type == 'agency').toList();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _favoritesPreviewCard(
+            context,
+            palette,
+            icon: Icons.favorite_rounded,
+            title: 'favorites_page.posts_label'.tr(),
+            entries: posts,
+            tabIndex: 0,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _favoritesPreviewCard(
+            context,
+            palette,
+            icon: Icons.storefront_rounded,
+            title: 'favorites_page.accounts_label'.tr(),
+            entries: accounts,
+            tabIndex: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _favoritesPreviewCard(
+    BuildContext context,
+    AppPalette palette, {
+    required IconData icon,
+    required String title,
+    required List<FavoriteEntry> entries,
+    required int tabIndex,
+  }) {
+    final preview = entries.take(2).toList();
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoritesScreen())),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => FavoritesScreen(initialTab: tabIndex))),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: palette.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.1), blurRadius: 14, offset: const Offset(0, 6))],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: palette.error.withOpacity(0.12), borderRadius: BorderRadius.circular(13)),
-              child: Icon(Icons.favorite_rounded, color: palette.error, size: 21),
+            Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(color: palette.error.withOpacity(0.12), borderRadius: BorderRadius.circular(9)),
+                  child: Icon(icon, color: palette.error, size: 14),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 12, fontWeight: FontWeight.w800)),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('nav.favorites'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 2),
-                  Text('profile_page.favorites_subtitle'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 11)),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: palette.textMuted, size: 22),
+            const SizedBox(height: 10),
+            if (preview.isEmpty)
+              Text('favorites_page.empty_short'.tr(), style: TextStyle(color: palette.textMuted, fontSize: 10.5))
+            else
+              ...preview.map((e) => Padding(padding: const EdgeInsets.only(bottom: 6), child: _favoritesPreviewTile(palette, e))),
           ],
         ),
       ),
     ).animate(delay: 100.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
+  }
+
+  Widget _favoritesPreviewTile(AppPalette palette, FavoriteEntry entry) {
+    if (entry.type == 'agency') {
+      final agency = Agency.fromJson(entry.data);
+      return Row(
+        children: [
+          ClipOval(
+            child: Container(
+              width: 24,
+              height: 24,
+              color: palette.surfaceElevated,
+              child: agency.logoUrl != null && agency.logoUrl!.isNotEmpty
+                  ? CachedNetworkImage(imageUrl: agency.logoUrl!, fit: BoxFit.cover)
+                  : Icon(Icons.storefront_rounded, size: 12, color: palette.textMuted),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(child: Text(agency.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600))),
+        ],
+      );
+    }
+    final imageList = entry.type == 'listing' ? entry.data['image_urls'] : entry.data['images'];
+    final imageUrl = (imageList is List && imageList.isNotEmpty) ? imageList.first.toString() : null;
+    final label = entry.type == 'listing' ? (entry.data['title']?.toString() ?? '') : (entry.data['name']?.toString() ?? '');
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 24,
+            height: 24,
+            color: palette.surfaceElevated,
+            child: imageUrl != null && imageUrl.isNotEmpty ? CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.cover) : Icon(Icons.image_outlined, size: 12, color: palette.textMuted),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600))),
+      ],
+    );
   }
 
   void _showBusinessContactSheet(BuildContext context, String title) {

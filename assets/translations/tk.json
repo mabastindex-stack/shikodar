@@ -94,6 +94,9 @@
   "favorites_page": {
     "tab_posts": "Halanan ýazgylar ({})",
     "tab_accounts": "Halanan hasaplar ({})",
+    "posts_label": "Halanan ýazgylar",
+    "accounts_label": "Halanan hasaplar",
+    "empty_short": "Entäk hiç zat ýok",
     "empty_posts": "Entäk hiç bir ýazgyny halanlara goşmadyňyz",
     "empty_accounts": "Entäk hiç bir hasaby halanlara goşmadyňyz"
   },
@@ -440,6 +443,9 @@
     "become_company_title": "Bir geliştirme şirketi misiniz?",
     "become_company_subtitle": "Konut komplekslerinizi kendi şehriniz gibi yönetin",
     "become_complex_title": "Bir konut kompleksine sahip misiniz?",
+    "become_agency_title_short": "Emlakçı",
+    "become_company_title_short": "Ösüş kompaniýasy",
+    "become_complex_title_short": "Toplum eýesi",
     "favorites_subtitle": "Halanan hasaplaryňyzy we ýazgylaryňyzy şu ýerden görüň",
     "change_cover_label": "Kapak fotoğrafını değiştir",
     "stat_unit": "Birim",

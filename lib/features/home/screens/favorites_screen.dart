@@ -49,14 +49,18 @@ class FavoritesStore {
 }
 
 class FavoritesScreen extends StatefulWidget {
-  const FavoritesScreen({super.key});
+  /// Which tab to open on — 0 posts, 1 accounts. Lets the profile page's
+  /// two preview columns deep-link straight into the matching tab instead
+  /// of always landing on posts.
+  final int initialTab;
+  const FavoritesScreen({super.key, this.initialTab = 0});
 
   @override
   State<FavoritesScreen> createState() => _FavoritesScreenState();
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  int _tab = 0; // 0 posts, 1 accounts
+  late int _tab = widget.initialTab; // 0 posts, 1 accounts
   List<FavoriteEntry> _entries = [];
   bool _isLoading = true;
 

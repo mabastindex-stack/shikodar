@@ -94,6 +94,9 @@
   "favorites_page": {
     "tab_posts": "Favorite posts ({})",
     "tab_accounts": "Favorite accounts ({})",
+    "posts_label": "Favorite posts",
+    "accounts_label": "Favorite accounts",
+    "empty_short": "Nothing yet",
     "empty_posts": "You haven't favorited any post yet",
     "empty_accounts": "You haven't favorited any account yet"
   },
@@ -440,6 +443,9 @@
     "become_company_title": "Are you a development company?",
     "become_company_subtitle": "Manage your residential complexes as your own city",
     "become_complex_title": "Do you own a residential complex?",
+    "become_agency_title_short": "Real estate agent",
+    "become_company_title_short": "Developer",
+    "become_complex_title_short": "Complex owner",
     "favorites_subtitle": "View your favorite accounts and posts here",
     "change_cover_label": "Change Cover",
     "stat_unit": "Unit",
