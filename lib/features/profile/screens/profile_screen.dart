@@ -69,8 +69,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   List<FavoriteEntry> _favoriteEntries = [];
 
   /// null = both preview cards collapsed; 0 = posts expanded; 1 = accounts
-  /// expanded. Tapping the already-expanded card collapses it again.
-  int? _expandedFavoritesTab;
+  /// expanded. Starts on posts (0), so the favorites section already shows
+  /// something useful the first time this page opens; tapping the
+  /// already-expanded card collapses it again.
+  int? _expandedFavoritesTab = 0;
 
   @override
   void initState() {
@@ -1072,15 +1074,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     ).animate(delay: 60.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
   }
 
-  /// Two side-by-side preview cards — favorited posts and favorited
-  /// accounts. Tapping one expands its full list right below this row (see
+  /// Two side-by-side slim pill-cards — just an icon and a label, no
+  /// preview content — for favorited posts and favorited accounts.
+  /// Tapping one expands its full list right below this row (see
   /// _favoritesExpandedSection); tapping the already-expanded one again
   /// collapses it.
   Widget _favoritesPreviewRow(BuildContext context, AppPalette palette) {
-    final posts = _favoriteEntries.where((e) => e.type == 'listing' || e.type == 'project').toList();
-    final accounts = _favoriteEntries.where((e) => e.type == 'agency').toList();
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: _favoritesPreviewCard(
@@ -1088,7 +1088,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             palette,
             icon: Icons.favorite_rounded,
             title: 'favorites_page.posts_label'.tr(),
-            entries: posts,
             tabIndex: 0,
           ),
         ),
@@ -1099,7 +1098,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             palette,
             icon: Icons.storefront_rounded,
             title: 'favorites_page.accounts_label'.tr(),
-            entries: accounts,
             tabIndex: 1,
           ),
         ),
@@ -1112,45 +1110,36 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     AppPalette palette, {
     required IconData icon,
     required String title,
-    required List<FavoriteEntry> entries,
     required int tabIndex,
   }) {
-    final preview = entries.take(2).toList();
     final isExpanded = _expandedFavoritesTab == tabIndex;
     return GestureDetector(
       onTap: () => setState(() => _expandedFavoritesTab = isExpanded ? null : tabIndex),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.1), blurRadius: 14, offset: const Offset(0, 6))],
-          border: Border.all(color: isExpanded ? palette.error.withOpacity(0.45) : Colors.transparent, width: 1.4),
+          color: isExpanded ? palette.error.withOpacity(0.08) : palette.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.1), blurRadius: 12, offset: const Offset(0, 5))],
+          border: Border.all(color: isExpanded ? palette.error.withOpacity(0.5) : Colors.transparent, width: 1.3),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(color: palette.error.withOpacity(0.12), borderRadius: BorderRadius.circular(9)),
-                  child: Icon(icon, color: palette.error, size: 14),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 12, fontWeight: FontWeight.w800)),
-                ),
-                Icon(isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: palette.textMuted, size: 18),
-              ],
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [palette.error, palette.error.withOpacity(0.75)]),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: palette.error.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+              ),
+              child: Icon(icon, color: Colors.white, size: 15),
             ),
-            const SizedBox(height: 10),
-            if (preview.isEmpty)
-              Text('favorites_page.empty_short'.tr(), style: TextStyle(color: palette.textMuted, fontSize: 10.5))
-            else
-              ...preview.map((e) => Padding(padding: const EdgeInsets.only(bottom: 6), child: _favoritesPreviewTile(palette, e))),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 11.5, fontWeight: FontWeight.w800)),
+            ),
           ],
         ),
       ),
@@ -1292,46 +1281,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ],
         ),
       ),
-    );
-  }
-
-  Widget _favoritesPreviewTile(AppPalette palette, FavoriteEntry entry) {
-    if (entry.type == 'agency') {
-      final agency = Agency.fromJson(entry.data);
-      return Row(
-        children: [
-          ClipOval(
-            child: Container(
-              width: 24,
-              height: 24,
-              color: palette.surfaceElevated,
-              child: agency.logoUrl != null && agency.logoUrl!.isNotEmpty
-                  ? CachedNetworkImage(imageUrl: agency.logoUrl!, fit: BoxFit.cover)
-                  : Icon(Icons.storefront_rounded, size: 12, color: palette.textMuted),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(child: Text(agency.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600))),
-        ],
-      );
-    }
-    final imageList = entry.type == 'listing' ? entry.data['image_urls'] : entry.data['images'];
-    final imageUrl = (imageList is List && imageList.isNotEmpty) ? imageList.first.toString() : null;
-    final label = entry.type == 'listing' ? (entry.data['title']?.toString() ?? '') : (entry.data['name']?.toString() ?? '');
-    return Row(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            width: 24,
-            height: 24,
-            color: palette.surfaceElevated,
-            child: imageUrl != null && imageUrl.isNotEmpty ? CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.cover) : Icon(Icons.image_outlined, size: 12, color: palette.textMuted),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600))),
-      ],
     );
   }
 
