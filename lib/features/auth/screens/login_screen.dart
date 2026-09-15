@@ -16,6 +16,7 @@ import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import 'server_settings_screen.dart';
 
@@ -111,12 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showForgotPasswordInfo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('auth.forgot_unavailable'.tr()),
-        behavior: SnackBarBehavior.floating,
-      ),
+  void _openForgotPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
     );
   }
 
@@ -247,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               Align(
                                 alignment: AlignmentDirectional.centerEnd,
                                 child: TextButton(
-                                  onPressed: _showForgotPasswordInfo,
+                                  onPressed: _openForgotPassword,
                                   child: Text(
                                     'auth.forgot_password'.tr(),
                                     style: TextStyle(
