@@ -6,12 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/models/zone.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
+import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
+import '../../../shared/widgets/zone_picker_sheet.dart';
 import '../widgets/auth_components.dart';
 import 'otp_screen.dart';
 
@@ -20,43 +23,6 @@ const _bgPhotos = <String>[
   'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1200&q=80',
   'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&q=80',
 ];
-
-const _kirkukZones = <String>[
-  'شۆڕجە',
-  'ڕاپەرین',
-  'ناوەڕاستی شار',
-  'ئیمام قاسم',
-  'ئازادی',
-  'گرناتە',
-  'ڕاهیمناوە',
-  'شەقامی ٦٠ مەتری',
-];
-
-/// Kirkuk zone names are stored/compared as raw Kurdish (matches the shared
-/// mock data in `core/mock/kirkuk_neighborhoods.dart`), so only the
-/// _displayed_ label is localized here — the underlying value never changes.
-String _kirkukZoneLabel(String zone) {
-  switch (zone) {
-    case 'شۆڕجە':
-      return 'zones.shorja'.tr();
-    case 'ڕاپەرین':
-      return 'zones.raparin'.tr();
-    case 'ناوەڕاستی شار':
-      return 'zones.city_center'.tr();
-    case 'ئیمام قاسم':
-      return 'zones.imam_qasim'.tr();
-    case 'ئازادی':
-      return 'zones.azadi'.tr();
-    case 'گرناتە':
-      return 'zones.granata'.tr();
-    case 'ڕاهیمناوە':
-      return 'edit_business_profile.zone_raihimawa'.tr();
-    case 'شەقامی ٦٠ مەتری':
-      return 'zones.sixty_meter_street'.tr();
-    default:
-      return zone;
-  }
-}
 
 /// Client self-registration only — agency/company/complex accounts are
 /// always created by an admin from the separate web admin panel, so this
@@ -83,12 +49,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _showZoneError = false;
   bool _isSubmitting = false;
   double _strength = 0;
-  String? _selectedZone;
+  Zone? _selectedZone;
+  List<Zone> _zones = [];
 
   @override
   void initState() {
     super.initState();
     _passwordController.addListener(_updateStrength);
+    context.read<ZoneRepository>().fetchAll().then((zones) {
+      if (mounted) setState(() => _zones = zones);
+    }).catchError((_) {});
   }
 
   @override
@@ -182,11 +152,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _pickZone() async {
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _ZonePickerSheet(zones: _kirkukZones, selected: _selectedZone),
+    final result = await pickZoneSheet(
+      context,
+      _zones,
+      title: 'my_listings.pick_neighborhood_title'.tr(),
+      searchHint: 'my_listings.search_neighborhood_hint'.tr(),
+      notFoundText: 'my_listings.no_neighborhood_found'.tr(),
     );
     if (result != null && mounted) {
       setState(() {
@@ -222,7 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             phone: phone,
             email: _emailController.text.trim(),
             password: _passwordController.text,
-            zone: _selectedZone!,
+            zone: _selectedZone!.name,
           );
       if (!mounted) return;
       if (devOtpCode != null) {
@@ -252,6 +223,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    // Same treatment as login_screen.dart — collapse the header out of the
+    // way while the keyboard is up so it doesn't eat into the room the long
+    // form already needs.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
       backgroundColor: AppColors.emeraldDark,
@@ -281,7 +256,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
             bottom: false,
             child: Column(
               children: [
-                const _RegisterHeader(),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  height: keyboardOpen ? 0.0 : 112.0,
+                  child: const ClipRect(
+                    child: OverflowBox(
+                      maxHeight: 112,
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(height: 112, child: _RegisterHeader()),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
@@ -590,7 +576,7 @@ class _ProfilePhoto extends StatelessWidget {
 class _ZoneSelector extends StatelessWidget {
   const _ZoneSelector({required this.selectedZone, required this.hasError, required this.onTap});
 
-  final String? selectedZone;
+  final Zone? selectedZone;
   final bool hasError;
   final VoidCallback onTap;
 
@@ -618,7 +604,7 @@ class _ZoneSelector extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    selectedZone == null ? 'auth.location'.tr() : _kirkukZoneLabel(selectedZone!),
+                    selectedZone == null ? 'auth.location'.tr() : selectedZone!.name,
                     style: TextStyle(
                       color: selectedZone == null ? palette.textSecondary : palette.textPrimary,
                       fontSize: 13,
@@ -719,89 +705,6 @@ class _TermsRow extends StatelessWidget {
                   height: 1.45,
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ZonePickerSheet extends StatelessWidget {
-  const _ZonePickerSheet({required this.zones, required this.selected});
-
-  final List<String> zones;
-  final String? selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: palette.divider,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Icon(Icons.location_on_outlined, color: palette.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'auth.location'.tr(),
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: zones.map((zone) {
-                final isSelected = zone == selected;
-                return InkWell(
-                  onTap: () => Navigator.pop(context, zone),
-                  borderRadius: BorderRadius.circular(99),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected ? palette.primary : palette.surfaceElevated,
-                      borderRadius: BorderRadius.circular(99),
-                      border: Border.all(
-                        color: isSelected ? palette.primary : palette.divider,
-                      ),
-                    ),
-                    child: Text(
-                      _kirkukZoneLabel(zone),
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : palette.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
             ),
           ],
         ),
