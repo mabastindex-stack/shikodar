@@ -800,15 +800,14 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                           } else {
                             // Picking a real zone is a "take me there" action
                             // — close the sheet (its own smooth dismiss
-                            // animation), let the zoom/spotlight play out on
-                            // the map underneath, and reset the OTHER search
-                            // options back to their normal state so nothing
-                            // from a previous search silently keeps filtering
-                            // this new zone's posts.
-                            setState(() {
-                              _purpose = null;
-                              _type = 'all';
-                            });
+                            // animation) and let the zoom/spotlight play out
+                            // on the map underneath. Purpose/type are left
+                            // exactly as they were: all three filters
+                            // combine (AND together) via _filtered, so
+                            // rent+villa picked first and Shorja picked after
+                            // shows only rent+villa listings in Shorja — and
+                            // if purpose/type were still at their defaults
+                            // ("all"), every real post in Shorja shows.
                             _zoomToZone(z);
                             Navigator.of(sheetContext).pop();
                           }
