@@ -75,12 +75,11 @@ class AuthRepository {
   final ApiClient _client;
   const AuthRepository(this._client);
 
-  /// Registers a new CLIENT account (the only self-service role) and
-  /// triggers an OTP send. Email is required — it's the account's password
-  /// recovery channel (see forgotPassword()/resetPassword() below).
-  /// Returns the dev-only OTP code when no real SMS gateway is configured
-  /// server-side, so it can be shown during testing.
-  Future<String?> register({
+  /// Registers a new CLIENT account (the only self-service role) and logs
+  /// them straight in — no OTP step. Email is required — it's the
+  /// account's password recovery channel (see forgotPassword()/
+  /// resetPassword() below).
+  Future<AuthResult> register({
     required String name,
     required String phone,
     required String email,
@@ -95,7 +94,7 @@ class AuthRepository {
         'password': password,
         'zone': zone,
       });
-      return response.data['dev_otp_code'] as String?;
+      return _saveAuthResult(response.data);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

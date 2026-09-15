@@ -75,7 +75,7 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Successful login/registration — called from `LoginScreen`/`OtpScreen`.
+  /// Successful login/registration — called from `LoginScreen`/`RegisterScreen`/`ResetPasswordScreen`.
   void logIn(
     AccountRole newRole, {
     String? name,

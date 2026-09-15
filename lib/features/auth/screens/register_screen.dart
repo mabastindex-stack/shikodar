@@ -9,15 +9,18 @@ import 'package:provider/provider.dart';
 import '../../../core/models/zone.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/auth_repository.dart';
+import '../../../core/network/favorite_repository.dart';
+import '../../../core/network/push_repository.dart';
 import '../../../core/network/zone_repository.dart';
+import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/zone_picker_sheet.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
-import 'otp_screen.dart';
 
 const _bgPhotos = <String>[
   'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&q=80',
@@ -177,29 +180,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final phone = _phoneController.text.trim();
     setState(() => _isSubmitting = true);
     try {
-      final devOtpCode = await context.read<AuthRepository>().register(
+      final result = await context.read<AuthRepository>().register(
             name: _nameController.text.trim(),
-            phone: phone,
+            phone: _phoneController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,
             zone: _selectedZone!.name,
           );
       if (!mounted) return;
-      if (devOtpCode != null) {
-        showAppSnackBar(context, message: 'OTP: $devOtpCode');
-      }
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          transitionDuration: AppMotion.expressive,
-          pageBuilder: (_, animation, __) => FadeTransition(
-            opacity: CurvedAnimation(parent: animation, curve: AppMotion.enter),
-            child: OtpScreen(phone: phone),
-          ),
-        ),
-      );
+
+      context.read<UserSession>().logIn(
+            result.role,
+            name: result.name,
+            agencyId: result.agencyId,
+            tier: result.tier,
+            contractEndDate: result.contractEndDate,
+            logoUrl: result.logoUrl,
+            agencyPhone: result.agencyPhone,
+            agencyWhatsapp: result.agencyWhatsapp,
+            agencyCoverUrl: result.agencyCoverUrl,
+            rating: result.rating,
+            reviewCount: result.reviewCount,
+            yearsActive: result.yearsActive,
+            dealsCompleted: result.dealsCompleted,
+            profilePhotoUrl: result.profilePhotoUrl,
+            coverUrl: result.coverUrl,
+          );
+      FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
+      context.read<PushRepository>().registerDevice();
+      // Registration is pushed from the profile tab's guest prompt, on top
+      // of the guest HomeShell already showing — pop back to it (now
+      // reactively logged in) instead of tearing down the stack and
+      // building a new one.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       if (!mounted) return;
       showAppSnackBar(context, message: e.message, isError: true);
