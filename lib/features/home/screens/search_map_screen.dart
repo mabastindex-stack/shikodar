@@ -102,6 +102,14 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   String _zone = 'هەموو';
   double _zoom = 11.8;
 
+  // The list view's own quick-filter bar — entirely separate from
+  // _type/_zone above, which belong to the map (its bubbles, the full
+  // filter sheet, and _zoomToZone's "take me there" navigation). Picking a
+  // zone or type here must only ever change what the list shows, never
+  // the map's own filter or vice versa.
+  String _listType = 'all';
+  String _listZone = 'هەموو';
+
   /// Set when a zone bubble is tapped — spotlights that zone (dims
   /// everything else, draws its outline, shows its name) until the
   /// visitor manually zooms back out, which clears it again.
@@ -167,6 +175,8 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
       _type = 'all';
       _zone = 'هەموو';
       _focusedZone = null;
+      _listType = 'all';
+      _listZone = 'هەموو';
     });
     _loadListings();
     _loadProjects();
@@ -231,6 +241,15 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
       }).toList();
 
   List<Project> get _filteredProjects => _allProjects.where((p) => _zone == 'هەموو' || p.zone == _zone).toList();
+
+  // The list's own filtered view, driven only by _listType/_listZone —
+  // kept fully independent of _filtered/_filteredProjects above, which the
+  // map (markers, bubbles, filter sheet) uses.
+  List<Listing> get _listFiltered => _allListings.where((l) {
+        if (_listType != 'all' && l.type.name != _listType) return false;
+        if (_listZone != 'هەموو' && l.zone != _listZone) return false;
+        return true;
+      }).toList();
 
   /// A soft, organic (not perfectly circular) outline around a zone's real
   /// content — deterministic per zone name (seeded on its hash, so it's
@@ -554,15 +573,17 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
       ];
 
   /// A thin pill for the list view's quick zone row — this one only
-  /// filters the list in place (plain _zone assignment, no camera/spotlight,
-  /// no view switch), unlike the map's own zone bubbles and the filter
+  /// filters the list in place, using its own _listZone (never _zone, which
+  /// belongs to the map/filter sheet), with no camera/spotlight and no
+  /// view switch — unlike the map's own zone bubbles and the filter
   /// sheet's zone chips, which are "take me to the map" actions. This bar
-  /// lives on the list page, so using it should keep you on the list page.
+  /// lives on the list page, so using it should keep you on the list page
+  /// and never touch the map's own filter state.
   Widget _quickZoneChip(String zone) {
     final palette = context.palette;
-    final sel = zone == _zone;
+    final sel = zone == _listZone;
     return GestureDetector(
-      onTap: () => setState(() => _zone = zone),
+      onTap: () => setState(() => _listZone = zone),
       child: AnimatedContainer(
         duration: AppMotion.quick,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -583,9 +604,9 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   Widget _quickTypeChip(String value, IconData icon, String label) {
     final palette = context.palette;
-    final sel = value == _type;
+    final sel = value == _listType;
     return GestureDetector(
-      onTap: () => setState(() => _type = value),
+      onTap: () => setState(() => _listType = value),
       child: AnimatedContainer(
         duration: AppMotion.quick,
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
@@ -936,6 +957,8 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     final palette = context.palette;
     final listings = _filtered;
     final projects = _filteredProjects;
+    // The list view's own independent filter result — see _listFiltered.
+    final listListings = _listFiltered;
     // While a zone is spotlighted, always show real pins (never zone
     // bubbles) — even if the fitted zoom for a large zone happens to land
     // below the normal threshold — so no other zone's bubble competes for
@@ -1090,9 +1113,9 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                   duration: 650.ms,
                   curve: Curves.easeOut,
                 )
-          else if (_listingsLoading && listings.isEmpty)
+          else if (_listingsLoading && _allListings.isEmpty)
             const Center(child: CircularProgressIndicator())
-          else if (_listingsFailed && listings.isEmpty)
+          else if (_listingsFailed && _allListings.isEmpty)
             SafeArea(
               child: Center(
                 child: Padding(
@@ -1114,7 +1137,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
             SafeArea(
               child: RefreshIndicator(
                 onRefresh: _loadListings,
-                child: listings.isEmpty
+                child: listListings.isEmpty
                     ? ListView(
                         padding: const EdgeInsets.fromLTRB(32, 184, 32, 110),
                         children: [
@@ -1131,9 +1154,9 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                       )
                     : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 184, 20, 110),
-                  itemCount: listings.length,
+                  itemCount: listListings.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listings[i], animationIndex: i)),
+                  itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listListings[i], animationIndex: i)),
                 ),
               ),
             ),
