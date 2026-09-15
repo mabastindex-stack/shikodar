@@ -113,9 +113,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
+    final requiredMessage = _required(value);
+    if (requiredMessage != null) return requiredMessage;
     final email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!email.hasMatch(value.trim())) return 'auth.email_invalid'.tr();
+    if (!email.hasMatch(value!.trim())) return 'auth.email_invalid'.tr();
     return null;
   }
 
@@ -310,7 +311,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 const SizedBox(height: 13),
                                 AuthTextFormField(
                                   controller: _emailController,
-                                  label: 'auth.optional_email'.tr(),
+                                  label: 'auth.email'.tr(),
                                   icon: Icons.alternate_email_rounded,
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,

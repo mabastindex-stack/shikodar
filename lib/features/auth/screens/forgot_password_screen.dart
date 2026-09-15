@@ -22,19 +22,19 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _isSubmitting = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-  String? _validatePhone(String? value) {
+  String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) return 'auth.field_required'.tr();
-    final digits = value.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 10) return 'auth.phone_invalid'.tr();
+    final email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!email.hasMatch(value.trim())) return 'auth.email_invalid'.tr();
     return null;
   }
 
@@ -42,10 +42,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim();
     setState(() => _isSubmitting = true);
     try {
-      final devOtpCode = await context.read<AuthRepository>().forgotPassword(phone: phone);
+      final devOtpCode = await context.read<AuthRepository>().forgotPassword(email: email);
       if (!mounted) return;
       if (devOtpCode != null) {
         showAppSnackBar(context, message: 'OTP: $devOtpCode');
@@ -55,7 +55,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           transitionDuration: AppMotion.expressive,
           pageBuilder: (_, animation, __) => FadeTransition(
             opacity: CurvedAnimation(parent: animation, curve: AppMotion.enter),
-            child: ResetPasswordScreen(phone: phone),
+            child: ResetPasswordScreen(email: email),
           ),
         ),
       );
@@ -135,19 +135,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ).entrance(index: 2),
                     const SizedBox(height: 30),
                     AuthTextFormField(
-                      controller: _phoneController,
-                      label: 'auth.phone'.tr(),
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
+                      controller: _emailController,
+                      label: 'auth.email'.tr(),
+                      icon: Icons.alternate_email_rounded,
+                      keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.telephoneNumber],
-                      validator: _validatePhone,
+                      autofillHints: const [AutofillHints.email],
+                      validator: _validateEmail,
                       onFieldSubmitted: (_) => _submit(),
                     ).entrance(index: 3),
                     const SizedBox(height: 26),
                     AuthPrimaryButton(
                       label: 'auth.send_code'.tr(),
-                      icon: Icons.sms_outlined,
+                      icon: Icons.mail_outline_rounded,
                       onPressed: _submit,
                       loading: _isSubmitting,
                     ).entrance(base: 420.ms),

@@ -20,9 +20,9 @@ import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key, required this.phone});
+  const ResetPasswordScreen({super.key, required this.email});
 
-  final String phone;
+  final String email;
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -76,7 +76,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isSubmitting = true);
     try {
       final result = await context.read<AuthRepository>().resetPassword(
-            phone: widget.phone,
+            email: widget.email,
             code: code,
             newPassword: _passwordController.text,
           );
@@ -180,7 +180,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ).entrance(index: 2),
                     const SizedBox(height: 7),
                     Text(
-                      widget.phone,
+                      widget.email,
                       textAlign: TextAlign.center,
                       textDirection: ui.TextDirection.ltr,
                       style: TextStyle(

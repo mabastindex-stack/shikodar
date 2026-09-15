@@ -76,12 +76,14 @@ class AuthRepository {
   const AuthRepository(this._client);
 
   /// Registers a new CLIENT account (the only self-service role) and
-  /// triggers an OTP send. Returns the dev-only OTP code when no real SMS
-  /// gateway is configured server-side, so it can be shown during testing.
+  /// triggers an OTP send. Email is required — it's the account's password
+  /// recovery channel (see forgotPassword()/resetPassword() below).
+  /// Returns the dev-only OTP code when no real SMS gateway is configured
+  /// server-side, so it can be shown during testing.
   Future<String?> register({
     required String name,
     required String phone,
-    String? email,
+    required String email,
     required String password,
     required String zone,
   }) async {
@@ -89,7 +91,7 @@ class AuthRepository {
       final response = await _client.dio.post('/auth/register', data: {
         'name': name,
         'phone': phone,
-        if (email != null && email.isNotEmpty) 'email': email,
+        'email': email,
         'password': password,
         'zone': zone,
       });
@@ -120,28 +122,30 @@ class AuthRepository {
     }
   }
 
-  /// Kicks off password recovery for an existing account — sends an OTP to
-  /// the phone, same mechanism as registration. Returns the dev-only OTP
-  /// code when no real SMS gateway is configured server-side.
-  Future<String?> forgotPassword({required String phone}) async {
+  /// Kicks off password recovery for an existing account — the owner types
+  /// their own registered EMAIL (not phone), and the code is mailed to it.
+  /// Returns the dev-only OTP code when running locally (never in
+  /// production, where the email is the only way to see it).
+  Future<String?> forgotPassword({required String email}) async {
     try {
-      final response = await _client.dio.post('/auth/password/forgot', data: {'phone': phone});
+      final response = await _client.dio.post('/auth/password/forgot', data: {'email': email});
       return response.data['dev_otp_code'] as String?;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
   }
 
-  /// Verifies the OTP and sets a new password in one step. Logs the user
-  /// straight in, mirroring what verifyOtp() does for a fresh registration.
+  /// Verifies the OTP (keyed by email) and sets a new password in one step.
+  /// Logs the user straight in, mirroring what verifyOtp() does for a
+  /// fresh registration.
   Future<AuthResult> resetPassword({
-    required String phone,
+    required String email,
     required String code,
     required String newPassword,
   }) async {
     try {
       final response = await _client.dio.post('/auth/password/reset', data: {
-        'phone': phone,
+        'email': email,
         'code': code,
         'new_password': newPassword,
       });
