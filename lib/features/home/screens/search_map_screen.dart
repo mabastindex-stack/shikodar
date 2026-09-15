@@ -533,15 +533,16 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
         ('shop', Icons.storefront_rounded, 'filters.shop'.tr()),
       ];
 
-  /// A thin pill for the always-visible quick zone row — same "take me
-  /// there" tap behavior as the map's own zone bubbles and the filter
-  /// sheet's zone chips (zoom + spotlight), just reachable without
-  /// opening anything first.
+  /// A thin pill for the list view's quick zone row — this one only
+  /// filters the list in place (plain _zone assignment, no camera/spotlight,
+  /// no view switch), unlike the map's own zone bubbles and the filter
+  /// sheet's zone chips, which are "take me to the map" actions. This bar
+  /// lives on the list page, so using it should keep you on the list page.
   Widget _quickZoneChip(String zone) {
     final palette = context.palette;
     final sel = zone == _zone;
     return GestureDetector(
-      onTap: () => zone == 'هەموو' ? setState(() => _zone = zone) : _zoomToZone(zone),
+      onTap: () => setState(() => _zone = zone),
       child: AnimatedContainer(
         duration: AppMotion.quick,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
