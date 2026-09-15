@@ -111,6 +111,8 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   List<Listing> _allListings = [];
   List<Project> _allProjects = [];
+  bool _listingsLoading = true;
+  bool _listingsFailed = false;
 
   // The one real, admin-managed zone list — same data the home page's zone
   // row, every zone filter, and registration's zone picker all read. This
@@ -181,12 +183,22 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   }
 
   Future<void> _loadListings() async {
+    if (mounted) setState(() => _listingsLoading = true);
     try {
       final listings = await context.read<ListingRepository>().fetchAll();
-      if (mounted) setState(() => _allListings = listings);
+      if (mounted) setState(() {
+        _allListings = listings;
+        _listingsLoading = false;
+        _listingsFailed = false;
+      });
     } catch (_) {
       // The map itself still works without listing data — just leave the
-      // pins/counts empty rather than blocking the whole screen.
+      // pins/counts empty rather than blocking the whole screen. The list
+      // view surfaces this as a retry state instead of a silent blank page.
+      if (mounted) setState(() {
+        _listingsLoading = false;
+        _listingsFailed = true;
+      });
     }
   }
 
@@ -1078,13 +1090,51 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                   duration: 650.ms,
                   curve: Curves.easeOut,
                 )
+          else if (_listingsLoading && listings.isEmpty)
+            const Center(child: CircularProgressIndicator())
+          else if (_listingsFailed && listings.isEmpty)
+            SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 184, 32, 110),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.wifi_off_rounded, size: 40, color: palette.textMuted),
+                      const SizedBox(height: 12),
+                      Text('search.load_error'.tr(), textAlign: TextAlign.center, style: TextStyle(color: palette.textSecondary, fontSize: 13.5)),
+                      const SizedBox(height: 14),
+                      ElevatedButton(onPressed: _loadListings, child: Text('search.retry'.tr())),
+                    ],
+                  ),
+                ),
+              ),
+            )
           else
             SafeArea(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 184, 20, 110),
-                itemCount: listings.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listings[i], animationIndex: i)),
+              child: RefreshIndicator(
+                onRefresh: _loadListings,
+                child: listings.isEmpty
+                    ? ListView(
+                        padding: const EdgeInsets.fromLTRB(32, 184, 32, 110),
+                        children: [
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 60),
+                              Icon(Icons.search_off_rounded, size: 40, color: palette.textMuted),
+                              const SizedBox(height: 12),
+                              Text('search.no_results'.tr(), textAlign: TextAlign.center, style: TextStyle(color: palette.textSecondary, fontSize: 13.5)),
+                            ],
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 184, 20, 110),
+                  itemCount: listings.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listings[i], animationIndex: i)),
+                ),
               ),
             ),
 
