@@ -124,7 +124,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final headerHeight = (screenHeight * 0.39).clamp(260.0, 340.0).toDouble();
+    final fullHeaderHeight = (screenHeight * 0.39).clamp(260.0, 340.0).toDouble();
+    // Collapse the brand header out of the way while the keyboard is up —
+    // otherwise it permanently eats a third of the screen and the password
+    // field ends up hidden below the fold with no obvious way to scroll to it.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final headerHeight = keyboardOpen ? 0.0 : fullHeaderHeight;
 
     return Scaffold(
       backgroundColor: AppColors.emeraldDark,
@@ -146,9 +151,20 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
               child: Column(
                 children: [
-                  SizedBox(
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
                     height: headerHeight,
-                    child: const _LoginBrandHeader(),
+                    child: ClipRect(
+                      child: OverflowBox(
+                        maxHeight: fullHeaderHeight,
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          height: fullHeaderHeight,
+                          child: const _LoginBrandHeader(),
+                        ),
+                      ),
+                    ),
                   ),
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
