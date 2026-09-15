@@ -27,6 +27,7 @@ import '../../agency/screens/agency_profile_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../../home/widgets/listing_card.dart';
 import '../../listing/screens/listing_detail_screen.dart';
 import '../../my_listings/screens/my_listings_screen.dart';
@@ -86,6 +87,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     // later would never re-trigger the fetches above, leaving
     // posts/stats/favorites permanently empty for the rest of the session.
     context.read<UserSession>().addListener(_onSessionChanged);
+    // Same reasoning for favorites specifically — a heart tapped on any
+    // listing/project/agency card elsewhere in the app updates this same
+    // ValueNotifier, so re-fetch the preview the moment that happens
+    // instead of only on the next full navigation to this tab.
+    FavoritesStore.ids.addListener(_loadFavoritesPreview);
   }
 
   void _onSessionChanged() {
@@ -149,6 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   void dispose() {
     _glow.dispose();
     context.read<UserSession>().removeListener(_onSessionChanged);
+    FavoritesStore.ids.removeListener(_loadFavoritesPreview);
     super.dispose();
   }
 
