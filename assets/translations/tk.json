@@ -91,6 +91,12 @@
     "projects": "Projeler",
     "me": "Ben"
   },
+  "favorites_page": {
+    "tab_posts": "Halanan ýazgylar ({})",
+    "tab_accounts": "Halanan hasaplar ({})",
+    "empty_posts": "Entäk hiç bir ýazgyny halanlara goşmadyňyz",
+    "empty_accounts": "Entäk hiç bir hasaby halanlara goşmadyňyz"
+  },
   "filters": {
     "all": "Hepsi",
     "rent": "Kira",
@@ -434,6 +440,7 @@
     "become_company_title": "Bir geliştirme şirketi misiniz?",
     "become_company_subtitle": "Konut komplekslerinizi kendi şehriniz gibi yönetin",
     "become_complex_title": "Bir konut kompleksine sahip misiniz?",
+    "favorites_subtitle": "Halanan hasaplaryňyzy we ýazgylaryňyzy şu ýerden görüň",
     "change_cover_label": "Kapak fotoğrafını değiştir",
     "stat_unit": "Birim",
     "stat_project": "Proje",

@@ -9,12 +9,14 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/review.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/review_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../../home/widgets/listing_card.dart';
 
 /// Real property photos (Unsplash) used for the cover carousel. Premium/
@@ -189,6 +191,20 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
                   child: _circleBtn(Icons.arrow_back_ios_new_rounded, () => Navigator.pop(context)),
                 ),
                 actions: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ValueListenableBuilder<Set<String>>(
+                      valueListenable: FavoritesStore.ids,
+                      builder: (_, ids, __) {
+                        final isFavorited = ids.contains(a.id);
+                        return _circleBtn(
+                          isFavorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          () => FavoritesStore.toggle(context.read<FavoriteRepository>(), type: 'agency', id: a.id),
+                          color: isFavorited ? AppColors.error : AppColors.ink,
+                        );
+                      },
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.all(8),
                     child: _circleBtn(Icons.ios_share_rounded, () async {
@@ -647,7 +663,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     );
   }
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap) => Container(
+  Widget _circleBtn(IconData icon, VoidCallback onTap, {Color? color}) => Container(
         decoration: const BoxDecoration(shape: BoxShape.circle, boxShadow: AppColors.cardShadow),
         child: Material(
           color: Colors.white,
@@ -655,7 +671,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
           child: InkWell(
             onTap: onTap,
             customBorder: const CircleBorder(),
-            child: SizedBox(width: 38, height: 38, child: Icon(icon, size: 17, color: AppColors.ink)),
+            child: SizedBox(width: 38, height: 38, child: Icon(icon, size: 17, color: color ?? AppColors.ink)),
           ),
         ),
       );

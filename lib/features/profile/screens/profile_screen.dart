@@ -21,6 +21,7 @@ import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
@@ -118,9 +119,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.dispose();
   }
 
-  /// Picks a logo/avatar image and, for a business account, immediately
-  /// uploads and saves it as the agency's real logo — a client's own
-  /// avatar has no server-side field, so it just stays a local preview.
+  /// Picks a logo/avatar image and immediately uploads it — a business
+  /// account saves it as the agency's real logo, any other role (client
+  /// included) saves it as that user's own profile photo.
   Future<void> _pickProfileImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null || !mounted) return;
@@ -128,20 +129,26 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
     final role = context.read<UserSession>().role;
     final isBusiness = role == AccountRole.agency || role == AccountRole.company || role == AccountRole.complex;
-    if (!isBusiness) return;
 
     final uploadRepository = context.read<UploadRepository>();
     final authRepository = context.read<AuthRepository>();
     setState(() => _uploadingLogo = true);
     try {
       final url = await uploadRepository.upload(picked.path);
-      final result = await authRepository.updateProfile(logoUrl: url);
       if (!mounted) return;
-      context.read<UserSession>().updateAgencyProfile(logoUrl: result['logo_url']);
+      if (isBusiness) {
+        final result = await authRepository.updateProfile(logoUrl: url);
+        if (!mounted) return;
+        context.read<UserSession>().updateAgencyProfile(logoUrl: result['logo_url']);
+      } else {
+        final savedUrl = await authRepository.updateMyPhoto(url);
+        if (!mounted) return;
+        context.read<UserSession>().updateProfilePhoto(savedUrl);
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _profileImage = null);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
+      showAppSnackBar(context, message: e.message, isError: true);
     } finally {
       if (mounted) setState(() => _uploadingLogo = false);
     }
@@ -342,9 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                     ],
                     const SizedBox(height: 18),
-                    _sectionCard(palette, delay: 100, children: [
-                      _tile(palette, Icons.favorite_border_rounded, 'nav.favorites'.tr(), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoritesScreen())), isLast: true),
-                    ]),
+                    _favoritesCard(context, palette),
                   ],
                 ),
               ),
@@ -1026,6 +1031,46 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ),
       ),
     ).animate(delay: 60.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
+  }
+
+  /// Entry point into FavoritesScreen — styled like the become-business
+  /// cards above it (icon chip + title/subtitle + chevron) instead of a
+  /// bare list row, and calls out that it now covers both favorited
+  /// accounts and favorited posts.
+  Widget _favoritesCard(BuildContext context, AppPalette palette) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoritesScreen())),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 8))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: palette.error.withOpacity(0.12), borderRadius: BorderRadius.circular(13)),
+              child: Icon(Icons.favorite_rounded, color: palette.error, size: 21),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('nav.favorites'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text('profile_page.favorites_subtitle'.tr(), style: TextStyle(color: palette.textSecondary, fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: palette.textMuted, size: 22),
+          ],
+        ),
+      ),
+    ).animate(delay: 100.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
   }
 
   void _showBusinessContactSheet(BuildContext context, String title) {

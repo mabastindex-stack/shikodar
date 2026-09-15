@@ -91,6 +91,12 @@
     "projects": "پڕۆژە",
     "me": "من"
   },
+  "favorites_page": {
+    "tab_posts": "پۆستی دڵخواز ({})",
+    "tab_accounts": "هەژماری دڵخواز ({})",
+    "empty_posts": "هێشتا هیچ پۆستێکت لە دڵخوازەکان زیاد نەکردووە",
+    "empty_accounts": "هێشتا هیچ هەژمارێکت لە دڵخوازەکان زیاد نەکردووە"
+  },
   "filters": {
     "all": "هەموو",
     "rent": "کرێ",
@@ -429,11 +435,12 @@
     "created_by_company": "دروستکراوە لەلایەن {}",
     "independent_complex": "مجمع سکنیەکی سەربەخۆ",
     "edit_profile_action": "دەستکاری پرۆفایل",
-    "become_agency_title": "دەتەوێت ببیتە دەلال؟",
+    "become_agency_title": "دەتەوێت ببیتە دەلالی عقارات؟",
     "become_agency_subtitle": "ئیلان و ڕیل بڵاو بکەرەوە، پۆرتۆفیۆلی تایبەت وەربگرە",
     "become_company_title": "کۆمپانیای گەشەپێدەریت؟",
     "become_company_subtitle": "مجمع سکنیەکانت وەک شارێکی تایبەت بەڕێوە ببە",
     "become_complex_title": "خاوەنی مجمع سکنیت؟",
+    "favorites_subtitle": "هەژماری دڵخواز و پۆستی دڵخوازت لێرەوە ببینە",
     "change_cover_label": "گۆڕینی کەڤەر",
     "stat_unit": "یەکە",
     "stat_project": "پڕۆژە",

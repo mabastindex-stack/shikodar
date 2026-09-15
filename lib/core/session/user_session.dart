@@ -142,6 +142,14 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Applied after ProfileScreen saves a new profile photo for a NON-business
+  /// account (a client, or any role without an agency logo) — see
+  /// updateAgencyProfile() above for the business equivalent.
+  void updateProfilePhoto(String url) {
+    profilePhotoUrl = url;
+    notifyListeners();
+  }
+
   /// Back-compat for older call sites that only distinguished agency/client.
   void setAgency({required bool asAgency}) {
     role = asAgency ? AccountRole.agency : AccountRole.client;

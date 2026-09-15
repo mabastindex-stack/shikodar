@@ -242,6 +242,18 @@ class AuthRepository {
     );
   }
 
+  /// Saves the signed-in user's own profile photo — works for ANY role
+  /// (client included), unlike updateProfile() below which only touches a
+  /// business account's agency record (logo/phone/whatsapp).
+  Future<String> updateMyPhoto(String url) async {
+    try {
+      final response = await _client.dio.put('/me/photo', data: {'profile_photo_url': url});
+      return response.data['profile_photo_url'] as String;
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// Updates the signed-in business's own logo/phone/whatsapp. Returns the
   /// fresh values so the caller can push them straight into UserSession
   /// without a second round trip.

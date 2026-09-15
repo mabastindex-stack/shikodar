@@ -7,10 +7,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/network/favorite_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../home/screens/favorites_screen.dart';
 import '../../projects/screens/project_detail_screen.dart';
 import '../../projects/widgets/project_identity_carousel.dart';
 
@@ -85,6 +87,22 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> with Ti
                   padding: const EdgeInsets.all(8),
                   child: _circleBtn(Icons.arrow_back_ios_new_rounded, () => Navigator.pop(context)),
                 ),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ValueListenableBuilder<Set<String>>(
+                      valueListenable: FavoritesStore.ids,
+                      builder: (_, ids, __) {
+                        final isFavorited = ids.contains(a.id);
+                        return _circleBtn(
+                          isFavorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          () => FavoritesStore.toggle(context.read<FavoriteRepository>(), type: 'agency', id: a.id),
+                          color: isFavorited ? AppColors.error : AppColors.ink,
+                        );
+                      },
+                    ),
+                  ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(background: _videoHeader()),
               ),
               SliverToBoxAdapter(
@@ -453,7 +471,7 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> with Ti
     ).animate(delay: 600.ms).fadeIn(duration: 320.ms);
   }
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap) {
+  Widget _circleBtn(IconData icon, VoidCallback onTap, {Color? color}) {
     return Container(
       decoration: const BoxDecoration(shape: BoxShape.circle, boxShadow: AppColors.cardShadow),
       child: Material(
@@ -462,7 +480,7 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> with Ti
         child: InkWell(
           onTap: onTap,
           customBorder: const CircleBorder(),
-          child: SizedBox(width: 38, height: 38, child: Icon(icon, size: 17, color: AppColors.ink)),
+          child: SizedBox(width: 38, height: 38, child: Icon(icon, size: 17, color: color ?? AppColors.ink)),
         ),
       ),
     );
