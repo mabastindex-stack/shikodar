@@ -128,7 +128,11 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
         for (final z in _zonesWithLocation) z.name: LatLng(z.lat!, z.lng!),
       };
 
-  List<String> get _zoneNames => ['هەموو', ..._zones.map((z) => z.name)];
+  // Same set as the map's own bubbles — a zone with no location can't be
+  // zoomed to or shown as a bubble, so it shouldn't be offered as a filter
+  // choice here either. Keeps this list and the map in lockstep: setting
+  // or clearing a zone's lat/lng in admin adds/removes it from both at once.
+  List<String> get _zoneNames => ['هەموو', ..._zonesWithLocation.map((z) => z.name)];
 
   /// How many of this zone's real listings exist right now — shown as the
   /// bubble's count badge, and what makes a zone with actual posts win a
