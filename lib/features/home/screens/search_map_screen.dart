@@ -289,6 +289,41 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   double _zoneBubbleWidth(String name) => (name.length * 12.5 + 42).clamp(78, 155);
 
+  /// Web Mercator meters-per-pixel at a given zoom/latitude — standard tile
+  /// math (EPSG:3857). Lets bubble overlap be detected from real geographic
+  /// distance between two neighbourhood points, without needing the map's
+  /// internal screen-space projection.
+  double _metersPerPixel(double zoom, double latitude) => 156543.03392 * cos(latitude * pi / 180) / pow(2, zoom);
+
+  /// Greedily keeps only the neighbourhood bubbles that won't visually
+  /// collide with one another at the current zoom — "major" quarters and
+  /// ones with more real listings win when two would overlap, so a crowded
+  /// cluster resolves into a clean, legible set instead of a pile of
+  /// overlapping pills. Every candidate still gets its polygon outline
+  /// drawn (see the PolygonLayer below) — only the label bubble itself is
+  /// decluttered.
+  List<int> _declutteredIndexes(List<int> candidates, double zoom, double scale) {
+    const distance = Distance();
+    final metersPerPixel = _metersPerPixel(zoom, _kirkukCenter.latitude);
+    double halfWidthMeters(int i) => (_zoneBubbleWidth(kirkukNeighborhoods[i].name) * scale / 2 + 10) * metersPerPixel;
+
+    final sorted = [...candidates]..sort((a, b) {
+        final majorCompare = (kirkukNeighborhoods[b].major ? 1 : 0) - (kirkukNeighborhoods[a].major ? 1 : 0);
+        if (majorCompare != 0) return majorCompare;
+        final countCompare = _nbUnitCounts[b] - _nbUnitCounts[a];
+        if (countCompare != 0) return countCompare;
+        return a - b;
+      });
+
+    final placed = <int>[];
+    for (final i in sorted) {
+      final iHalf = halfWidthMeters(i);
+      final overlapsPlaced = placed.any((j) => distance(_nbPoints[i], _nbPoints[j]) < iHalf + halfWidthMeters(j));
+      if (!overlapsPlaced) placed.add(i);
+    }
+    return placed;
+  }
+
   /// Shrinks the neighbourhood bubbles the further out you zoom, so a label
   /// never outgrows the tiny on-screen outline it belongs to. Two segments:
   /// the major-only tier (fewer labels, so a gentler shrink) and the
@@ -501,21 +536,33 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     );
   }
 
+  /// A zone's pill: a subtle diagonal gradient (not a flat fill) and a
+  /// two-layer shadow for real depth. A zone with actual live listings gets
+  /// a thin gold ring and a gentle breathing pulse — the map's own way of
+  /// saying "there's something real posted here" — while an empty zone
+  /// stays still and plain white-bordered, so attention naturally goes to
+  /// the zones that matter instead of everything pulsing at once.
   Widget _zoneBubble(String name, Color color, int unitCount, double scale, VoidCallback onTap) {
-    final bubble = GestureDetector(
+    final hasListings = unitCount > 0;
+    final darkColor = Color.lerp(color, Colors.black, 0.28)!;
+    Widget bubble = GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
-          color: color,
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color, darkColor]),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.45), width: 1.4),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 12, offset: const Offset(0, 5))],
+          border: Border.all(color: hasListings ? AppColors.gold.withOpacity(0.85) : Colors.white.withOpacity(0.4), width: hasListings ? 1.6 : 1.2),
+          boxShadow: [
+            BoxShadow(color: color.withOpacity(0.45), blurRadius: 14, offset: const Offset(0, 6)),
+            BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 4, offset: const Offset(0, 1)),
+            if (hasListings) BoxShadow(color: AppColors.gold.withOpacity(0.35), blurRadius: 10, spreadRadius: 0.5),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.place_rounded, size: 11, color: Colors.white),
+            Icon(Icons.place_rounded, size: 11, color: hasListings ? AppColors.goldLight : Colors.white),
             const SizedBox(width: 5),
             Flexible(
               child: Text(
@@ -529,19 +576,22 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
               const SizedBox(width: 5),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.28), borderRadius: BorderRadius.circular(20)),
-                child: Text('$unitCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.9), borderRadius: BorderRadius.circular(20)),
+                child: Text('$unitCount', style: const TextStyle(color: AppColors.ink, fontSize: 9, fontWeight: FontWeight.w800)),
               ),
             ],
           ],
         ),
       ),
-    ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
-          begin: const Offset(1, 1),
-          end: const Offset(1.04, 1.04),
-          duration: 1500.ms,
-          curve: Curves.easeInOut,
-        );
+    );
+    if (hasListings) {
+      bubble = bubble.animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+            begin: const Offset(1, 1),
+            end: const Offset(1.05, 1.05),
+            duration: 1500.ms,
+            curve: Curves.easeInOut,
+          );
+    }
     return Transform.scale(scale: scale, child: bubble);
   }
 
@@ -738,6 +788,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     final showAllNeighborhoods = !showUnits && _zoom >= _neighborhoodZoomThreshold;
     final neighborhoodIndexes = showUnits ? const <int>[] : (showAllNeighborhoods ? List.generate(kirkukNeighborhoods.length, (i) => i) : _majorIndexes);
     final bubbleScale = _bubbleScaleFor(_zoom);
+    final labelIndexes = neighborhoodIndexes.isEmpty ? neighborhoodIndexes : _declutteredIndexes(neighborhoodIndexes, _zoom, bubbleScale);
     return Scaffold(
       backgroundColor: palette.background,
       body: Stack(
@@ -791,7 +842,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                 if (!showUnits)
                   MarkerLayer(
                     markers: [
-                      for (final i in neighborhoodIndexes)
+                      for (final i in labelIndexes)
                         Marker(
                           point: _nbPoints[i],
                           width: _zoneBubbleWidth(kirkukNeighborhoods[i].name),
