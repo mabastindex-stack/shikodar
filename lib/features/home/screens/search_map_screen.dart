@@ -502,6 +502,50 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     );
   }
 
+  /// The spotlighted zone's own name badge, rendered as a real map marker
+  /// at that zone's point (see the MarkerLayer that places this) — a
+  /// close button sits right on it as a manual way out of the spotlight.
+  Widget _zoneFocusLabel(String zone) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: AppColors.ink.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: AppColors.gold.withOpacity(0.6)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.place_rounded, size: 14, color: AppColors.goldLight),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'search.zone_focus_label'.tr(args: [zone]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 7),
+            GestureDetector(
+              onTap: () => setState(() {
+                _focusedZone = null;
+                _zone = 'هەموو';
+              }),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                child: const Icon(Icons.close_rounded, size: 13, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// A zone's pill: a subtle diagonal gradient (not a flat fill) and a
   /// two-layer shadow for real depth. A zone with actual live listings gets
   /// a thin gold ring and a gentle breathing pulse — the map's own way of
@@ -895,6 +939,22 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                       builder: (context, markers) => _clusterBubble(markers.length, AppColors.goldDark),
                     ),
                   ),
+                // The spotlighted zone's own name label — a real map
+                // marker at the zone's own point, not a fixed screen
+                // overlay, so it stays anchored inside the highlighted
+                // shape as the visitor pans/zooms instead of floating
+                // independently of where the zone actually is.
+                if (_focusedZone != null && _zoneCenters[_focusedZone!] != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _zoneCenters[_focusedZone!]!,
+                        width: 220,
+                        height: 40,
+                        child: _zoneFocusLabel(_focusedZone!),
+                      ),
+                    ],
+                  ),
                 Align(
                   alignment: Alignment.bottomLeft,
                   child: Padding(
@@ -969,47 +1029,6 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
             ),
           ).entrance(),
 
-          // The spotlighted zone's name, with a close button as a manual
-          // alternative to zooming back out.
-          if (_showMap && _focusedZone != null)
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 64, left: 20, right: 20),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 9, 10, 9),
-                    decoration: BoxDecoration(
-                      color: AppColors.ink.withOpacity(0.88),
-                      borderRadius: BorderRadius.circular(99),
-                      boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 8))],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.place_rounded, size: 15, color: AppColors.goldLight),
-                        const SizedBox(width: 6),
-                        Text(
-                          'search.zone_focus_label'.tr(args: [_focusedZone!]),
-                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => setState(() {
-                            _focusedZone = null;
-                            _zone = 'هەموو';
-                          }),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                            child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ).entrance(),
         ],
       ),
     );
