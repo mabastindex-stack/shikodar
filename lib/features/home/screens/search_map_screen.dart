@@ -315,29 +315,46 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   /// post outside the viewport if it sits a bit away from that point —
   /// and spotlights it: everything else dims, the zone's own soft outline
   /// draws around its real content, and its name shows on screen until the
-  /// visitor zooms back out.
+  /// visitor zooms back out. Also switches to map view if the quick-filter
+  /// bar is used from the list view — "take me there" has to mean the map.
   void _zoomToZone(String zone) {
+    final wasShowingMap = _showMap;
     setState(() {
       _zone = zone;
       _focusedZone = zone;
+      _showMap = true;
     });
 
-    // Fit to the SAME shape the spotlight outline draws (not just the raw
-    // listing points, which can be tighter than the shape) — so the zoom
-    // always lands exactly where the whole outline is visible, and always
-    // through the same smooth animated move regardless of how many real
-    // posts this zone has.
-    final shape = _zoneSpotlightShape(zone);
-    if (shape.isEmpty) return;
+    void applyZoom() {
+      // Fit to the SAME shape the spotlight outline draws (not just the raw
+      // listing points, which can be tighter than the shape) — so the zoom
+      // always lands exactly where the whole outline is visible, and always
+      // through the same smooth animated move regardless of how many real
+      // posts this zone has.
+      final shape = _zoneSpotlightShape(zone);
+      if (shape.isEmpty) return;
 
-    final fitted = CameraFit.bounds(bounds: LatLngBounds.fromPoints(shape), padding: const EdgeInsets.all(40))
-        .fit(_animatedMapController.mapController.camera);
-    _animatedMapController.centerOnPoint(
-      fitted.center,
-      zoom: fitted.zoom,
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeInOutCubic,
-    );
+      final fitted = CameraFit.bounds(bounds: LatLngBounds.fromPoints(shape), padding: const EdgeInsets.all(40))
+          .fit(_animatedMapController.mapController.camera);
+      _animatedMapController.centerOnPoint(
+        fitted.center,
+        zoom: fitted.zoom,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+
+    if (wasShowingMap) {
+      // The map was already mounted — apply straight away, exactly as
+      // before.
+      applyZoom();
+    } else {
+      // Coming from list view: the FlutterMap widget only mounts once this
+      // frame's setState rebuild completes, so the fit/animate call has to
+      // wait for that frame instead of running against a controller with
+      // nothing attached yet.
+      WidgetsBinding.instance.addPostFrameCallback((_) => applyZoom());
+    }
   }
 
   Widget _miniStat(IconData icon, String label) {
@@ -1111,7 +1128,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                       _viewToggle(),
                     ],
                   ),
-                  if (_showMap) ...[
+                  if (!_showMap) ...[
                     const SizedBox(height: 10),
                     SizedBox(
                       height: 30,
