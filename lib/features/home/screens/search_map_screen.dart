@@ -796,10 +796,16 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                         onTap: () {
                           if (z == 'هەموو') {
                             setState(() => _zone = z);
+                            setModalState(() {});
                           } else {
+                            // Picking a real zone is a "take me there" action
+                            // — close the sheet (its own smooth dismiss
+                            // animation) and let the zoom/spotlight play out
+                            // on the map underneath, instead of leaving the
+                            // sheet open over it.
                             _zoomToZone(z);
+                            Navigator.of(sheetContext).pop();
                           }
-                          setModalState(() {});
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
