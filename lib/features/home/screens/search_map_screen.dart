@@ -241,26 +241,41 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     });
   }
 
-  /// The dimming mask for a spotlighted zone — one giant rectangle covering
-  /// the visible world with the zone's own shape cut out as a hole, so
-  /// only that zone stays bright and everything else fades back. The hole's
-  /// own boundary is what reads as the zone's outline.
+  /// The dimming mask for a spotlighted zone — a rectangle around the
+  /// zone's own shape (padded well past anything the viewport could show
+  /// at the zoom levels this is used at) with that shape cut out as a
+  /// hole, so only the zone stays bright and everything else fades back.
+  /// The hole's own boundary is what reads as the zone's outline.
+  ///
+  /// Deliberately NOT a world-spanning rectangle — at the map's actual
+  /// render zoom, a polygon with corners that far apart tessellates badly
+  /// (rendered as a thin sliver instead of covering the screen), which is
+  /// exactly what a first pass at this looked like.
   Widget _zoneSpotlightMask(String zone) {
     final shape = _zoneSpotlightShape(zone);
     if (shape.isEmpty) return const SizedBox.shrink();
-    const outerBox = [
-      LatLng(-85, -180),
-      LatLng(-85, 180),
-      LatLng(85, 180),
-      LatLng(85, -180),
+
+    final lats = shape.map((p) => p.latitude);
+    final lngs = shape.map((p) => p.longitude);
+    const pad = 0.4; // degrees — comfortably covers the viewport at any zoom this mask is shown at
+    final minLat = lats.reduce((a, b) => a < b ? a : b) - pad;
+    final maxLat = lats.reduce((a, b) => a > b ? a : b) + pad;
+    final minLng = lngs.reduce((a, b) => a < b ? a : b) - pad;
+    final maxLng = lngs.reduce((a, b) => a > b ? a : b) + pad;
+    final outerBox = [
+      LatLng(minLat, minLng),
+      LatLng(minLat, maxLng),
+      LatLng(maxLat, maxLng),
+      LatLng(maxLat, minLng),
     ];
+
     return IgnorePointer(
       child: PolygonLayer(
         polygons: [
           Polygon(
             points: outerBox,
             holePointsList: [shape],
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withOpacity(0.55),
             borderColor: AppColors.gold,
             borderStrokeWidth: 2.5,
           ),
@@ -309,27 +324,22 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
       _zone = zone;
       _focusedZone = zone;
     });
-    final points = <LatLng>[
-      for (final l in _allListings)
-        if (l.zone == zone && l.lat != null && l.lng != null) LatLng(l.lat!, l.lng!),
-      for (final p in _allProjects)
-        if (p.zone == zone && p.lat != null && p.lng != null) LatLng(p.lat!, p.lng!),
-    ];
 
-    if (points.length <= 1) {
-      final center = points.isNotEmpty ? points.first : _zoneCenters[zone];
-      if (center == null) return;
-      _animatedMapController.centerOnPoint(
-        center,
-        zoom: 16,
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeInOutCubic,
-      );
-      return;
-    }
+    // Fit to the SAME shape the spotlight outline draws (not just the raw
+    // listing points, which can be tighter than the shape) — so the zoom
+    // always lands exactly where the whole outline is visible, and always
+    // through the same smooth animated move regardless of how many real
+    // posts this zone has.
+    final shape = _zoneSpotlightShape(zone);
+    if (shape.isEmpty) return;
 
-    _animatedMapController.mapController.fitCamera(
-      CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: const EdgeInsets.all(70)),
+    final fitted = CameraFit.bounds(bounds: LatLngBounds.fromPoints(shape), padding: const EdgeInsets.all(40))
+        .fit(_animatedMapController.mapController.camera);
+    _animatedMapController.centerOnPoint(
+      fitted.center,
+      zoom: fitted.zoom,
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOutCubic,
     );
   }
 
