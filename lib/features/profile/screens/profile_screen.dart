@@ -23,6 +23,7 @@ import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/reel_thumbnail_tile.dart';
 import '../../agency/screens/agency_profile_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
@@ -780,20 +781,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       itemCount: reels.length,
       itemBuilder: (_, i) {
         final r = reels[i];
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            r.thumbnailUrl.isNotEmpty
-                ? CachedNetworkImage(imageUrl: r.thumbnailUrl, fit: BoxFit.cover, placeholder: (_, __) => Container(color: palette.surfaceElevated))
-                : Container(color: palette.surfaceElevated, child: Icon(Icons.videocam_outlined, color: palette.textMuted)),
-            const Positioned(top: 5, right: 5, child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 17)),
-            Positioned(
-              left: 5,
-              bottom: 5,
-              child: Text('${r.duration.inSeconds}s', style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        );
+        return ReelThumbnailTile(videoUrl: r.videoUrl, thumbnailUrl: r.thumbnailUrl, duration: r.duration);
       },
     );
   }

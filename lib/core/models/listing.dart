@@ -25,6 +25,12 @@ class Agency {
   final String id;
   final String name;
   final String? logoUrl;
+
+  /// The agency's own real cover photo (admin panel / EditBusinessProfileScreen)
+  /// — null until the business sets one. AgencyProfileScreen prefers this
+  /// over its stock-photo cover carousel when it's set, so a visitor sees
+  /// the same real cover the account owner sees on their own profile.
+  final String? coverUrl;
   final PackageTier tier;
   final bool verified;
   final double? rating;
@@ -46,6 +52,7 @@ class Agency {
     required this.id,
     required this.name,
     this.logoUrl,
+    this.coverUrl,
     required this.tier,
     this.verified = false,
     this.rating,
@@ -63,6 +70,7 @@ class Agency {
   Agency copyWith({
     String? name,
     String? logoUrl,
+    String? coverUrl,
     PackageTier? tier,
     bool? verified,
     double? rating,
@@ -73,11 +81,14 @@ class Agency {
     List<String>? specialties,
     List<String>? serviceAreas,
     String? bio,
+    String? phone,
+    String? whatsapp,
   }) =>
       Agency(
         id: id,
         name: name ?? this.name,
         logoUrl: logoUrl ?? this.logoUrl,
+        coverUrl: coverUrl ?? this.coverUrl,
         tier: tier ?? this.tier,
         verified: verified ?? this.verified,
         rating: rating ?? this.rating,
@@ -85,6 +96,8 @@ class Agency {
         yearsActive: yearsActive ?? this.yearsActive,
         dealsCompleted: dealsCompleted ?? this.dealsCompleted,
         responseRatePercent: responseRatePercent ?? this.responseRatePercent,
+        phone: phone ?? this.phone,
+        whatsapp: whatsapp ?? this.whatsapp,
         specialties: specialties ?? this.specialties,
         serviceAreas: serviceAreas ?? this.serviceAreas,
         bio: bio ?? this.bio,
@@ -94,6 +107,7 @@ class Agency {
         id: json['id'].toString(),
         name: json['name'] ?? '',
         logoUrl: json['logo_url'],
+        coverUrl: json['cover_url'],
         tier: PackageTier.values.firstWhere(
           (t) => t.name == (json['tier'] ?? 'starter'),
           orElse: () => PackageTier.starter,

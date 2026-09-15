@@ -17,6 +17,7 @@ import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/reel_thumbnail_tile.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../../home/widgets/listing_card.dart';
 import '../../reels/widgets/reel_video_player.dart';
@@ -57,13 +58,19 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
 
   bool get _isPremiumTier => widget.agency.tier == PackageTier.premium || widget.agency.tier == PackageTier.enterprise;
 
+  /// True once the agency has uploaded its OWN real cover photo (admin
+  /// panel / EditBusinessProfileScreen) — that always wins over the
+  /// stock-photo carousel below, so a visitor sees the same cover the
+  /// account owner sees on their own profile.
+  bool get _hasRealCover => widget.agency.coverUrl != null && widget.agency.coverUrl!.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
     _shimmer = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
     _glow = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
     _kenBurns = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat(reverse: true);
-    if (_isPremiumTier) {
+    if (_isPremiumTier && !_hasRealCover) {
       _carouselTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (!mounted) return;
         setState(() => _coverIndex = (_coverIndex + 1) % _coverPhotos.length);
@@ -322,11 +329,14 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     );
   }
 
-  /// The cover: real property photos, crossfading with a slow Ken-Burns
-  /// zoom. Premium/Enterprise auto-advance through the full set with dot
-  /// indicators; other tiers show a single static (still real, still
-  /// beautiful) photo — the tier gap made visible, not just described.
+  /// The cover: the agency's OWN real photo when it has uploaded one — the
+  /// same one shown on its own profile — otherwise a stock-photo fallback
+  /// (crossfading with a slow Ken-Burns zoom; Premium/Enterprise auto-
+  /// advance through the full set, other tiers show a single static one —
+  /// the tier gap made visible, not just described).
   Widget _cover() {
+    final realCover = widget.agency.coverUrl;
+    final coverImageUrl = _hasRealCover ? realCover! : _coverPhotos[_coverIndex];
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -336,14 +346,14 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
           switchOutCurve: Curves.easeIn,
           layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]),
           child: AnimatedBuilder(
-            key: ValueKey(_coverIndex),
+            key: ValueKey(_hasRealCover ? 'real-cover' : _coverIndex),
             animation: _kenBurns,
             builder: (context, child) => Transform.scale(
               scale: 1.06 + 0.06 * _kenBurns.value,
               child: child,
             ),
             child: CachedNetworkImage(
-              imageUrl: _coverPhotos[_coverIndex],
+              imageUrl: coverImageUrl,
               fit: BoxFit.cover,
               fadeInDuration: const Duration(milliseconds: 400),
               placeholder: (context, url) => Container(color: AppColors.ink),
@@ -386,7 +396,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
               );
             },
           ),
-        if (_isPremiumTier)
+        if (_isPremiumTier && !_hasRealCover)
           Positioned(
             bottom: 14,
             left: 0,
@@ -656,23 +666,11 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
       );
 
   Widget _reelTile(Reel r) {
-    final palette = context.palette;
-    return GestureDetector(
+    return ReelThumbnailTile(
+      videoUrl: r.videoUrl,
+      thumbnailUrl: r.thumbnailUrl,
+      duration: r.duration,
       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => _ReelPlayerScreen(reel: r))),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          r.thumbnailUrl.isNotEmpty
-              ? CachedNetworkImage(imageUrl: r.thumbnailUrl, fit: BoxFit.cover, placeholder: (_, __) => Container(color: palette.surfaceElevated))
-              : Container(color: palette.surfaceElevated, child: Icon(Icons.videocam_outlined, color: palette.textMuted)),
-          const Positioned(top: 5, right: 5, child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 17)),
-          Positioned(
-            left: 5,
-            bottom: 5,
-            child: Text('${r.duration.inSeconds}s', style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
     );
   }
 
