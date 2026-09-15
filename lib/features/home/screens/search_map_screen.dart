@@ -301,16 +301,9 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     } else {
       _zoom = z;
     }
-    // A real pinch/drag zoom-out while a zone is spotlighted clears the
-    // spotlight — "the situation returns to its place" — but never the
-    // camera's own fitCamera/centerOnPoint animation moving through the
-    // same zoom range on its way in.
-    if (hasGesture && _focusedZone != null && z < _zoomThreshold) {
-      setState(() {
-        _focusedZone = null;
-        _zone = 'هەموو';
-      });
-    }
+    // Zooming in/out while a zone is spotlighted no longer clears it —
+    // only the explicit close (×) button next to the zone's name does,
+    // per explicit request.
   }
 
   /// Zooms to show EVERY real listing/project in this zone at once — not
@@ -782,7 +775,11 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     final palette = context.palette;
     final listings = _filtered;
     final projects = _filteredProjects;
-    final showUnits = _zoom >= _zoomThreshold;
+    // While a zone is spotlighted, always show real pins (never zone
+    // bubbles) — even if the fitted zoom for a large zone happens to land
+    // below the normal threshold — so no other zone's bubble competes for
+    // attention and only the focused zone's own real posts are visible.
+    final showUnits = _focusedZone != null || _zoom >= _zoomThreshold;
     final bubbleScale = _bubbleScaleFor(_zoom);
     final zoneCounts = _zoneListingCounts;
     // Every real zone with a location shows its own bubble, always — no
