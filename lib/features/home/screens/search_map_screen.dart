@@ -156,8 +156,16 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   /// Kept alive by the bottom nav's IndexedStack, so it never rebuilds on
   /// its own when a listing is published elsewhere and the visitor switches
   /// back to this tab — called by HomeShell each time that happens so the
-  /// map/list is never showing a stale snapshot from app launch.
+  /// map/list is never showing a stale snapshot from app launch. Also
+  /// resets every filter back to its default — leaving this tab and coming
+  /// back should never carry over a filter from the last visit.
   void refresh() {
+    setState(() {
+      _purpose = null;
+      _type = 'all';
+      _zone = 'هەموو';
+      _focusedZone = null;
+    });
     _loadListings();
     _loadProjects();
     _loadZones();
@@ -1073,7 +1081,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
           else
             SafeArea(
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 100, 20, 110),
+                padding: const EdgeInsets.fromLTRB(20, 172, 20, 110),
                 itemCount: listings.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 14),
                 itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listings[i], animationIndex: i)),
