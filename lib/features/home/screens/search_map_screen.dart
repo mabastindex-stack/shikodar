@@ -1081,7 +1081,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
           else
             SafeArea(
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 172, 20, 110),
+                padding: const EdgeInsets.fromLTRB(20, 184, 20, 110),
                 itemCount: listings.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 14),
                 itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listings[i], animationIndex: i)),
@@ -1120,10 +1120,20 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
           // visible quick-filter bar (zones, then property types, each its
           // own horizontal scroll) for the two things worth changing
           // without opening the sheet at all. The map itself stays fully
-          // visible right from the top of the page either way.
+          // visible right from the top of the page either way. In list
+          // mode this sits on an opaque background of its own so the
+          // scrolling posts disappear behind it instead of bleeding
+          // through the gaps between the title row and the chip rows.
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Container(
+              width: double.infinity,
+              decoration: !_showMap
+                  ? BoxDecoration(
+                      color: palette.background,
+                      boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 14, offset: const Offset(0, 6))],
+                    )
+                  : null,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
