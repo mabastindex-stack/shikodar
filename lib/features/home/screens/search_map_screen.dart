@@ -506,6 +506,70 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     );
   }
 
+  /// (value, icon, label) for the quick property-type row — built fresh
+  /// each build so labels stay localized on a language switch.
+  List<(String, IconData, String)> get _quickTypes => [
+        ('all', Icons.apps_rounded, 'filters.all'.tr()),
+        ('house', Icons.home_rounded, 'filters.house'.tr()),
+        ('villa', Icons.villa_rounded, 'filters.villa'.tr()),
+        ('land', Icons.terrain_rounded, 'filters.land'.tr()),
+        ('shop', Icons.storefront_rounded, 'filters.shop'.tr()),
+      ];
+
+  /// A thin pill for the always-visible quick zone row — same "take me
+  /// there" tap behavior as the map's own zone bubbles and the filter
+  /// sheet's zone chips (zoom + spotlight), just reachable without
+  /// opening anything first.
+  Widget _quickZoneChip(String zone) {
+    final palette = context.palette;
+    final sel = zone == _zone;
+    return GestureDetector(
+      onTap: () => zone == 'هەموو' ? setState(() => _zone = zone) : _zoomToZone(zone),
+      child: AnimatedContainer(
+        duration: AppMotion.quick,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: sel ? palette.primary : palette.surface,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: sel ? Colors.transparent : palette.divider),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.16), blurRadius: 8, offset: const Offset(0, 3))],
+        ),
+        child: Text(
+          _kirkukZoneLabel(zone),
+          style: TextStyle(color: sel ? palette.onPrimary : palette.textSecondary, fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickTypeChip(String value, IconData icon, String label) {
+    final palette = context.palette;
+    final sel = value == _type;
+    return GestureDetector(
+      onTap: () => setState(() => _type = value),
+      child: AnimatedContainer(
+        duration: AppMotion.quick,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: sel ? palette.primary : palette.surface,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: sel ? Colors.transparent : palette.divider),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.12), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12.5, color: sel ? palette.onPrimary : palette.textSecondary),
+            const SizedBox(width: 5),
+            Text(label, style: TextStyle(color: sel ? palette.onPrimary : palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// The spotlighted zone's own name badge, rendered as a real map marker
   /// at that zone's point (see the MarkerLayer that places this) — a
   /// close button sits right on it as a manual way out of the spotlight.
@@ -1025,20 +1089,52 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
               ),
             ).entrance(),
 
-          // Compact header: title, filter icon (opens the filter sheet),
-          // and the map/list toggle — the map itself stays fully visible
-          // right from the top of the page.
+          // Compact header: title, filter icon (opens the full filter
+          // sheet), and the map/list toggle — followed by a thin, always-
+          // visible quick-filter bar (zones, then property types, each its
+          // own horizontal scroll) for the two things worth changing
+          // without opening the sheet at all. The map itself stays fully
+          // visible right from the top of the page either way.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text('search.map_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w800), textAlign: TextAlign.start),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('search.map_title'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w800), textAlign: TextAlign.start),
+                      ),
+                      _filterIconButton(),
+                      const SizedBox(width: 8),
+                      _viewToggle(),
+                    ],
                   ),
-                  _filterIconButton(),
-                  const SizedBox(width: 8),
-                  _viewToggle(),
+                  if (_showMap) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 30,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        itemCount: _zoneNames.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder: (_, i) => _quickZoneChip(_zoneNames[i]),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 28,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        itemCount: _quickTypes.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder: (_, i) => _quickTypeChip(_quickTypes[i].$1, _quickTypes[i].$2, _quickTypes[i].$3),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
