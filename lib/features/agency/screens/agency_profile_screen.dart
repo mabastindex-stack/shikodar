@@ -11,6 +11,7 @@ import '../../../core/models/listing.dart';
 import '../../../core/models/review.dart';
 import '../../../core/network/favorite_repository.dart';
 import '../../../core/network/listing_repository.dart';
+import '../../../core/network/reel_repository.dart';
 import '../../../core/network/review_repository.dart';
 import '../../../core/session/business_profile_store.dart';
 import '../../../core/session/user_session.dart';
@@ -18,6 +19,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../../home/widgets/listing_card.dart';
+import '../../reels/widgets/reel_video_player.dart';
 
 /// Real property photos (Unsplash) used for the cover carousel. Premium/
 /// Enterprise agencies get the full rotating set; other tiers show only the
@@ -48,6 +50,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
   int _coverIndex = 0;
   int _tab = 0; // 0 listings, 1 reels, 2 reviews, 3 about
   List<Listing> _listings = [];
+  List<Reel> _reels = [];
   late Agency _agency = widget.agency;
   List<Review> _reviews = [];
   bool _reviewsLoading = true;
@@ -68,6 +71,9 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     }
     context.read<ListingRepository>().fetchAll().then((listings) {
       if (mounted) setState(() => _listings = listings.where((l) => l.agency.id == widget.agency.id).toList());
+    });
+    context.read<ReelRepository>().fetchAll().then((reels) {
+      if (mounted) setState(() => _reels = reels.where((r) => r.agency.id == widget.agency.id).toList());
     });
     _loadReviews();
   }
@@ -174,6 +180,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     final palette = context.palette;
     final a = _agency;
     final listings = _listings;
+    final reels = _reels;
     final foundedYear = DateTime.now().year - a.yearsActive;
 
     return Scaffold(
@@ -251,7 +258,23 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
                         ),
                 )
               else if (_tab == 1)
-                SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40, bottom: 130), child: _emptyState('agency_profile.empty_reels'.tr())))
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 130),
+                  sliver: reels.isEmpty
+                      ? SliverToBoxAdapter(child: _emptyState('agency_profile.empty_reels'.tr()))
+                      : SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 3,
+                            crossAxisSpacing: 3,
+                            childAspectRatio: 0.7,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (_, i) => _reelTile(reels[i]),
+                            childCount: reels.length,
+                          ),
+                        ),
+                )
               else if (_tab == 2)
                 ...[
                   if (a.id != context.watch<UserSession>().agencyId && context.watch<UserSession>().isLoggedIn)
@@ -632,6 +655,27 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
         ),
       );
 
+  Widget _reelTile(Reel r) {
+    final palette = context.palette;
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => _ReelPlayerScreen(reel: r))),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          r.thumbnailUrl.isNotEmpty
+              ? CachedNetworkImage(imageUrl: r.thumbnailUrl, fit: BoxFit.cover, placeholder: (_, __) => Container(color: palette.surfaceElevated))
+              : Container(color: palette.surfaceElevated, child: Icon(Icons.videocam_outlined, color: palette.textMuted)),
+          const Positioned(top: 5, right: 5, child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 17)),
+          Positioned(
+            left: 5,
+            bottom: 5,
+            child: Text('${r.duration.inSeconds}s', style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _contactBar() {
     final palette = context.palette;
     final whatsappNumber = _agency.whatsapp ?? _agency.phone;
@@ -712,6 +756,47 @@ class _CountUpText extends StatelessWidget {
         final display = numeric == numeric.roundToDouble() ? value.round().toString() : value.toStringAsFixed(1);
         return Text('$prefix$display$suffix', style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800));
       },
+    );
+  }
+}
+
+/// A minimal full-screen player for one reel, opened by tapping a tile in
+/// an agency's reels grid — just the video and a close button, unlike the
+/// main ReelsScreen feed (vertical swipe through every reel in the app),
+/// since here the point is watching this one specific reel.
+class _ReelPlayerScreen extends StatelessWidget {
+  final Reel reel;
+  const _ReelPlayerScreen({required this.reel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: ReelVideoPlayer(
+              videoUrl: reel.videoUrl,
+              thumbnailUrl: reel.thumbnailUrl,
+              isActive: true,
+              muted: false,
+            ),
+          ),
+          PositionedDirectional(
+            top: 44,
+            start: 16,
+            child: Material(
+              color: Colors.black38,
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: () => Navigator.of(context).pop(),
+                customBorder: const CircleBorder(),
+                child: const SizedBox(width: 40, height: 40, child: Icon(Icons.close_rounded, color: Colors.white, size: 22)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
