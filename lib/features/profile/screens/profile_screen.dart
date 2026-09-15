@@ -23,10 +23,11 @@ import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../agency/screens/agency_profile_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
-import '../../home/screens/favorites_screen.dart';
+import '../../home/widgets/listing_card.dart';
 import '../../listing/screens/listing_detail_screen.dart';
 import '../../my_listings/screens/my_listings_screen.dart';
 import '../../my_projects/screens/edit_project_screen.dart';
@@ -62,10 +63,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   DashboardStats? _dashboardStats;
   bool _isLoadingContent = true;
 
-  /// A client's own favorited posts/accounts — just for the two preview
-  /// columns on this page (see _favoritesPreviewRow); the full lists live
-  /// in FavoritesScreen, which these columns deep-link into.
+  /// A client's own favorited posts/accounts, shown by the two preview
+  /// cards (see _favoritesPreviewRow) and, when one is tapped, expanded
+  /// in full right below them on this same page.
   List<FavoriteEntry> _favoriteEntries = [];
+
+  /// null = both preview cards collapsed; 0 = posts expanded; 1 = accounts
+  /// expanded. Tapping the already-expanded card collapses it again.
+  int? _expandedFavoritesTab;
 
   @override
   void initState() {
@@ -383,6 +388,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                     const SizedBox(height: 18),
                     _favoritesPreviewRow(context, palette),
+                    _favoritesExpandedSection(context, palette),
                   ],
                 ),
               ),
@@ -1067,8 +1073,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   /// Two side-by-side preview cards — favorited posts and favorited
-  /// accounts — each showing up to 2 items and deep-linking into the
-  /// matching FavoritesScreen tab, instead of one link-out row.
+  /// accounts. Tapping one expands its full list right below this row (see
+  /// _favoritesExpandedSection); tapping the already-expanded one again
+  /// collapses it.
   Widget _favoritesPreviewRow(BuildContext context, AppPalette palette) {
     final posts = _favoriteEntries.where((e) => e.type == 'listing' || e.type == 'project').toList();
     final accounts = _favoriteEntries.where((e) => e.type == 'agency').toList();
@@ -1109,14 +1116,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     required int tabIndex,
   }) {
     final preview = entries.take(2).toList();
+    final isExpanded = _expandedFavoritesTab == tabIndex;
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => FavoritesScreen(initialTab: tabIndex))),
-      child: Container(
+      onTap: () => setState(() => _expandedFavoritesTab = isExpanded ? null : tabIndex),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: palette.surface,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.1), blurRadius: 14, offset: const Offset(0, 6))],
+          border: Border.all(color: isExpanded ? palette.error.withOpacity(0.45) : Colors.transparent, width: 1.4),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1133,6 +1143,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 Expanded(
                   child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 12, fontWeight: FontWeight.w800)),
                 ),
+                Icon(isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: palette.textMuted, size: 18),
               ],
             ),
             const SizedBox(height: 10),
@@ -1144,6 +1155,144 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ),
       ),
     ).animate(delay: 100.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0);
+  }
+
+  /// The full list for whichever preview card is currently expanded —
+  /// collapses to nothing when neither is.
+  Widget _favoritesExpandedSection(BuildContext context, AppPalette palette) {
+    if (_expandedFavoritesTab == null) return const SizedBox.shrink();
+    final isPosts = _expandedFavoritesTab == 0;
+    final entries = _favoriteEntries.where((e) => isPosts ? (e.type == 'listing' || e.type == 'project') : e.type == 'agency').toList();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: isPosts ? _favoritesPostsGrid(context, palette, entries) : _favoritesAccountsList(context, palette, entries),
+    );
+  }
+
+  Widget _favoritesPostsGrid(BuildContext context, AppPalette palette, List<FavoriteEntry> entries) {
+    if (entries.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: Text('favorites_page.empty_posts'.tr(), style: TextStyle(color: palette.textSecondary, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
+      );
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14, childAspectRatio: 0.66),
+      itemCount: entries.length,
+      itemBuilder: (_, i) {
+        final entry = entries[i];
+        if (entry.type == 'listing') {
+          return ListingCard(listing: Listing.fromJson(entry.data), animationIndex: i);
+        }
+        return _favoritesProjectTile(context, palette, Project.fromJson(entry.data));
+      },
+    ).animate().fadeIn(duration: 280.ms);
+  }
+
+  Widget _favoritesProjectTile(BuildContext context, AppPalette palette, Project project) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProjectDetailScreen(project: project))),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            project.images.isNotEmpty
+                ? CachedNetworkImage(imageUrl: project.images.first, fit: BoxFit.cover, placeholder: (_, __) => Container(color: palette.surfaceElevated))
+                : Container(color: palette.surfaceElevated, child: Icon(Icons.apartment_rounded, color: palette.textMuted)),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0x99000000)], stops: [0.5, 1]),
+              ),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 10,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(project.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text('\$${project.priceFrom.toStringAsFixed(0)}+', style: const TextStyle(color: AppColors.gold, fontSize: 11, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _favoritesAccountsList(BuildContext context, AppPalette palette, List<FavoriteEntry> entries) {
+    if (entries.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: Text('favorites_page.empty_accounts'.tr(), style: TextStyle(color: palette.textSecondary, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
+      );
+    }
+    return Column(
+      children: entries.map((e) {
+        final agency = Agency.fromJson(e.data);
+        return Padding(padding: const EdgeInsets.only(bottom: 10), child: _favoritesAccountTile(context, palette, agency));
+      }).toList(),
+    ).animate().fadeIn(duration: 280.ms);
+  }
+
+  Widget _favoritesAccountTile(BuildContext context, AppPalette palette, Agency agency) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AgencyProfileScreen(agency: agency))),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.1), blurRadius: 14, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          children: [
+            ClipOval(
+              child: Container(
+                width: 44,
+                height: 44,
+                color: palette.surfaceElevated,
+                child: agency.logoUrl != null && agency.logoUrl!.isNotEmpty
+                    ? CachedNetworkImage(imageUrl: agency.logoUrl!, fit: BoxFit.cover)
+                    : Icon(Icons.storefront_rounded, color: palette.textMuted, size: 20),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(child: Text(agency.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w800))),
+                      if (agency.verified) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified_rounded, color: AppColors.goldDark, size: 14),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: AppColors.amber, size: 13),
+                      const SizedBox(width: 2),
+                      Text(agency.rating != null ? agency.rating!.toStringAsFixed(1) : '—', style: TextStyle(color: palette.textSecondary, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: palette.textMuted, size: 20),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _favoritesPreviewTile(AppPalette palette, FavoriteEntry entry) {
