@@ -255,6 +255,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.emeraldDark,
+      // See login_screen.dart — without this, the keyboard resizes the
+      // whole Stack (background photo included), tearing the layout apart.
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -300,7 +303,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               24,
                               25,
                               24,
-                              24 + MediaQuery.paddingOf(context).bottom,
+                              24 +
+                                  MediaQuery.paddingOf(context).bottom +
+                                  MediaQuery.viewInsetsOf(context).bottom,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,

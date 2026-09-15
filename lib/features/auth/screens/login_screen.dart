@@ -128,6 +128,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.emeraldDark,
+      // The background photo and its overlay live in this same Stack — if
+      // the Scaffold resized itself for the keyboard, they'd get squeezed
+      // and shifted along with the form, tearing the layout apart. Keeping
+      // this false pins the background in place; only the scrollable form
+      // below pads itself for the keyboard instead.
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -137,6 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
             bottom: false,
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
               child: Column(
                 children: [
                   SizedBox(
@@ -171,6 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Text(
                                 'auth.welcome_back'.tr(),
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: palette.textPrimary,
                                   fontSize: 24,
@@ -181,6 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 7),
                               Text(
                                 'auth.login_subtitle'.tr(),
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: palette.textSecondary,
                                   fontSize: 12.5,
