@@ -141,7 +141,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                 child: SectionHeader(
                   title: 'home.featured_zones_title'.tr(),
                   subtitle: 'home.featured_zones_subtitle'.tr(),
-                  icon: Icons.location_on_outlined,
+                  centered: true,
                 ),
               ),
             ),
@@ -160,7 +160,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                 child: SectionHeader(
                   title: 'home.what_are_you_looking_for'.tr(),
                   subtitle: 'home.choose_property_type'.tr(),
-                  icon: Icons.category_outlined,
+                  centered: true,
                 ),
               ),
             ),

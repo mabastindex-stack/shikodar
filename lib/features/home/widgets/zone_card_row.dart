@@ -94,68 +94,72 @@ class _ZoneCardRowState extends State<ZoneCardRow> {
                 onSelect(z.name);
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => ZoneDetailScreen(zone: z.name)));
               },
-              child: AnimatedContainer(
+              child: AnimatedScale(
                 duration: AppMotion.standard,
-                width: 128,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? palette.gold : palette.divider,
-                    width: isSelected ? 2 : 1,
+                scale: isSelected ? 1.03 : 1.0,
+                child: AnimatedContainer(
+                  duration: AppMotion.standard,
+                  width: 128,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected ? AppColors.gold.withOpacity(0.45) : palette.shadow.withOpacity(0.18),
+                        blurRadius: isSelected ? 22 : 14,
+                        spreadRadius: isSelected ? 1 : 0,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: palette.shadow.withOpacity(isSelected ? 0.38 : 0.18),
-                      blurRadius: isSelected ? 20 : 14,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (z.imageUrl != null)
-                      CachedNetworkImage(
-                        imageUrl: z.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: palette.surfaceElevated),
-                        errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
-                      )
-                    else
-                      Container(color: palette.surfaceElevated),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withOpacity(isSelected ? 0.6 : 0.5)],
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (z.imageUrl != null)
+                        CachedNetworkImage(
+                          imageUrl: z.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                          errorWidget: (_, __, ___) => Container(color: palette.surfaceElevated),
+                        )
+                      else
+                        Container(color: palette.surfaceElevated),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black.withOpacity(isSelected ? 0.6 : 0.5)],
+                          ),
                         ),
                       ),
-                    ),
-                    if (isSelected)
-                      const PositionedDirectional(
-                        top: 8,
-                        end: 8,
-                        child: Icon(
-                          Icons.check_circle_rounded,
-                          color: AppColors.goldLight,
-                          size: 19,
+                      Positioned(
+                        left: 8,
+                        right: 8,
+                        bottom: 10,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _zoneLabel(z.name),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700),
+                            ),
+                            if (isSelected) ...[
+                              const SizedBox(height: 5),
+                              Container(
+                                width: 22,
+                                height: 3,
+                                decoration: BoxDecoration(color: AppColors.goldLight, borderRadius: BorderRadius.circular(99)),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                    Positioned(
-                      left: 8,
-                      right: 8,
-                      bottom: 10,
-                      child: Text(
-                        _zoneLabel(z.name),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

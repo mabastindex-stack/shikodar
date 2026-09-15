@@ -57,115 +57,84 @@ class _HeroBannerState extends State<HeroBanner>
 
     if (heroPhotos.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      height: 224,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: palette.shadow.withOpacity(0.55),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            AnimatedSwitcher(
-              duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 950),
-              layoutBuilder: (current, previous) => Stack(
-                fit: StackFit.expand,
-                children: [...previous, if (current != null) current],
-              ),
-              child: AnimatedBuilder(
-                key: ValueKey(index),
-                animation: _kenBurns,
-                builder: (context, child) => Transform.scale(
-                  scale: reduceMotion ? 1.06 : 1.05 + 0.06 * _kenBurns.value,
-                  child: child,
-                ),
-                child: CachedNetworkImage(
-                  imageUrl: heroPhotos[index],
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(color: palette.surfaceElevated),
-                  errorWidget: (_, __, ___) => Container(
-                    decoration: const BoxDecoration(gradient: AppColors.brandGradient),
-                  ),
-                ),
-              ),
-            ),
-            // A faint bottom-only vignette — just enough depth for the dot
-            // indicator and CTA to sit on, without ever competing with the
-            // photo itself. No headline lives here; the image is the message.
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0x59083B34)],
-                  stops: [0.68, 1],
-                ),
-              ),
-            ),
-            PositionedDirectional(
-              start: 20,
-              end: 20,
-              bottom: 18,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    children: List.generate(heroPhotos.length, (i) {
-                      final selected = index == i;
-                      return AnimatedContainer(
-                        duration: AppMotion.standard,
-                        width: selected ? 18 : 5,
-                        height: 5,
-                        margin: const EdgeInsetsDirectional.only(end: 4),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.goldLight
-                              : Colors.white.withOpacity(0.45),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                      );
-                    }),
-                  ),
-                  const Spacer(),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: widget.onExplore,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.goldLight,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x40000000),
-                              blurRadius: 14,
-                              offset: Offset(0, 7),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: AppColors.emeraldDark,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return GestureDetector(
+      onTap: widget.onExplore,
+      child: Container(
+        height: 224,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: palette.shadow.withOpacity(0.55),
+              blurRadius: 32,
+              offset: const Offset(0, 16),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedSwitcher(
+                duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 950),
+                layoutBuilder: (current, previous) => Stack(
+                  fit: StackFit.expand,
+                  children: [...previous, if (current != null) current],
+                ),
+                child: AnimatedBuilder(
+                  key: ValueKey(index),
+                  animation: _kenBurns,
+                  builder: (context, child) => Transform.scale(
+                    scale: reduceMotion ? 1.06 : 1.05 + 0.06 * _kenBurns.value,
+                    child: child,
+                  ),
+                  child: CachedNetworkImage(
+                    imageUrl: heroPhotos[index],
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: palette.surfaceElevated),
+                    errorWidget: (_, __, ___) => Container(
+                      decoration: const BoxDecoration(gradient: AppColors.brandGradient),
+                    ),
+                  ),
+                ),
+              ),
+              // A faint bottom-only vignette — just enough depth for the dot
+              // indicator to sit on, without ever competing with the photo
+              // itself. No headline lives here; the image is the message.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0x59083B34)],
+                    stops: [0.68, 1],
+                  ),
+                ),
+              ),
+              PositionedDirectional(
+                start: 20,
+                bottom: 18,
+                child: Row(
+                  children: List.generate(heroPhotos.length, (i) {
+                    final selected = index == i;
+                    return AnimatedContainer(
+                      duration: AppMotion.standard,
+                      width: selected ? 18 : 5,
+                      height: 5,
+                      margin: const EdgeInsetsDirectional.only(end: 4),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppColors.goldLight
+                            : Colors.white.withOpacity(0.45),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
