@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
@@ -696,6 +697,31 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     ).entrance();
   }
 
+  /// The bubble shown in place of a tight cluster of pins — tapping it (via
+  /// MarkerClusterLayerOptions.zoomToBoundsOnClick) zooms into that group,
+  /// which then splits back into individual pins as they no longer overlap.
+  Widget _clusterBubble(int count, Color color) {
+    final darkColor = Color.lerp(color, Colors.black, 0.25)!;
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color, darkColor]),
+        border: Border.all(color: Colors.white, width: 2.5),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.5), blurRadius: 16, offset: const Offset(0, 6)),
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 1)),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+    ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+          begin: const Offset(1, 1),
+          end: const Offset(1.06, 1.06),
+          duration: 1400.ms,
+          curve: Curves.easeInOut,
+        );
+  }
+
   void _openFilterSheet() {
     showModalBottomSheet(
       context: context,
@@ -857,33 +883,54 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                         ),
                     ],
                   ),
+                // Real marker clustering (not just decluttering) for actual
+                // listing/project pins — dense clusters collapse into one
+                // count bubble that zooms in on tap, splitting apart
+                // smoothly as you zoom further, the same pattern every
+                // major map-based real-estate app uses.
                 if (showUnits)
-                  MarkerLayer(
-                    markers: [
-                      for (final l in listings)
-                        if (l.lat != null && l.lng != null)
-                          Marker(
-                            point: LatLng(l.lat!, l.lng!),
-                            width: 70,
-                            height: 80,
-                            alignment: Alignment.topCenter,
-                            child: _unitMarker(l),
-                          ),
-                    ],
+                  MarkerClusterLayerWidget(
+                    options: MarkerClusterLayerOptions(
+                      maxClusterRadius: 55,
+                      size: const Size(44, 44),
+                      alignment: Alignment.center,
+                      disableClusteringAtZoom: 18,
+                      zoomToBoundsOnClick: true,
+                      markers: [
+                        for (final l in listings)
+                          if (l.lat != null && l.lng != null)
+                            Marker(
+                              point: LatLng(l.lat!, l.lng!),
+                              width: 70,
+                              height: 80,
+                              alignment: Alignment.topCenter,
+                              child: _unitMarker(l),
+                            ),
+                      ],
+                      builder: (context, markers) => _clusterBubble(markers.length, context.palette.primary),
+                    ),
                   ),
                 if (showUnits)
-                  MarkerLayer(
-                    markers: [
-                      for (final p in projects)
-                        if (p.lat != null && p.lng != null)
-                          Marker(
-                            point: LatLng(p.lat!, p.lng!),
-                            width: 70,
-                            height: 76,
-                            alignment: Alignment.topCenter,
-                            child: _projectMarker(p),
-                          ),
-                    ],
+                  MarkerClusterLayerWidget(
+                    options: MarkerClusterLayerOptions(
+                      maxClusterRadius: 55,
+                      size: const Size(44, 44),
+                      alignment: Alignment.center,
+                      disableClusteringAtZoom: 18,
+                      zoomToBoundsOnClick: true,
+                      markers: [
+                        for (final p in projects)
+                          if (p.lat != null && p.lng != null)
+                            Marker(
+                              point: LatLng(p.lat!, p.lng!),
+                              width: 70,
+                              height: 76,
+                              alignment: Alignment.topCenter,
+                              child: _projectMarker(p),
+                            ),
+                      ],
+                      builder: (context, markers) => _clusterBubble(markers.length, AppColors.goldDark),
+                    ),
                   ),
                 Align(
                   alignment: Alignment.bottomLeft,

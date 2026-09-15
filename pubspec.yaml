@@ -50,6 +50,7 @@ dependencies:
   # Maps — OpenStreetMap based (no API key / billing account needed)
   flutter_map: ^7.0.2
   flutter_map_animations: ^0.7.0
+  flutter_map_marker_cluster: ^1.3.6
   latlong2: ^0.9.1
 
   # Storage
