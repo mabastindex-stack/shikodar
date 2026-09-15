@@ -800,9 +800,15 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                           } else {
                             // Picking a real zone is a "take me there" action
                             // — close the sheet (its own smooth dismiss
-                            // animation) and let the zoom/spotlight play out
-                            // on the map underneath, instead of leaving the
-                            // sheet open over it.
+                            // animation), let the zoom/spotlight play out on
+                            // the map underneath, and reset the OTHER search
+                            // options back to their normal state so nothing
+                            // from a previous search silently keeps filtering
+                            // this new zone's posts.
+                            setState(() {
+                              _purpose = null;
+                              _type = 'all';
+                            });
                             _zoomToZone(z);
                             Navigator.of(sheetContext).pop();
                           }
