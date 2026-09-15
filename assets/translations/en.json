@@ -202,6 +202,7 @@
     "map_title": "Properties Map",
     "filters_title": "Search Filters",
     "zoom_hint": "Zoom in on a zone to see its units",
+    "zone_focus_label": "{} zone",
     "results_title": "Search Results",
     "results_count_subtitle": "{} properties found",
     "no_results_found": "No properties found",

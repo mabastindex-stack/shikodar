@@ -202,6 +202,7 @@
     "map_title": "نەخشەی موڵکەکان",
     "filters_title": "فلتەرەکانی گەران",
     "zoom_hint": "نزیک ببەوە لە زۆنێک بۆ بینینی یەکەکانی",
+    "zone_focus_label": "گەڕەکی {}",
     "results_title": "ئەنجامی گەڕان",
     "results_count_subtitle": "{} موڵک دۆزرایەوە",
     "no_results_found": "هیچ موڵکێک نەدۆزرایەوە",

@@ -202,6 +202,7 @@
     "map_title": "Mülkler Haritası",
     "filters_title": "Arama filtreleri",
     "zoom_hint": "Birimlerini görmek için bir bölgeye yakınlaşın",
+    "zone_focus_label": "{} etraby",
     "results_title": "Arama Sonuçları",
     "results_count_subtitle": "{} mülk bulundu",
     "no_results_found": "Mülk bulunamadı",

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -101,6 +102,11 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   String _zone = 'هەموو';
   double _zoom = 11.8;
 
+  /// Set when a zone bubble is tapped — spotlights that zone (dims
+  /// everything else, draws its outline, shows its name) until the
+  /// visitor manually zooms back out, which clears it again.
+  String? _focusedZone;
+
   late final AnimatedMapController _animatedMapController = AnimatedMapController(vsync: this);
 
   List<Listing> _allListings = [];
@@ -202,6 +208,67 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   List<Project> get _filteredProjects => _allProjects.where((p) => _zone == 'هەموو' || p.zone == _zone).toList();
 
+  /// A soft, organic (not perfectly circular) outline around a zone's real
+  /// content — deterministic per zone name (seeded on its hash, so it's
+  /// stable across rebuilds) and sized to comfortably contain every real
+  /// listing/project point that zone actually has, not an arbitrary fixed
+  /// radius. Empty when the zone has neither a point nor any real content
+  /// to draw around.
+  List<LatLng> _zoneSpotlightShape(String zone) {
+    final zoneCenter = _zoneCenters[zone];
+    final points = <LatLng>[
+      for (final l in _allListings)
+        if (l.zone == zone && l.lat != null && l.lng != null) LatLng(l.lat!, l.lng!),
+      for (final p in _allProjects)
+        if (p.zone == zone && p.lat != null && p.lng != null) LatLng(p.lat!, p.lng!),
+    ];
+    final center = zoneCenter ?? (points.isNotEmpty ? points.first : null);
+    if (center == null) return const [];
+
+    const distance = Distance();
+    var maxDist = 260.0; // a sensible minimum even for a zone with no posts yet
+    for (final p in points) {
+      final d = distance(center, p);
+      if (d > maxDist) maxDist = d;
+    }
+    final radius = maxDist + 220;
+    final rand = Random(zone.hashCode);
+    const pointCount = 16;
+    return List.generate(pointCount, (i) {
+      final angle = (360 / pointCount) * i;
+      final wobble = 0.85 + rand.nextDouble() * 0.3;
+      return distance.offset(center, radius * wobble, angle);
+    });
+  }
+
+  /// The dimming mask for a spotlighted zone — one giant rectangle covering
+  /// the visible world with the zone's own shape cut out as a hole, so
+  /// only that zone stays bright and everything else fades back. The hole's
+  /// own boundary is what reads as the zone's outline.
+  Widget _zoneSpotlightMask(String zone) {
+    final shape = _zoneSpotlightShape(zone);
+    if (shape.isEmpty) return const SizedBox.shrink();
+    const outerBox = [
+      LatLng(-85, -180),
+      LatLng(-85, 180),
+      LatLng(85, 180),
+      LatLng(85, -180),
+    ];
+    return IgnorePointer(
+      child: PolygonLayer(
+        polygons: [
+          Polygon(
+            points: outerBox,
+            holePointsList: [shape],
+            color: Colors.black.withOpacity(0.5),
+            borderColor: AppColors.gold,
+            borderStrokeWidth: 2.5,
+          ),
+        ],
+      ),
+    );
+  }
+
   double _zoneBubbleWidth(String name) => (name.length * 12.5 + 42).clamp(78, 155);
 
   /// Shrinks the zone bubbles the further out you zoom, so a label never
@@ -212,22 +279,36 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     return 0.55 + 0.45 * t;
   }
 
-  void _onCameraMove(MapCamera camera) {
+  void _onCameraMove(MapCamera camera, bool hasGesture) {
     final z = camera.zoom;
     if ((z - _zoom).abs() > 0.05) {
       setState(() => _zoom = z);
     } else {
       _zoom = z;
     }
+    // A real pinch/drag zoom-out while a zone is spotlighted clears the
+    // spotlight — "the situation returns to its place" — but never the
+    // camera's own fitCamera/centerOnPoint animation moving through the
+    // same zoom range on its way in.
+    if (hasGesture && _focusedZone != null && z < _zoomThreshold) {
+      setState(() {
+        _focusedZone = null;
+        _zone = 'هەموو';
+      });
+    }
   }
 
   /// Zooms to show EVERY real listing/project in this zone at once — not
   /// just the zone's own fixed point at a fixed zoom, which could leave a
-  /// post outside the viewport if it sits a bit away from that point.
-  /// Falls back to centering on the zone's own point when it has no posts
-  /// yet (nothing to fit bounds to).
+  /// post outside the viewport if it sits a bit away from that point —
+  /// and spotlights it: everything else dims, the zone's own soft outline
+  /// draws around its real content, and its name shows on screen until the
+  /// visitor zooms back out.
   void _zoomToZone(String zone) {
-    setState(() => _zone = zone);
+    setState(() {
+      _zone = zone;
+      _focusedZone = zone;
+    });
     final points = <LatLng>[
       for (final l in _allListings)
         if (l.zone == zone && l.lat != null && l.lng != null) LatLng(l.lat!, l.lng!),
@@ -711,7 +792,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                 minZoom: 11,
                 maxZoom: 18,
                 interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-                onPositionChanged: (camera, hasGesture) => _onCameraMove(camera),
+                onPositionChanged: (camera, hasGesture) => _onCameraMove(camera, hasGesture),
               ),
               children: [
                 ColorFiltered(
@@ -731,6 +812,10 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                     userAgentPackageName: 'com.shikodar.app',
                     maxNativeZoom: 16,
                   ),
+                // The spotlight: dims everything outside the focused zone's
+                // own real-content outline. Sits above the tiles but below
+                // the marker layers, so the zone's own pins stay crisp.
+                if (_focusedZone != null) _zoneSpotlightMask(_focusedZone!),
                 // Just the real zone names — no territory outlines/shapes,
                 // per explicit request. Tapping one calls _zoomToZone, which
                 // both zooms in AND sets it as the active zone filter, so
@@ -876,6 +961,48 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
               ),
             ),
           ).entrance(),
+
+          // The spotlighted zone's name, with a close button as a manual
+          // alternative to zooming back out.
+          if (_showMap && _focusedZone != null)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 64, left: 20, right: 20),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 9, 10, 9),
+                    decoration: BoxDecoration(
+                      color: AppColors.ink.withOpacity(0.88),
+                      borderRadius: BorderRadius.circular(99),
+                      boxShadow: [BoxShadow(color: palette.shadow.withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 8))],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.place_rounded, size: 15, color: AppColors.goldLight),
+                        const SizedBox(width: 6),
+                        Text(
+                          'search.zone_focus_label'.tr(args: [_focusedZone!]),
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => setState(() {
+                            _focusedZone = null;
+                            _zone = 'هەموو';
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                            child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ).entrance(),
         ],
       ),
     );
