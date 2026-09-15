@@ -198,7 +198,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
             slivers: [
               SliverAppBar(
                 backgroundColor: AppColors.ink,
-                expandedHeight: 240,
+                expandedHeight: 180,
                 pinned: true,
                 leading: Padding(
                   padding: const EdgeInsets.all(8),
@@ -426,7 +426,7 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
     final palette = context.palette;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: palette.divider)),
       child: Column(
         children: [
@@ -435,8 +435,8 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
             builder: (context, child) {
               final glowT = a.verified ? _glow.value : 0.0;
               return Container(
-                width: 68,
-                height: 68,
+                width: 92,
+                height: 92,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
@@ -459,16 +459,16 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
                     ? CachedNetworkImage(
                         imageUrl: a.logoUrl!,
                         fit: BoxFit.cover,
-                        width: 68,
-                        height: 68,
+                        width: 92,
+                        height: 92,
                         placeholder: (_, __) => Container(color: AppColors.surfaceElevated),
-                        errorWidget: (_, __, ___) => Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 30),
+                        errorWidget: (_, __, ___) => Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 40),
                       )
-                    : Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 30),
+                    : Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 40),
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -479,9 +479,9 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
               ],
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           _tierBadge(a),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text('agency_profile.founded_year'.tr(args: ['$foundedYear']), style: TextStyle(color: palette.textSecondary, fontSize: 12)),
         ],
       ),
