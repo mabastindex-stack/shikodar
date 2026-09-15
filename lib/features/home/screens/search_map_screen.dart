@@ -12,9 +12,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/mock/kirkuk_neighborhoods.dart';
 import '../../../core/models/listing.dart';
 import '../../../core/models/project.dart';
+import '../../../core/models/zone.dart';
 import '../../../core/network/activity_repository.dart';
 import '../../../core/network/listing_repository.dart';
 import '../../../core/network/project_repository.dart';
@@ -31,16 +31,9 @@ import 'kirkuk_map_style.dart';
 /// Kirkuk city center — default camera position for the map filter view.
 const _kirkukCenter = LatLng(35.4681, 44.3922);
 
-/// Below this zoom, the map shows real listing pins; above/below it toggles
-/// between the two neighbourhood tiers below — the "get close to a zone"
-/// behaviour.
+/// Below this zoom, the map shows real listing pins; above it, real-zone
+/// name bubbles — the "get close to a zone" behaviour.
 const _zoomThreshold = 14.5;
-
-/// Below this zoom, only the handful of "major" neighbourhoods are labelled,
-/// keeping the widest city view legible; at or above it (but still under
-/// [_zoomThreshold]) every real Kirkuk neighbourhood gets its own outline
-/// and label.
-const _neighborhoodZoomThreshold = 12.6;
 
 String _kirkukZoneLabel(String zone) {
   switch (zone) {
@@ -111,40 +104,37 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   late final AnimatedMapController _animatedMapController = AnimatedMapController(vsync: this);
 
-  // Used only by the search-filter's zone picker (a handful of names tied to
-  // Listing's own `zone` field) — unrelated to the real-neighbourhood map
-  // layer below, which covers the whole city regardless of listing data.
-  // Populated once listings are fetched (see _loadListings) — empty until
-  // then, so the zone picker just has nothing to zoom to yet.
-  Map<String, LatLng> _zoneCenters = {};
-
-  // The real, citywide neighbourhood layer — points, their organic outlines
-  // (sized off how close their nearest neighbour is, so dense clusters get
-  // smaller shapes and sparse ones get bigger, roughly tiling instead of
-  // piling on top of each other), and which ones count as "major". None of
-  // this depends on listing data, so it's ready immediately.
-  late final List<LatLng> _nbPoints = kirkukNeighborhoods.map((n) => LatLng(n.lat, n.lng)).toList();
-  late final List<double> _nbNearestDist = _computeNearestDistances();
-  late final List<List<LatLng>> _nbPolygons = [
-    for (var i = 0; i < _nbPoints.length; i++) _organicPolygon(_nbPoints[i], i, _nbNearestDist[i]),
-  ];
-  late final List<int> _majorIndexes = [
-    for (var i = 0; i < kirkukNeighborhoods.length; i++)
-      if (kirkukNeighborhoods[i].major) i,
-  ];
-  // Per-neighbourhood listing counts — starts all-zero and fills in once
-  // listings are fetched.
-  List<int> _nbUnitCounts = List<int>.filled(kirkukNeighborhoods.length, 0);
-
   List<Listing> _allListings = [];
   List<Project> _allProjects = [];
 
-  // The admin-managed zone list (same one the home zone cards and every
-  // other zone filter in the app read) — kept in sync here instead of a
-  // separate hardcoded list, which used to drift out of sync with real
-  // zones (new ones missing, renamed/removed ones still offered as a dead
-  // filter option).
-  List<String> _kirkukZoneNames = ['هەموو'];
+  // The one real, admin-managed zone list — same data the home page's zone
+  // row, every zone filter, and registration's zone picker all read. This
+  // is now also what draws the map's zone bubbles below, using each zone's
+  // own admin-set lat/lng — previously the map drew a second, disconnected
+  // set of ~76 OSM-sourced "neighbourhood" points that didn't correspond to
+  // real Listing.zone values at all, so tapping one didn't reliably show a
+  // zone's actual posts.
+  List<Zone> _zones = [];
+
+  // Only zones with a real lat/lng can get a bubble at all.
+  List<Zone> get _zonesWithLocation => _zones.where((z) => z.lat != null && z.lng != null).toList();
+
+  Map<String, LatLng> get _zoneCenters => {
+        for (final z in _zonesWithLocation) z.name: LatLng(z.lat!, z.lng!),
+      };
+
+  List<String> get _zoneNames => ['هەموو', ..._zones.map((z) => z.name)];
+
+  /// How many of this zone's real listings exist right now — shown as the
+  /// bubble's count badge, and what makes a zone with actual posts win a
+  /// decluttering tie over an empty one.
+  Map<String, int> get _zoneListingCounts {
+    final counts = <String, int>{};
+    for (final l in _allListings) {
+      counts[l.zone] = (counts[l.zone] ?? 0) + 1;
+    }
+    return counts;
+  }
 
   @override
   void initState() {
@@ -167,7 +157,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   Future<void> _loadZones() async {
     try {
       final zones = await context.read<ZoneRepository>().fetchAll();
-      if (mounted) setState(() => _kirkukZoneNames = ['هەموو', ...zones.map((z) => z.name)]);
+      if (mounted) setState(() => _zones = zones);
     } catch (_) {
       // Falls back to just "all" — the map and its filters still work.
     }
@@ -176,16 +166,10 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
   Future<void> _loadListings() async {
     try {
       final listings = await context.read<ListingRepository>().fetchAll();
-      if (!mounted) return;
-      setState(() {
-        _allListings = listings;
-        _zoneCenters = _computeZoneCenters();
-        _nbUnitCounts = _computeNeighborhoodCounts();
-      });
+      if (mounted) setState(() => _allListings = listings);
     } catch (_) {
-      // The map itself (tiles + neighbourhood outlines) still works without
-      // listing data — just leave the pins/counts empty rather than
-      // blocking the whole screen on this one call.
+      // The map itself still works without listing data — just leave the
+      // pins/counts empty rather than blocking the whole screen.
     }
   }
 
@@ -219,126 +203,44 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   List<Project> get _filteredProjects => _allProjects.where((p) => _zone == 'هەموو' || p.zone == _zone).toList();
 
-  Map<String, LatLng> _computeZoneCenters() {
-    final sums = <String, List<double>>{}; // [latSum, lngSum, count]
-    for (final l in _allListings) {
-      if (l.lat == null || l.lng == null) continue;
-      final cur = sums.putIfAbsent(l.zone, () => [0, 0, 0]);
-      cur[0] += l.lat!;
-      cur[1] += l.lng!;
-      cur[2] += 1;
-    }
-    return sums.map((zone, v) => MapEntry(zone, LatLng(v[0] / v[2], v[1] / v[2])));
-  }
-
-  /// Distance (metres) from each neighbourhood point to its single nearest
-  /// neighbour — used to size that point's outline so dense clusters of real
-  /// quarters don't draw shapes that swallow each other.
-  List<double> _computeNearestDistances() {
-    const distance = Distance();
-    final result = <double>[];
-    for (var i = 0; i < _nbPoints.length; i++) {
-      var best = double.infinity;
-      for (var j = 0; j < _nbPoints.length; j++) {
-        if (i == j) continue;
-        final d = distance(_nbPoints[i], _nbPoints[j]);
-        if (d < best) best = d;
-      }
-      result.add(best.isFinite ? best : 900);
-    }
-    return result;
-  }
-
-  /// A soft, organic (not perfectly circular) territory outline — deterministic
-  /// per point (seeded on its index) so it stays stable across rebuilds, and
-  /// sized off [nearestDistMeters] so neighbouring shapes roughly tile instead
-  /// of overlapping heavily.
-  List<LatLng> _organicPolygon(LatLng center, int index, double nearestDistMeters) {
-    final rand = Random(index * 97 + 13);
-    const distance = Distance();
-    const pointCount = 12;
-    final baseRadius = (nearestDistMeters * 0.4).clamp(140, 480);
-    return List.generate(pointCount, (i) {
-      final angle = (360 / pointCount) * i;
-      final wobble = 0.8 + rand.nextDouble() * 0.4;
-      return distance.offset(center, baseRadius * wobble, angle);
-    });
-  }
-
-  /// How many listings sit closest to each neighbourhood point (capped at
-  /// 3km so far-flung listings don't get claimed by an unrelated
-  /// neighbourhood) — shown as the little count badge on its bubble.
-  List<int> _computeNeighborhoodCounts() {
-    const distance = Distance();
-    final counts = List<int>.filled(_nbPoints.length, 0);
-    for (final l in _allListings) {
-      if (l.lat == null || l.lng == null) continue;
-      final p = LatLng(l.lat!, l.lng!);
-      var bestIndex = -1;
-      var bestDist = double.infinity;
-      for (var i = 0; i < _nbPoints.length; i++) {
-        final d = distance(p, _nbPoints[i]);
-        if (d < bestDist) {
-          bestDist = d;
-          bestIndex = i;
-        }
-      }
-      if (bestIndex >= 0 && bestDist < 3000) counts[bestIndex]++;
-    }
-    return counts;
-  }
-
   double _zoneBubbleWidth(String name) => (name.length * 12.5 + 42).clamp(78, 155);
 
   /// Web Mercator meters-per-pixel at a given zoom/latitude — standard tile
   /// math (EPSG:3857). Lets bubble overlap be detected from real geographic
-  /// distance between two neighbourhood points, without needing the map's
-  /// internal screen-space projection.
+  /// distance between two zone points, without needing the map's internal
+  /// screen-space projection.
   double _metersPerPixel(double zoom, double latitude) => 156543.03392 * cos(latitude * pi / 180) / pow(2, zoom);
 
-  /// Greedily keeps only the neighbourhood bubbles that won't visually
-  /// collide with one another at the current zoom — "major" quarters and
-  /// ones with more real listings win when two would overlap, so a crowded
-  /// cluster resolves into a clean, legible set instead of a pile of
-  /// overlapping pills. Every candidate still gets its polygon outline
-  /// drawn (see the PolygonLayer below) — only the label bubble itself is
-  /// decluttered.
-  List<int> _declutteredIndexes(List<int> candidates, double zoom, double scale) {
+  /// Greedily keeps only the real-zone bubbles that won't visually collide
+  /// with one another at the current zoom — zones with more live listings
+  /// win when two would overlap, so a crowded cluster resolves into a
+  /// clean, legible set instead of a pile of overlapping pills.
+  List<Zone> _declutteredZones(List<Zone> candidates, double zoom, double scale, Map<String, int> counts) {
     const distance = Distance();
     final metersPerPixel = _metersPerPixel(zoom, _kirkukCenter.latitude);
-    double halfWidthMeters(int i) => (_zoneBubbleWidth(kirkukNeighborhoods[i].name) * scale / 2 + 10) * metersPerPixel;
+    double halfWidthMeters(Zone z) => (_zoneBubbleWidth(z.name) * scale / 2 + 10) * metersPerPixel;
 
     final sorted = [...candidates]..sort((a, b) {
-        final majorCompare = (kirkukNeighborhoods[b].major ? 1 : 0) - (kirkukNeighborhoods[a].major ? 1 : 0);
-        if (majorCompare != 0) return majorCompare;
-        final countCompare = _nbUnitCounts[b] - _nbUnitCounts[a];
+        final countCompare = (counts[b.name] ?? 0) - (counts[a.name] ?? 0);
         if (countCompare != 0) return countCompare;
-        return a - b;
+        return a.name.compareTo(b.name);
       });
 
-    final placed = <int>[];
-    for (final i in sorted) {
-      final iHalf = halfWidthMeters(i);
-      final overlapsPlaced = placed.any((j) => distance(_nbPoints[i], _nbPoints[j]) < iHalf + halfWidthMeters(j));
-      if (!overlapsPlaced) placed.add(i);
+    final placed = <Zone>[];
+    for (final z in sorted) {
+      final zHalf = halfWidthMeters(z);
+      final overlapsPlaced = placed.any((p) => distance(LatLng(z.lat!, z.lng!), LatLng(p.lat!, p.lng!)) < zHalf + halfWidthMeters(p));
+      if (!overlapsPlaced) placed.add(z);
     }
     return placed;
   }
 
-  /// Shrinks the neighbourhood bubbles the further out you zoom, so a label
-  /// never outgrows the tiny on-screen outline it belongs to. Two segments:
-  /// the major-only tier (fewer labels, so a gentler shrink) and the
-  /// all-76 tier, which starts noticeably smaller right where the crowd of
-  /// labels jumps from ~22 to 76, then grows back to full size as the
-  /// visitor zooms in and real screen space opens up between them.
+  /// Shrinks the zone bubbles the further out you zoom, so a label never
+  /// outgrows the small on-screen area it has to sit in.
   double _bubbleScaleFor(double zoom) {
     const lo = 11.0; // matches MapOptions.minZoom
-    if (zoom < _neighborhoodZoomThreshold) {
-      final t = ((zoom - lo) / (_neighborhoodZoomThreshold - lo)).clamp(0.0, 1.0);
-      return 0.6 + 0.25 * t;
-    }
-    final t = ((zoom - _neighborhoodZoomThreshold) / (_zoomThreshold - _neighborhoodZoomThreshold)).clamp(0.0, 1.0);
-    return 0.4 + 0.6 * t;
+    final t = ((zoom - lo) / (_zoomThreshold - lo)).clamp(0.0, 1.0);
+    return 0.55 + 0.45 * t;
   }
 
   void _onCameraMove(MapCamera camera) {
@@ -356,15 +258,6 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     setState(() => _zone = zone);
     _animatedMapController.centerOnPoint(
       center,
-      zoom: 16,
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeInOutCubic,
-    );
-  }
-
-  void _zoomToNeighborhood(LatLng point) {
-    _animatedMapController.centerOnPoint(
-      point,
       zoom: 16,
       duration: const Duration(milliseconds: 900),
       curve: Curves.easeInOutCubic,
@@ -777,7 +670,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _kirkukZoneNames.map((z) {
+                    children: _zoneNames.map((z) {
                       final sel = z == _zone;
                       return GestureDetector(
                         onTap: () {
@@ -811,10 +704,9 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     final listings = _filtered;
     final projects = _filteredProjects;
     final showUnits = _zoom >= _zoomThreshold;
-    final showAllNeighborhoods = !showUnits && _zoom >= _neighborhoodZoomThreshold;
-    final neighborhoodIndexes = showUnits ? const <int>[] : (showAllNeighborhoods ? List.generate(kirkukNeighborhoods.length, (i) => i) : _majorIndexes);
     final bubbleScale = _bubbleScaleFor(_zoom);
-    final labelIndexes = neighborhoodIndexes.isEmpty ? neighborhoodIndexes : _declutteredIndexes(neighborhoodIndexes, _zoom, bubbleScale);
+    final zoneCounts = _zoneListingCounts;
+    final labelZones = showUnits ? const <Zone>[] : _declutteredZones(_zonesWithLocation, _zoom, bubbleScale, zoneCounts);
     return Scaffold(
       backgroundColor: palette.background,
       body: Stack(
@@ -848,37 +740,25 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                     userAgentPackageName: 'com.shikodar.app',
                     maxNativeZoom: 16,
                   ),
-                // Real neighbourhood outlines only render once there's enough
-                // screen space between them (mid zoom) — at the widest view
-                // they'd be a handful of screen-pixels each and the label
-                // would spill far outside its own shape, so that tier shows
-                // only labels for the best-known quarters, no outlines yet.
-                if (showAllNeighborhoods)
-                  PolygonLayer(
-                    polygons: [
-                      for (final i in neighborhoodIndexes)
-                        Polygon(
-                          points: _nbPolygons[i],
-                          color: zoneColor(i).withOpacity(0.16),
-                          borderColor: zoneColor(i).withOpacity(0.65),
-                          borderStrokeWidth: 2,
-                        ),
-                    ],
-                  ),
+                // Just the real zone names — no territory outlines/shapes,
+                // per explicit request. Tapping one calls _zoomToZone, which
+                // both zooms in AND sets it as the active zone filter, so
+                // every real post belonging to that exact zone (not a
+                // distance guess) is what shows once zoomed in.
                 if (!showUnits)
                   MarkerLayer(
                     markers: [
-                      for (final i in labelIndexes)
+                      for (final z in labelZones)
                         Marker(
-                          point: _nbPoints[i],
-                          width: _zoneBubbleWidth(kirkukNeighborhoods[i].name),
+                          point: LatLng(z.lat!, z.lng!),
+                          width: _zoneBubbleWidth(z.name),
                           height: 34,
                           child: _zoneBubble(
-                            kirkukNeighborhoods[i].name,
-                            zoneColor(i),
-                            _nbUnitCounts[i],
+                            z.name,
+                            zoneColor(z.name.hashCode),
+                            zoneCounts[z.name] ?? 0,
                             bubbleScale,
-                            () => _zoomToNeighborhood(_nbPoints[i]),
+                            () => _zoomToZone(z.name),
                           ),
                         ),
                     ],
