@@ -416,12 +416,23 @@ class _AgencyProfileScreenState extends State<AgencyProfileScreen> with TickerPr
             },
             child: Container(
               decoration: BoxDecoration(
-                gradient: _isPremiumTier ? AppColors.goldGradient : null,
-                color: _isPremiumTier ? null : AppColors.surfaceElevated,
+                gradient: (a.logoUrl == null || a.logoUrl!.isEmpty) && _isPremiumTier ? AppColors.goldGradient : null,
+                color: (a.logoUrl == null || a.logoUrl!.isEmpty) && !_isPremiumTier ? AppColors.surfaceElevated : null,
                 shape: BoxShape.circle,
                 border: Border.all(color: palette.surface, width: 3),
               ),
-              child: Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 30),
+              child: ClipOval(
+                child: a.logoUrl != null && a.logoUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: a.logoUrl!,
+                        fit: BoxFit.cover,
+                        width: 68,
+                        height: 68,
+                        placeholder: (_, __) => Container(color: AppColors.surfaceElevated),
+                        errorWidget: (_, __, ___) => Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 30),
+                      )
+                    : Icon(Icons.storefront_rounded, color: _isPremiumTier ? AppColors.ink : palette.textMuted, size: 30),
+              ),
             ),
           ),
           const SizedBox(height: 10),

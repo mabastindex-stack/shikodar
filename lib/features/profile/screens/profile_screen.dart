@@ -259,6 +259,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final isBusiness = isAgency || isCompany || isComplex;
     final isAdmin = role == AccountRole.admin;
     final myComplex = _myProjects.isNotEmpty ? _myProjects.first : null;
+    // The agency's real package tier — this used to be a hardcoded
+    // "Enterprise ✦" string shown to every agency account regardless of
+    // what they actually pay for, which is exactly what AgencyProfileScreen
+    // (the PUBLIC view of the same account) correctly showed as "Starter".
+    final agencyTier = PackageTier.values.firstWhere(
+      (t) => t.name == session.tier,
+      orElse: () => PackageTier.starter,
+    );
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -296,7 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       : (isCompany
                           ? 'profile_page.badge_developer'.tr()
                           : (isAgency
-                              ? 'profile_page.badge_enterprise'.tr()
+                              ? '${agencyTier.label} ✦'
                               : (isAdmin ? 'profile_page.badge_admin'.tr() : 'profile_page.badge_client'.tr()))),
                   style: TextStyle(color: isBusiness ? AppColors.ink : palette.textSecondary, fontSize: 11, fontWeight: FontWeight.w800),
                 ),

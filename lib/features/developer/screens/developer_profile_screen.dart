@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -214,8 +215,23 @@ class _DeveloperProfileScreenState extends State<DeveloperProfileScreen> with Ti
             child: child,
           ),
           child: Container(
-            decoration: BoxDecoration(gradient: AppColors.goldGradient, shape: BoxShape.circle, border: Border.all(color: palette.background, width: 4)),
-            child: const Icon(Icons.apartment_rounded, color: AppColors.ink, size: 40),
+            decoration: BoxDecoration(
+              gradient: (a.logoUrl == null || a.logoUrl!.isEmpty) ? AppColors.goldGradient : null,
+              shape: BoxShape.circle,
+              border: Border.all(color: palette.background, width: 4),
+            ),
+            child: ClipOval(
+              child: a.logoUrl != null && a.logoUrl!.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: a.logoUrl!,
+                      fit: BoxFit.cover,
+                      width: 92,
+                      height: 92,
+                      placeholder: (_, __) => const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.goldGradient)),
+                      errorWidget: (_, __, ___) => const Icon(Icons.apartment_rounded, color: AppColors.ink, size: 40),
+                    )
+                  : const Icon(Icons.apartment_rounded, color: AppColors.ink, size: 40),
+            ),
           ),
         ).animate().scale(duration: 480.ms, curve: Curves.easeOutBack).fadeIn(),
         const SizedBox(height: 14),
