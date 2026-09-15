@@ -8,6 +8,7 @@ import '../../../core/network/auth_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
 import '../widgets/auth_components.dart';
 import 'reset_password_screen.dart';
@@ -47,9 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       final devOtpCode = await context.read<AuthRepository>().forgotPassword(phone: phone);
       if (!mounted) return;
       if (devOtpCode != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('OTP: $devOtpCode'), behavior: SnackBarBehavior.floating),
-        );
+        showAppSnackBar(context, message: 'OTP: $devOtpCode');
       }
       Navigator.of(context).push(
         PageRouteBuilder(
@@ -62,9 +61,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
-      );
+      showAppSnackBar(context, message: e.message, isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

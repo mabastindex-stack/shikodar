@@ -12,6 +12,7 @@ import '../../../core/network/push_repository.dart';
 import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
 import '../../home/screens/favorites_screen.dart';
@@ -104,9 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
-      );
+      showAppSnackBar(context, message: e.message, isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

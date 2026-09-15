@@ -13,6 +13,7 @@ import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/photo_backdrop.dart';
 import '../../../shared/widgets/zone_picker_sheet.dart';
 import '../widgets/auth_components.dart';
@@ -142,12 +143,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (picked != null && mounted) setState(() => _profileImage = File(picked.path));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('auth.image_error'.tr()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showAppSnackBar(context, message: 'auth.image_error'.tr(), isError: true);
     }
   }
 
@@ -176,12 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!fieldsValid || !zoneValid) return;
     if (!_agreedToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('auth.accept_terms'.tr()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showAppSnackBar(context, message: 'auth.accept_terms'.tr(), isError: true);
       return;
     }
 
@@ -197,9 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           );
       if (!mounted) return;
       if (devOtpCode != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('OTP: $devOtpCode'), behavior: SnackBarBehavior.floating),
-        );
+        showAppSnackBar(context, message: 'OTP: $devOtpCode');
       }
       Navigator.of(context).push(
         PageRouteBuilder(
@@ -212,9 +201,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
-      );
+      showAppSnackBar(context, message: e.message, isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

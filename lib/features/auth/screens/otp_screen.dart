@@ -15,6 +15,7 @@ import '../../../core/session/user_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/shikodar_mark.dart';
 import '../../home/screens/favorites_screen.dart';
 import '../widgets/auth_components.dart';
@@ -54,12 +55,7 @@ class _OtpScreenState extends State<OtpScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     final code = _controllers.map((controller) => controller.text).join();
     if (code.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('auth.otp_incomplete'.tr()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showAppSnackBar(context, message: 'auth.otp_incomplete'.tr(), isError: true);
       return;
     }
 
@@ -97,9 +93,7 @@ class _OtpScreenState extends State<OtpScreen> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
-      );
+      showAppSnackBar(context, message: e.message, isError: true);
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
