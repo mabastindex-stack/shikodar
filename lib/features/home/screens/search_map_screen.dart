@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -205,36 +204,6 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
 
   double _zoneBubbleWidth(String name) => (name.length * 12.5 + 42).clamp(78, 155);
 
-  /// Web Mercator meters-per-pixel at a given zoom/latitude — standard tile
-  /// math (EPSG:3857). Lets bubble overlap be detected from real geographic
-  /// distance between two zone points, without needing the map's internal
-  /// screen-space projection.
-  double _metersPerPixel(double zoom, double latitude) => 156543.03392 * cos(latitude * pi / 180) / pow(2, zoom);
-
-  /// Greedily keeps only the real-zone bubbles that won't visually collide
-  /// with one another at the current zoom — zones with more live listings
-  /// win when two would overlap, so a crowded cluster resolves into a
-  /// clean, legible set instead of a pile of overlapping pills.
-  List<Zone> _declutteredZones(List<Zone> candidates, double zoom, double scale, Map<String, int> counts) {
-    const distance = Distance();
-    final metersPerPixel = _metersPerPixel(zoom, _kirkukCenter.latitude);
-    double halfWidthMeters(Zone z) => (_zoneBubbleWidth(z.name) * scale / 2 + 10) * metersPerPixel;
-
-    final sorted = [...candidates]..sort((a, b) {
-        final countCompare = (counts[b.name] ?? 0) - (counts[a.name] ?? 0);
-        if (countCompare != 0) return countCompare;
-        return a.name.compareTo(b.name);
-      });
-
-    final placed = <Zone>[];
-    for (final z in sorted) {
-      final zHalf = halfWidthMeters(z);
-      final overlapsPlaced = placed.any((p) => distance(LatLng(z.lat!, z.lng!), LatLng(p.lat!, p.lng!)) < zHalf + halfWidthMeters(p));
-      if (!overlapsPlaced) placed.add(z);
-    }
-    return placed;
-  }
-
   /// Shrinks the zone bubbles the further out you zoom, so a label never
   /// outgrows the small on-screen area it has to sit in.
   double _bubbleScaleFor(double zoom) {
@@ -252,15 +221,34 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     }
   }
 
+  /// Zooms to show EVERY real listing/project in this zone at once — not
+  /// just the zone's own fixed point at a fixed zoom, which could leave a
+  /// post outside the viewport if it sits a bit away from that point.
+  /// Falls back to centering on the zone's own point when it has no posts
+  /// yet (nothing to fit bounds to).
   void _zoomToZone(String zone) {
-    final center = _zoneCenters[zone];
-    if (center == null) return;
     setState(() => _zone = zone);
-    _animatedMapController.centerOnPoint(
-      center,
-      zoom: 16,
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeInOutCubic,
+    final points = <LatLng>[
+      for (final l in _allListings)
+        if (l.zone == zone && l.lat != null && l.lng != null) LatLng(l.lat!, l.lng!),
+      for (final p in _allProjects)
+        if (p.zone == zone && p.lat != null && p.lng != null) LatLng(p.lat!, p.lng!),
+    ];
+
+    if (points.length <= 1) {
+      final center = points.isNotEmpty ? points.first : _zoneCenters[zone];
+      if (center == null) return;
+      _animatedMapController.centerOnPoint(
+        center,
+        zoom: 16,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOutCubic,
+      );
+      return;
+    }
+
+    _animatedMapController.mapController.fitCamera(
+      CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: const EdgeInsets.all(70)),
     );
   }
 
@@ -706,7 +694,10 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
     final showUnits = _zoom >= _zoomThreshold;
     final bubbleScale = _bubbleScaleFor(_zoom);
     final zoneCounts = _zoneListingCounts;
-    final labelZones = showUnits ? const <Zone>[] : _declutteredZones(_zonesWithLocation, _zoom, bubbleScale, zoneCounts);
+    // Every real zone with a location shows its own bubble, always — no
+    // hiding at wide zoom — so the whole city's zones are visible without
+    // needing to zoom in first.
+    final labelZones = showUnits ? const <Zone>[] : _zonesWithLocation;
     return Scaffold(
       backgroundColor: palette.background,
       body: Stack(
