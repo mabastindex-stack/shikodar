@@ -1208,6 +1208,7 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                   : null,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
