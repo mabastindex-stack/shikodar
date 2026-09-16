@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:easy_localization/easy_localization.dart';
@@ -38,6 +39,51 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscureConfirmation = true;
   bool _isSubmitting = false;
 
+  static const _otpValiditySeconds = 300; // 5 minutes, matches the email's own stated validity.
+  int _secondsRemaining = _otpValiditySeconds;
+  Timer? _countdownTimer;
+  bool _isResending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    setState(() => _secondsRemaining = _otpValiditySeconds);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining <= 1) {
+        timer.cancel();
+        setState(() => _secondsRemaining = 0);
+        return;
+      }
+      setState(() => _secondsRemaining--);
+    });
+  }
+
+  String get _formattedCountdown {
+    final minutes = _secondsRemaining ~/ 60;
+    final seconds = _secondsRemaining % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _resendCode() async {
+    setState(() => _isResending = true);
+    try {
+      await context.read<AuthRepository>().forgotPassword(email: widget.email);
+      if (!mounted) return;
+      showAppSnackBar(context, message: 'auth.otp_resent'.tr());
+      _startCountdown();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(context, message: e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _isResending = false);
+    }
+  }
+
   @override
   void dispose() {
     for (final controller in _codeControllers) {
@@ -48,6 +94,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
     _passwordController.dispose();
     _confirmController.dispose();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -211,6 +258,27 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         },
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: _secondsRemaining > 0
+                          ? Text(
+                              'auth.otp_expires_in'.tr(args: [_formattedCountdown]),
+                              style: TextStyle(color: palette.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600),
+                            )
+                          : _isResending
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: palette.primary),
+                                )
+                              : GestureDetector(
+                                  onTap: _resendCode,
+                                  child: Text(
+                                    'auth.resend_code'.tr(),
+                                    style: TextStyle(color: palette.primary, fontSize: 12.5, fontWeight: FontWeight.w800),
+                                  ),
+                                ),
+                    ).entrance(index: 3),
                     const SizedBox(height: 26),
                     AuthTextFormField(
                       controller: _passwordController,
