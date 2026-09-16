@@ -1,49 +1,27 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/listing.dart';
+import '../../../core/models/zone.dart';
 import '../../../core/network/listing_repository.dart';
+import '../../../core/network/zone_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_palette.dart';
+import '../search_relevance.dart';
 import 'search_results_screen.dart';
 
-enum SortOption { newest, priceLow, priceHigh }
+enum SortOption { relevance, newest, priceLow, priceHigh }
 
-// Raw zone values match `Listing.zone` in the mock data (which stays in
-// Kurdish) — only the label shown to the user is localized, via
-// `_zoneLabel` below, so filtering keeps working regardless of locale.
-const _zones = <String>[
-  'هەموو',
-  'شۆڕجە',
-  'ڕاپەرین',
-  'ناوەڕاستی شار',
-  'ئیمام قاسم',
-  'ئازادی',
-  'گرناتە',
-];
+/// A fixed, approximate display rate — the app has no live FX feed, and
+/// every listing is still stored and compared in USD underneath. This only
+/// converts what the price range panel shows/accepts when IQD is picked,
+/// never what's actually stored or sent to the backend.
+const iqdPerUsd = 1310.0;
 
-String _zoneLabel(String zone) {
-  switch (zone) {
-    case 'هەموو':
-      return 'zones.all'.tr();
-    case 'شۆڕجە':
-      return 'zones.shorja'.tr();
-    case 'ڕاپەرین':
-      return 'zones.raparin'.tr();
-    case 'ناوەڕاستی شار':
-      return 'zones.city_center'.tr();
-    case 'ئیمام قاسم':
-      return 'zones.imam_qasim'.tr();
-    case 'ئازادی':
-      return 'zones.azadi'.tr();
-    case 'گرناتە':
-      return 'zones.granata'.tr();
-    default:
-      return zone;
-  }
-}
+final _iqdFormat = NumberFormat.decimalPattern();
 
 class SmartSearchScreen extends StatefulWidget {
   const SmartSearchScreen({super.key});
@@ -61,14 +39,22 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
   RangeValues _area = const RangeValues(0, 500);
   int? _rooms;
   bool _verifiedOnly = false;
-  SortOption _sort = SortOption.newest;
+  bool _iqd = false;
+  SortOption _sort = SortOption.relevance;
   List<Listing> _allListings = [];
+  List<Zone> _zones = [];
 
   @override
   void initState() {
     super.initState();
     context.read<ListingRepository>().fetchAll().then((listings) {
       if (mounted) setState(() => _allListings = listings);
+    });
+    // The real, admin-managed zone list — same one every other zone picker
+    // in the app reads — instead of a small hardcoded set that drifts out
+    // of sync the moment admin adds or renames a zone.
+    context.read<ZoneRepository>().fetchAll().then((zones) {
+      if (mounted) setState(() => _zones = zones);
     });
   }
 
@@ -78,30 +64,45 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
     super.dispose();
   }
 
-  List<Listing> get _matches => _allListings.where((listing) {
-        final keyword = _keywordController.text.trim().toLowerCase();
-        if (keyword.isNotEmpty &&
-            !listing.title.toLowerCase().contains(keyword) &&
-            !listing.zone.toLowerCase().contains(keyword) &&
-            !listing.agency.name.toLowerCase().contains(keyword)) {
-          return false;
-        }
-        if (_zone != 'هەموو' && listing.zone != _zone) return false;
-        if (_purpose != null && listing.purpose != _purpose) return false;
-        if (_type != 'all' && listing.type.name != _type) return false;
-        if (listing.price < _price.start || listing.price > _price.end) return false;
-        if (listing.areaSqm != null &&
-            (listing.areaSqm! < _area.start || listing.areaSqm! > _area.end)) {
-          return false;
-        }
-        if (_rooms != null &&
-            (listing.rooms == null ||
-                (_rooms == 4 ? listing.rooms! < 4 : listing.rooms != _rooms))) {
-          return false;
-        }
-        if (_verifiedOnly && !listing.agency.verified) return false;
-        return true;
-      }).toList();
+  SearchCriteria get _criteria => SearchCriteria(
+        zone: _zone,
+        purpose: _purpose,
+        type: _type,
+        priceRange: _price,
+        areaRange: _area,
+        rooms: _rooms,
+        verifiedOnly: _verifiedOnly,
+      );
+
+  /// Ranked, not just filtered: a listing that's close to what was asked
+  /// for but not a perfect fit still shows up here (further down), instead
+  /// of vanishing the instant one criterion misses — see search_relevance.
+  List<Listing> get _matches {
+    final keyword = _keywordController.text.trim().toLowerCase();
+    final criteria = _criteria;
+    final scored = _allListings.where((listing) {
+      if (keyword.isEmpty) return true;
+      return listing.title.toLowerCase().contains(keyword) ||
+          listing.zone.toLowerCase().contains(keyword) ||
+          listing.agency.name.toLowerCase().contains(keyword);
+    }).map((l) => (listing: l, score: listingRelevance(l, criteria))).where((m) => m.score >= relevanceCutoff).toList();
+
+    switch (_sort) {
+      case SortOption.relevance:
+        scored.sort((a, b) => b.score.compareTo(a.score));
+        break;
+      case SortOption.newest:
+        scored.sort((a, b) => b.listing.createdAt.compareTo(a.listing.createdAt));
+        break;
+      case SortOption.priceLow:
+        scored.sort((a, b) => a.listing.price.compareTo(b.listing.price));
+        break;
+      case SortOption.priceHigh:
+        scored.sort((a, b) => b.listing.price.compareTo(a.listing.price));
+        break;
+    }
+    return scored.map((m) => m.listing).toList();
+  }
 
   void _reset() {
     setState(() {
@@ -113,7 +114,8 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
       _area = const RangeValues(0, 500);
       _rooms = null;
       _verifiedOnly = false;
-      _sort = SortOption.newest;
+      _iqd = false;
+      _sort = SortOption.relevance;
     });
   }
 
@@ -127,13 +129,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
           child: SearchResultsScreen(
             allListings: _allListings,
             keyword: _keywordController.text.trim(),
-            zone: _zone,
-            purpose: _purpose,
-            type: _type,
-            priceRange: _price,
-            areaRange: _area,
-            rooms: _rooms,
-            verifiedOnly: _verifiedOnly,
+            criteria: _criteria,
             sort: _sort,
           ),
         ),
@@ -223,13 +219,19 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _zones.map((zone) {
-                return _ChoicePill(
-                  label: _zoneLabel(zone),
-                  selected: _zone == zone,
-                  onTap: () => setState(() => _zone = zone),
-                );
-              }).toList(),
+              children: [
+                _ChoicePill(
+                  label: 'zones.all'.tr(),
+                  selected: _zone == 'هەموو',
+                  onTap: () => setState(() => _zone = 'هەموو'),
+                ),
+                for (final zone in _zones)
+                  _ChoicePill(
+                    label: zone.name,
+                    selected: _zone == zone.name,
+                    onTap: () => setState(() => _zone = zone.name),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 14),
@@ -291,12 +293,15 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
           const SizedBox(height: 14),
           _RangePanel(
             title: 'filters.price_range'.tr(),
-            valueText: '\$${_price.start.toStringAsFixed(0)} — \$${_price.end.toStringAsFixed(0)}',
+            valueText: _iqd
+                ? '${_iqdFormat.format((_price.start * iqdPerUsd).round())} — ${_iqdFormat.format((_price.end * iqdPerUsd).round())} ${'listing.iqd_suffix'.tr()}'
+                : '\$${_price.start.toStringAsFixed(0)} — \$${_price.end.toStringAsFixed(0)}',
             values: _price,
             min: 0,
             max: 250000,
             divisions: 25,
             onChanged: (value) => setState(() => _price = value),
+            trailing: _CurrencyToggle(iqd: _iqd, onChanged: (v) => setState(() => _iqd = v)),
           ),
           const SizedBox(height: 14),
           _RangePanel(
@@ -335,6 +340,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
+                _ChoicePill(label: 'search.sort_relevance'.tr(), selected: _sort == SortOption.relevance, onTap: () => setState(() => _sort = SortOption.relevance)),
                 _ChoicePill(label: 'search.sort_newest'.tr(), selected: _sort == SortOption.newest, onTap: () => setState(() => _sort = SortOption.newest)),
                 _ChoicePill(label: 'search.sort_price_low'.tr(), selected: _sort == SortOption.priceLow, onTap: () => setState(() => _sort = SortOption.priceLow)),
                 _ChoicePill(label: 'search.sort_price_high'.tr(), selected: _sort == SortOption.priceHigh, onTap: () => setState(() => _sort = SortOption.priceHigh)),
@@ -483,7 +489,7 @@ class _TypePill extends StatelessWidget {
 }
 
 class _RangePanel extends StatelessWidget {
-  const _RangePanel({required this.title, required this.valueText, required this.values, required this.min, required this.max, required this.divisions, required this.onChanged});
+  const _RangePanel({required this.title, required this.valueText, required this.values, required this.min, required this.max, required this.divisions, required this.onChanged, this.trailing});
   final String title;
   final String valueText;
   final RangeValues values;
@@ -491,6 +497,7 @@ class _RangePanel extends StatelessWidget {
   final double max;
   final int divisions;
   final ValueChanged<RangeValues> onChanged;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -498,7 +505,45 @@ class _RangePanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 8),
       decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: palette.divider)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Text(title, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w800)), const Spacer(), Text(valueText, style: TextStyle(color: palette.primary, fontSize: 11.5, fontWeight: FontWeight.w800))]), RangeSlider(values: values, min: min, max: max, divisions: divisions, activeColor: palette.primary, inactiveColor: palette.divider, onChanged: onChanged)]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(title, style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w800)),
+          const Spacer(),
+          if (trailing != null) ...[trailing!, const SizedBox(width: 10)],
+        ]),
+        const SizedBox(height: 6),
+        Text(valueText, style: TextStyle(color: palette.primary, fontSize: 11.5, fontWeight: FontWeight.w800)),
+        RangeSlider(values: values, min: min, max: max, divisions: divisions, activeColor: palette.primary, inactiveColor: palette.divider, onChanged: onChanged),
+      ]),
+    );
+  }
+}
+
+class _CurrencyToggle extends StatelessWidget {
+  const _CurrencyToggle({required this.iqd, required this.onChanged});
+  final bool iqd;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    Widget option(String label, bool selected, VoidCallback onTap) => InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(99),
+          child: AnimatedContainer(
+            duration: AppMotion.quick,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(color: selected ? palette.primary : Colors.transparent, borderRadius: BorderRadius.circular(99)),
+            child: Text(label, style: TextStyle(color: selected ? palette.onPrimary : palette.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w800)),
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: palette.surfaceElevated, borderRadius: BorderRadius.circular(99), border: Border.all(color: palette.divider)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        option('USD', !iqd, () => onChanged(false)),
+        option('IQD', iqd, () => onChanged(true)),
+      ]),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/models/listing.dart';
 import '../../../core/theme/app_palette.dart';
+import '../search_relevance.dart';
 import '../widgets/listing_card.dart';
 import 'smart_search_screen.dart';
 
@@ -11,66 +12,48 @@ class SearchResultsScreen extends StatelessWidget {
     super.key,
     required this.allListings,
     required this.keyword,
-    required this.zone,
-    required this.purpose,
-    required this.type,
-    required this.priceRange,
-    required this.areaRange,
-    required this.rooms,
-    required this.verifiedOnly,
+    required this.criteria,
     required this.sort,
   });
 
   final List<Listing> allListings;
   final String keyword;
-  final String zone;
-  final ListingPurpose? purpose;
-  final String type;
-  final RangeValues priceRange;
-  final RangeValues areaRange;
-  final int? rooms;
-  final bool verifiedOnly;
+  final SearchCriteria criteria;
   final SortOption sort;
 
+  String get zone => criteria.zone;
+  ListingPurpose? get purpose => criteria.purpose;
+  String get type => criteria.type;
+  int? get rooms => criteria.rooms;
+  bool get verifiedOnly => criteria.verifiedOnly;
+
+  /// Ranked the same way SmartSearchScreen previewed them — a listing that
+  /// misses one criterion but is otherwise close still shows up here,
+  /// further down, instead of disappearing outright. See search_relevance.
   List<Listing> get _results {
-    final results = allListings.where((listing) {
-      if (keyword.isNotEmpty) {
-        final query = keyword.toLowerCase();
-        if (!listing.title.toLowerCase().contains(query) &&
-            !listing.zone.toLowerCase().contains(query) &&
-            !listing.agency.name.toLowerCase().contains(query)) {
-          return false;
-        }
-      }
-      if (zone != 'هەموو' && listing.zone != zone) return false;
-      if (purpose != null && listing.purpose != purpose) return false;
-      if (type != 'all' && listing.type.name != type) return false;
-      if (listing.price < priceRange.start || listing.price > priceRange.end) return false;
-      if (listing.areaSqm != null &&
-          (listing.areaSqm! < areaRange.start || listing.areaSqm! > areaRange.end)) {
-        return false;
-      }
-      if (rooms != null &&
-          (listing.rooms == null ||
-              (rooms == 4 ? listing.rooms! < 4 : listing.rooms != rooms))) {
-        return false;
-      }
-      if (verifiedOnly && !listing.agency.verified) return false;
-      return true;
-    }).toList();
+    final matched = allListings.where((listing) {
+      if (keyword.isEmpty) return true;
+      final query = keyword.toLowerCase();
+      return listing.title.toLowerCase().contains(query) ||
+          listing.zone.toLowerCase().contains(query) ||
+          listing.agency.name.toLowerCase().contains(query);
+    }).map((l) => (listing: l, score: listingRelevance(l, criteria))).where((m) => m.score >= relevanceCutoff).toList();
 
     switch (sort) {
+      case SortOption.relevance:
+        matched.sort((a, b) => b.score.compareTo(a.score));
+        break;
       case SortOption.newest:
-        results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        matched.sort((a, b) => b.listing.createdAt.compareTo(a.listing.createdAt));
         break;
       case SortOption.priceLow:
-        results.sort((a, b) => a.price.compareTo(b.price));
+        matched.sort((a, b) => a.listing.price.compareTo(b.listing.price));
         break;
       case SortOption.priceHigh:
-        results.sort((a, b) => b.price.compareTo(a.price));
+        matched.sort((a, b) => b.listing.price.compareTo(a.listing.price));
         break;
     }
-    return results;
+    return matched.map((m) => m.listing).toList();
   }
 
   @override
