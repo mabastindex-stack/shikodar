@@ -63,6 +63,26 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
   }
 
+  /// A single typed digit just advances focus, same as before. Anything
+  /// longer — a long-press paste of the full 6-digit code copied straight
+  /// out of the email — gets spread across this box and the ones after it
+  /// instead of being silently truncated to one character.
+  void _handleCodeChanged(int index, String value) {
+    if (value.length <= 1) {
+      if (value.isNotEmpty && index < 5) _codeNodes[index + 1].requestFocus();
+      return;
+    }
+    for (var i = 0; i < value.length && index + i < 6; i++) {
+      _codeControllers[index + i].text = value[i];
+    }
+    final lastFilled = (index + value.length - 1).clamp(0, 5);
+    if (lastFilled < 5) {
+      _codeNodes[lastFilled + 1].requestFocus();
+    } else {
+      _codeNodes[lastFilled].unfocus();
+    }
+  }
+
   String get _formattedCountdown {
     final minutes = _secondsRemaining ~/ 60;
     final seconds = _secondsRemaining % 60;
@@ -275,7 +295,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 width: boxWidth,
                                 controller: _codeControllers[index],
                                 node: _codeNodes[index],
-                                nextNode: index < 5 ? _codeNodes[index + 1] : null,
+                                isLast: index == 5,
+                                onChanged: (value) => _handleCodeChanged(index, value),
                               ).entrance(index: index, delay: 40.ms, base: 260.ms),
                             ),
                           );
@@ -359,12 +380,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 }
 
 class _CodeBox extends StatelessWidget {
-  const _CodeBox({required this.width, required this.controller, required this.node, this.nextNode});
+  const _CodeBox({required this.width, required this.controller, required this.node, required this.isLast, required this.onChanged});
 
   final double width;
   final TextEditingController controller;
   final FocusNode node;
-  final FocusNode? nextNode;
+  final bool isLast;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -377,11 +399,14 @@ class _CodeBox extends StatelessWidget {
         focusNode: node,
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        textInputAction: nextNode == null ? TextInputAction.done : TextInputAction.next,
-        maxLength: 1,
+        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+        // No maxLength here — a long-press paste of the full 6-digit code
+        // lands in whichever box is focused, and onChanged (wired to the
+        // parent's _handleCodeChanged) spreads it across the remaining
+        // boxes instead of a hard 1-char cap silently discarding it.
         inputFormatters: <TextInputFormatter>[
           FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
+          LengthLimitingTextInputFormatter(6),
         ],
         style: TextStyle(
           color: palette.textPrimary,
@@ -402,9 +427,7 @@ class _CodeBox extends StatelessWidget {
             borderSide: BorderSide(color: palette.primary, width: 1.5),
           ),
         ),
-        onChanged: (value) {
-          if (value.isNotEmpty && nextNode != null) nextNode!.requestFocus();
-        },
+        onChanged: onChanged,
       ),
     );
   }
