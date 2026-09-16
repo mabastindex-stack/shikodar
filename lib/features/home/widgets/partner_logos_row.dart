@@ -47,28 +47,38 @@ class _PartnerLogosRowState extends State<PartnerLogosRow> with SingleTickerProv
 
     return SizedBox(
       height: 72,
-      child: ClipRect(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            final dx = -(_controller.value * setWidth);
-            // OverflowBox gives the (much wider than the screen) Row an
-            // unconstrained width to lay out in, so it never trips a
-            // RenderFlex overflow — ClipRect still clips what's actually
-            // painted to the viewport.
-            return OverflowBox(
-              alignment: Alignment.centerLeft,
-              minWidth: 0,
-              maxWidth: double.infinity,
-              child: Transform.translate(offset: Offset(dx, 0), child: child),
-            );
-          },
-          // Three copies back-to-back so the wrap-around point is never visible.
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [...logos, ...logos, ...logos].map((a) => _badge(context, a)).toList(),
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Enough copies back-to-back to cover the visible width twice over
+          // (plus one extra) — with only one or two logos configured, three
+          // fixed copies could be narrower than the screen, leaving a blank
+          // gap once the scroll passed them. Scaling the copy count to the
+          // viewport guarantees the strip never runs out mid-scroll however
+          // few or many logos admin has set.
+          final copies = (constraints.maxWidth / setWidth).ceil() * 2 + 1;
+          return ClipRect(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final dx = -(_controller.value * setWidth);
+                // OverflowBox gives the (much wider than the screen) Row an
+                // unconstrained width to lay out in, so it never trips a
+                // RenderFlex overflow — ClipRect still clips what's actually
+                // painted to the viewport.
+                return OverflowBox(
+                  alignment: Alignment.centerLeft,
+                  minWidth: 0,
+                  maxWidth: double.infinity,
+                  child: Transform.translate(offset: Offset(dx, 0), child: child),
+                );
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(copies, (_) => logos).expand((l) => l).map((a) => _badge(context, a)).toList(),
+              ),
+            ),
+          );
+        },
       ),
     ).animate().fadeIn(duration: 420.ms);
   }
