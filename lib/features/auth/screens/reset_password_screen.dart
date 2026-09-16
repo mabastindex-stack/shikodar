@@ -162,6 +162,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    // Collapse the logo/title block out of the way while the keyboard is
+    // up — otherwise (with resizeToAvoidBottomInset false, so the Scaffold
+    // itself never shrinks) it permanently eats the top of the screen and
+    // the password field ends up hidden under the keyboard, same fix as
+    // LoginScreen's header collapse.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       backgroundColor: palette.background,
       resizeToAvoidBottomInset: false,
@@ -201,42 +207,60 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: ShikodarMark(size: 64, showShadow: false))
-                        .animate()
-                        .fadeIn(duration: 380.ms, curve: AppMotion.enter)
-                        .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), curve: AppMotion.emphasized),
-                    const SizedBox(height: 20),
-                    Text(
-                      'auth.reset_password_title'.tr(),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOut,
+                      height: keyboardOpen ? 0 : 190,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          maxHeight: 190,
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            height: 190,
+                            child: Column(
+                              children: [
+                                const Center(child: ShikodarMark(size: 64, showShadow: false))
+                                    .animate()
+                                    .fadeIn(duration: 380.ms, curve: AppMotion.enter)
+                                    .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), curve: AppMotion.emphasized),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'auth.reset_password_title'.tr(),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: palette.textPrimary,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ).entrance(index: 1),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'auth.reset_password_subtitle'.tr(),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: palette.textSecondary,
+                                    fontSize: 12.5,
+                                    height: 1.5,
+                                  ),
+                                ).entrance(index: 2),
+                                const SizedBox(height: 7),
+                                Text(
+                                  widget.email,
+                                  textAlign: TextAlign.center,
+                                  textDirection: ui.TextDirection.ltr,
+                                  style: TextStyle(
+                                    color: palette.primary,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ).entrance(index: 2),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ).entrance(index: 1),
-                    const SizedBox(height: 8),
-                    Text(
-                      'auth.reset_password_subtitle'.tr(),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 12.5,
-                        height: 1.5,
-                      ),
-                    ).entrance(index: 2),
-                    const SizedBox(height: 7),
-                    Text(
-                      widget.email,
-                      textAlign: TextAlign.center,
-                      textDirection: ui.TextDirection.ltr,
-                      style: TextStyle(
-                        color: palette.primary,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
-                      ),
-                    ).entrance(index: 2),
+                    ),
                     const SizedBox(height: 26),
                     Directionality(
                       textDirection: ui.TextDirection.ltr,
