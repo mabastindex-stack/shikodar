@@ -191,6 +191,8 @@
     "clear": "سڕینەوە",
     "hint": "ناوی ئیلان، زۆن یان دەلال...",
     "location_label": "شوێن",
+    "zone_search_hint": "بگەڕێ بۆ گەڕەک...",
+    "no_zone_match": "هیچ گەڕەکێک نەدۆزرایەوە",
     "purpose_label": "مەبەستی موڵک",
     "type_label": "جۆری موڵک",
     "sort_label": "ڕیزبەندی",

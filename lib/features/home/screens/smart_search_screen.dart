@@ -32,6 +32,7 @@ class SmartSearchScreen extends StatefulWidget {
 
 class _SmartSearchScreenState extends State<SmartSearchScreen> {
   final TextEditingController _keywordController = TextEditingController();
+  final TextEditingController _zoneSearchController = TextEditingController();
   ListingPurpose? _purpose;
   String _type = 'all';
   String _zone = 'هەموو';
@@ -61,7 +62,17 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
   @override
   void dispose() {
     _keywordController.dispose();
+    _zoneSearchController.dispose();
     super.dispose();
+  }
+
+  /// Typing the first letter(s) of a zone's name narrows the picker to
+  /// zones starting with it — with a growing admin zone list, scrolling to
+  /// find one by eye stops scaling.
+  List<Zone> get _visibleZones {
+    final query = _zoneSearchController.text.trim();
+    if (query.isEmpty) return _zones;
+    return _zones.where((z) => z.name.startsWith(query)).toList();
   }
 
   SearchCriteria get _criteria => SearchCriteria(
@@ -107,6 +118,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
   void _reset() {
     setState(() {
       _keywordController.clear();
+      _zoneSearchController.clear();
       _purpose = null;
       _type = 'all';
       _zone = 'هەموو';
@@ -216,21 +228,34 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
           _FilterPanel(
             title: 'search.location_label'.tr(),
             icon: Icons.location_on_outlined,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ChoicePill(
-                  label: 'zones.all'.tr(),
-                  selected: _zone == 'هەموو',
-                  onTap: () => setState(() => _zone = 'هەموو'),
+                _ZoneSearchField(
+                  controller: _zoneSearchController,
+                  onChanged: (_) => setState(() {}),
                 ),
-                for (final zone in _zones)
-                  _ChoicePill(
-                    label: zone.name,
-                    selected: _zone == zone.name,
-                    onTap: () => setState(() => _zone = zone.name),
-                  ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (_zoneSearchController.text.trim().isEmpty)
+                      _ChoicePill(
+                        label: 'zones.all'.tr(),
+                        selected: _zone == 'هەموو',
+                        onTap: () => setState(() => _zone = 'هەموو'),
+                      ),
+                    for (final zone in _visibleZones)
+                      _ChoicePill(
+                        label: zone.name,
+                        selected: _zone == zone.name,
+                        onTap: () => setState(() => _zone = zone.name),
+                      ),
+                    if (_zoneSearchController.text.trim().isNotEmpty && _visibleZones.isEmpty)
+                      Text('search.no_zone_match'.tr(), style: TextStyle(color: context.palette.textMuted, fontSize: 11.5)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -410,6 +435,50 @@ class _FilterPanel extends StatelessWidget {
           const SizedBox(height: 13),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _ZoneSearchField extends StatelessWidget {
+  const _ZoneSearchField({required this.controller, required this.onChanged});
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surfaceElevated,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: palette.divider),
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: TextStyle(color: palette.textPrimary, fontSize: 12.5),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          hintText: 'search.zone_search_hint'.tr(),
+          hintStyle: TextStyle(color: palette.textMuted, fontSize: 11.5),
+          prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted, size: 17),
+          prefixIconConstraints: const BoxConstraints(minWidth: 34),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  onPressed: () {
+                    controller.clear();
+                    onChanged('');
+                  },
+                  icon: Icon(Icons.close_rounded, color: palette.textMuted, size: 16),
+                ),
+          filled: false,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
       ),
     );
   }

@@ -191,6 +191,8 @@
     "clear": "Clear",
     "hint": "Listing name, zone or broker...",
     "location_label": "Location",
+    "zone_search_hint": "Search zones...",
+    "no_zone_match": "No matching zones",
     "purpose_label": "Property Purpose",
     "type_label": "Property Type",
     "sort_label": "Sort",

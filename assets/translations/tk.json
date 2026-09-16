@@ -191,6 +191,8 @@
     "clear": "Temizle",
     "hint": "İlan adı, bölge veya emlakçı...",
     "location_label": "Konum",
+    "zone_search_hint": "Etraby gözle...",
+    "no_zone_match": "Gabat gelýän etrap ýok",
     "purpose_label": "Mülk amacı",
     "type_label": "Mülk türü",
     "sort_label": "Sıralama",

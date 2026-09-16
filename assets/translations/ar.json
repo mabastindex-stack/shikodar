@@ -191,6 +191,8 @@
     "clear": "مسح",
     "hint": "اسم الإعلان أو المنطقة أو الوسيط...",
     "location_label": "الموقع",
+    "zone_search_hint": "ابحث عن حي...",
+    "no_zone_match": "لا توجد أحياء مطابقة",
     "purpose_label": "الغرض من العقار",
     "type_label": "نوع العقار",
     "sort_label": "الترتيب",
