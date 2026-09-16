@@ -1152,11 +1152,16 @@ class SearchMapScreenState extends State<SearchMapScreen> with TickerProviderSta
                           ),
                         ],
                       )
-                    : ListView.separated(
+                    : GridView.builder(
                   padding: const EdgeInsets.fromLTRB(20, 184, 20, 110),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.66,
+                  ),
                   itemCount: listListings.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (_, i) => SizedBox(height: 300, child: ListingCard(listing: listListings[i], animationIndex: i)),
+                  itemBuilder: (_, i) => ListingCard(listing: listListings[i], animationIndex: i),
                 ),
               ),
             ),
