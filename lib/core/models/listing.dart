@@ -143,6 +143,8 @@ class Listing {
   final String? videoUrl;
   final double? areaSqm;
   final int? rooms;
+  final int? floors;
+  final bool hasGarden;
   final double? lat;
   final double? lng;
   final Agency agency;
@@ -169,6 +171,8 @@ class Listing {
     this.videoUrl,
     this.areaSqm,
     this.rooms,
+    this.floors,
+    this.hasGarden = false,
     this.lat,
     this.lng,
     required this.agency,
@@ -239,6 +243,8 @@ class Listing {
         videoUrl: json['video_url'],
         areaSqm: (json['area_sqm'] as num?)?.toDouble(),
         rooms: json['rooms'],
+        floors: json['floors'],
+        hasGarden: json['has_garden'] ?? false,
         lat: (json['lat'] as num?)?.toDouble(),
         lng: (json['lng'] as num?)?.toDouble(),
         agency: Agency.fromJson(json['agency'] ?? const {}),

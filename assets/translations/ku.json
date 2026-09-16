@@ -113,7 +113,8 @@
     "zone": "زۆن",
     "area": "ڕووبەر",
     "price_range": "مەودای نرخ",
-    "rooms": "ژمارەی ژوور"
+    "rooms": "ژمارەی ژوور",
+    "floors": "ژمارەی نهۆم"
   },
   "listing": {
     "negotiable": "دانوستان دەکرێت",
@@ -201,6 +202,7 @@
     "sort_price_low": "نرخی کەمتر",
     "sort_price_high": "نرخی زۆرتر",
     "verified_only": "تەنها موڵکی پشتڕاستکراو",
+    "garden_only": "تەنها موڵکی باخچەی هەیە",
     "search_button": "گەڕان — {} ئەنجام",
     "matching_results": "ئەنجامی گونجاو بە فلتەرەکانت",
     "map_title": "نەخشەی موڵکەکان",
@@ -287,6 +289,9 @@
     "area_hint": "250",
     "rooms_label": "ژمارەی ژوور *",
     "rooms_hint": "4",
+    "floors_label": "ژمارەی نهۆم/قاتەکان",
+    "floors_hint": "2",
+    "garden_toggle": "باخچەی هەیە",
     "negotiable_toggle": "نرخ دانوستان دەکرێت",
     "add_photo": "زیادکردن",
     "primary_photo_badge": "سەرەکی",

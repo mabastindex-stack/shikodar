@@ -113,7 +113,8 @@
     "zone": "Zone",
     "area": "Area",
     "price_range": "Price Range",
-    "rooms": "Rooms"
+    "rooms": "Rooms",
+    "floors": "Floors"
   },
   "listing": {
     "negotiable": "Negotiable",
@@ -201,6 +202,7 @@
     "sort_price_low": "Lowest Price",
     "sort_price_high": "Highest Price",
     "verified_only": "Verified Properties Only",
+    "garden_only": "Properties with a Garden Only",
     "search_button": "Search — {} Results",
     "matching_results": "Results matching your filters",
     "map_title": "Properties Map",
@@ -287,6 +289,9 @@
     "area_hint": "250",
     "rooms_label": "Number of Rooms *",
     "rooms_hint": "4",
+    "floors_label": "Number of Floors",
+    "floors_hint": "2",
+    "garden_toggle": "Has a garden",
     "negotiable_toggle": "Price is negotiable",
     "add_photo": "Add",
     "primary_photo_badge": "Primary",

@@ -39,6 +39,8 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
   RangeValues _price = const RangeValues(0, 250000);
   RangeValues _area = const RangeValues(0, 500);
   int? _rooms;
+  int? _floors;
+  bool _gardenOnly = false;
   bool _verifiedOnly = false;
   bool _iqd = false;
   SortOption _sort = SortOption.relevance;
@@ -82,6 +84,8 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
         priceRange: _price,
         areaRange: _area,
         rooms: _rooms,
+        floors: _floors,
+        gardenOnly: _gardenOnly,
         verifiedOnly: _verifiedOnly,
       );
 
@@ -125,6 +129,8 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
       _price = const RangeValues(0, 250000);
       _area = const RangeValues(0, 500);
       _rooms = null;
+      _floors = null;
+      _gardenOnly = false;
       _verifiedOnly = false;
       _iqd = false;
       _sort = SortOption.relevance;
@@ -235,27 +241,48 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
                   controller: _zoneSearchController,
                   onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (_zoneSearchController.text.trim().isEmpty)
-                      _ChoicePill(
-                        label: 'zones.all'.tr(),
-                        selected: _zone == 'هەموو',
-                        onTap: () => setState(() => _zone = 'هەموو'),
+                // The full zone list only appears while actively searching
+                // — otherwise it's just the chosen zone (if any), as a
+                // single clearable chip, instead of the whole admin zone
+                // list sitting open on the page at all times.
+                if (_zoneSearchController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final zone in _visibleZones)
+                        _ChoicePill(
+                          label: zone.name,
+                          selected: _zone == zone.name,
+                          onTap: () => setState(() {
+                            _zone = zone.name;
+                            _zoneSearchController.clear();
+                          }),
+                        ),
+                      if (_visibleZones.isEmpty)
+                        Text('search.no_zone_match'.tr(), style: TextStyle(color: context.palette.textMuted, fontSize: 11.5)),
+                    ],
+                  ),
+                ] else if (_zone != 'هەموو') ...[
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: () => setState(() => _zone = 'هەموو'),
+                    borderRadius: BorderRadius.circular(99),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: context.palette.primary,
+                        borderRadius: BorderRadius.circular(99),
                       ),
-                    for (final zone in _visibleZones)
-                      _ChoicePill(
-                        label: zone.name,
-                        selected: _zone == zone.name,
-                        onTap: () => setState(() => _zone = zone.name),
-                      ),
-                    if (_zoneSearchController.text.trim().isNotEmpty && _visibleZones.isEmpty)
-                      Text('search.no_zone_match'.tr(), style: TextStyle(color: context.palette.textMuted, fontSize: 11.5)),
-                  ],
-                ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(_zone, style: TextStyle(color: context.palette.onPrimary, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 6),
+                        Icon(Icons.close_rounded, size: 14, color: context.palette.onPrimary),
+                      ]),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -342,20 +369,46 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
           _FilterPanel(
             title: 'filters.rooms'.tr(),
             icon: Icons.bed_outlined,
-            child: Row(
-              children: [1, 2, 3, 4].map((room) {
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 7),
-                    child: _RoomButton(
-                      label: room == 4 ? '+٤' : '$room',
-                      selected: _rooms == room,
-                      onTap: () => setState(() => _rooms = _rooms == room ? null : room),
-                    ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [1, 2, 3, 4, 5, roomsPlusValue].map((room) {
+                return SizedBox(
+                  width: 74,
+                  child: _RoomButton(
+                    label: room == roomsPlusValue ? '+$roomsPlusValue' : '$room',
+                    selected: _rooms == room,
+                    onTap: () => setState(() => _rooms = _rooms == room ? null : room),
                   ),
                 );
               }).toList(),
             ),
+          ),
+          const SizedBox(height: 14),
+          _FilterPanel(
+            title: 'filters.floors'.tr(),
+            icon: Icons.layers_outlined,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [1, 2, 3, 4].map((floor) {
+                return SizedBox(
+                  width: 74,
+                  child: _RoomButton(
+                    label: floor == 4 ? '+4' : '$floor',
+                    selected: _floors == floor,
+                    onTap: () => setState(() => _floors = _floors == floor ? null : floor),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _ToggleSwitch(
+            icon: Icons.grass_rounded,
+            label: 'search.garden_only'.tr(),
+            value: _gardenOnly,
+            onChanged: (value) => setState(() => _gardenOnly = value),
           ),
           const SizedBox(height: 14),
           _FilterPanel(
@@ -373,7 +426,9 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          _VerifiedSwitch(
+          _ToggleSwitch(
+            icon: Icons.verified_rounded,
+            label: 'search.verified_only'.tr(),
             value: _verifiedOnly,
             onChanged: (value) => setState(() => _verifiedOnly = value),
           ),
@@ -630,8 +685,10 @@ class _RoomButton extends StatelessWidget {
   }
 }
 
-class _VerifiedSwitch extends StatelessWidget {
-  const _VerifiedSwitch({required this.value, required this.onChanged});
+class _ToggleSwitch extends StatelessWidget {
+  const _ToggleSwitch({required this.icon, required this.label, required this.value, required this.onChanged});
+  final IconData icon;
+  final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -641,7 +698,7 @@ class _VerifiedSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
       decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: value ? palette.gold : palette.divider)),
-      child: Row(children: [Icon(Icons.verified_rounded, color: palette.gold, size: 20), const SizedBox(width: 10), Expanded(child: Text('search.verified_only'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w700))), Switch(value: value, onChanged: onChanged, activeColor: palette.primary)]),
+      child: Row(children: [Icon(icon, color: palette.gold, size: 20), const SizedBox(width: 10), Expanded(child: Text(label, style: TextStyle(color: palette.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w700))), Switch(value: value, onChanged: onChanged, activeColor: palette.primary)]),
     );
   }
 }

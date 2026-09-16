@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/listing.dart';
 
+/// The highest explicit room-count button in the picker — picking it means
+/// "this many or more", the same "N+" convention the old 4-button picker
+/// used at 4, just moved up now that the picker offers more room counts.
+const roomsPlusValue = 6;
+
 /// The set of criteria a search screen collects — shared between
 /// SmartSearchScreen (where the visitor sets them) and SearchResultsScreen
 /// (where they're applied and ranked), so the two never drift apart.
@@ -13,6 +18,8 @@ class SearchCriteria {
     required this.priceRange,
     required this.areaRange,
     this.rooms,
+    this.floors,
+    this.gardenOnly = false,
     this.verifiedOnly = false,
   });
 
@@ -22,6 +29,8 @@ class SearchCriteria {
   final RangeValues priceRange;
   final RangeValues areaRange;
   final int? rooms;
+  final int? floors;
+  final bool gardenOnly;
   final bool verifiedOnly;
 }
 
@@ -55,13 +64,23 @@ double listingRelevance(Listing listing, SearchCriteria c) {
     final r = listing.rooms;
     if (r == null) {
       scores.add(0.4);
-    } else if (c.rooms == 4) {
-      scores.add(r >= 4 ? 1.0 : (1.0 - (4 - r) * 0.25).clamp(0.0, 1.0));
+    } else if (c.rooms == roomsPlusValue) {
+      scores.add(r >= roomsPlusValue ? 1.0 : (1.0 - (roomsPlusValue - r) * 0.2).clamp(0.0, 1.0));
     } else {
       final diff = (r - c.rooms!).abs();
       scores.add(diff == 0 ? 1.0 : (1.0 - diff * 0.3).clamp(0.0, 1.0));
     }
   }
+  if (c.floors != null) {
+    final f = listing.floors;
+    if (f == null) {
+      scores.add(0.4);
+    } else {
+      final diff = (f - c.floors!).abs();
+      scores.add(diff == 0 ? 1.0 : (1.0 - diff * 0.35).clamp(0.0, 1.0));
+    }
+  }
+  if (c.gardenOnly) scores.add(listing.hasGarden ? 1.0 : 0.25);
   if (c.verifiedOnly) scores.add(listing.agency.verified ? 1.0 : 0.5);
   if (scores.isEmpty) return 1.0;
   return scores.reduce((a, b) => a + b) / scores.length;

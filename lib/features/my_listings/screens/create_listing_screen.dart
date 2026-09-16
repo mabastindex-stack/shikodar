@@ -96,6 +96,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
   bool _negotiable = false;
   final _areaController = TextEditingController();
   final _roomsController = TextEditingController();
+  final _floorsController = TextEditingController();
+  bool _hasGarden = false;
   final _downPaymentController = TextEditingController();
   final _monthlyInstallmentController = TextEditingController();
   final _installmentMonthsController = TextEditingController();
@@ -129,6 +131,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
     _priceController.dispose();
     _areaController.dispose();
     _roomsController.dispose();
+    _floorsController.dispose();
     _downPaymentController.dispose();
     _monthlyInstallmentController.dispose();
     _installmentMonthsController.dispose();
@@ -275,7 +278,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
         'negotiable': _negotiable,
         'image_urls': imageUrls,
         'area_sqm': double.parse(_areaController.text.trim()),
-        if (_type == ListingType.house || _type == ListingType.villa) 'rooms': int.tryParse(_roomsController.text.trim()),
+        if (_type == ListingType.house || _type == ListingType.villa) ...{
+          'rooms': int.tryParse(_roomsController.text.trim()),
+          'floors': int.tryParse(_floorsController.text.trim()),
+          'has_garden': _hasGarden,
+        },
         if (_purpose == ListingPurpose.installment) ...{
           'down_payment': double.parse(_downPaymentController.text.trim()),
           'monthly_installment': double.parse(_monthlyInstallmentController.text.trim()),
@@ -492,6 +499,22 @@ class _CreateListingScreenState extends State<CreateListingScreen> with TickerPr
             keyboardType: TextInputType.number,
             style: TextStyle(color: palette.textPrimary),
             decoration: _inputDecoration(palette, hint: 'my_listings.rooms_hint'.tr()),
+          ),
+          const SizedBox(height: 20),
+          _fieldLabel(palette, 'my_listings.floors_label'.tr()),
+          TextField(
+            controller: _floorsController,
+            keyboardType: TextInputType.number,
+            style: TextStyle(color: palette.textPrimary),
+            decoration: _inputDecoration(palette, hint: 'my_listings.floors_hint'.tr()),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _hasGarden,
+            onChanged: (v) => setState(() => _hasGarden = v),
+            activeColor: palette.primary,
+            title: Text('my_listings.garden_toggle'.tr(), style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600)),
           ),
         ],
         if (_purpose == ListingPurpose.installment) ...[

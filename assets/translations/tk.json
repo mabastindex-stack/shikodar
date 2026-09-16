@@ -113,7 +113,8 @@
     "zone": "Bölge",
     "area": "Alan",
     "price_range": "Fiyat aralığı",
-    "rooms": "Oda sayısı"
+    "rooms": "Oda sayısı",
+    "floors": "Gat sany"
   },
   "listing": {
     "negotiable": "Pazarlık edilebilir",
@@ -201,6 +202,7 @@
     "sort_price_low": "En düşük fiyat",
     "sort_price_high": "En yüksek fiyat",
     "verified_only": "Sadece doğrulanmış mülkler",
+    "garden_only": "Diňe bagly mülkler",
     "search_button": "Ara — {} sonuç",
     "matching_results": "Filtrelerinize uygun sonuçlar",
     "map_title": "Mülkler Haritası",
@@ -287,6 +289,9 @@
     "area_hint": "250",
     "rooms_label": "Oda sayısı *",
     "rooms_hint": "4",
+    "floors_label": "Gat sany",
+    "floors_hint": "2",
+    "garden_toggle": "Baglary bar",
     "negotiable_toggle": "Fiyat pazarlığa açık",
     "add_photo": "Ekle",
     "primary_photo_badge": "Ana",

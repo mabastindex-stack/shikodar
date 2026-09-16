@@ -113,7 +113,8 @@
     "zone": "المنطقة",
     "area": "المساحة",
     "price_range": "نطاق السعر",
-    "rooms": "عدد الغرف"
+    "rooms": "عدد الغرف",
+    "floors": "عدد الطوابق"
   },
   "listing": {
     "negotiable": "قابل للتفاوض",
@@ -201,6 +202,7 @@
     "sort_price_low": "الأقل سعراً",
     "sort_price_high": "الأعلى سعراً",
     "verified_only": "العقارات الموثقة فقط",
+    "garden_only": "العقارات التي تحتوي على حديقة فقط",
     "search_button": "بحث — {} نتيجة",
     "matching_results": "نتائج مطابقة لفلاترك",
     "map_title": "خريطة العقارات",
@@ -287,6 +289,9 @@
     "area_hint": "250",
     "rooms_label": "عدد الغرف *",
     "rooms_hint": "4",
+    "floors_label": "عدد الطوابق",
+    "floors_hint": "2",
+    "garden_toggle": "يحتوي على حديقة",
     "negotiable_toggle": "السعر قابل للتفاوض",
     "add_photo": "إضافة",
     "primary_photo_badge": "رئيسية",
