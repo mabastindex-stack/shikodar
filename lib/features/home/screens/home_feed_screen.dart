@@ -16,14 +16,18 @@ import '../widgets/home_video_showcase.dart';
 import '../widgets/listing_card.dart';
 import '../widgets/partner_logos_row.dart';
 import '../widgets/zone_card_row.dart';
-import 'all_listings_screen.dart';
 import 'notifications_screen.dart';
 import 'smart_search_screen.dart';
 
 const _maxPreviewCards = 6;
 
 class HomeFeedScreen extends StatefulWidget {
-  const HomeFeedScreen({super.key});
+  const HomeFeedScreen({super.key, this.onViewMap});
+
+  /// Lets HomeShell (the ancestor that owns the bottom nav) switch to the
+  /// map/search tab on this screen's behalf — this screen has no direct
+  /// way to reach that sibling tab otherwise.
+  final VoidCallback? onViewMap;
 
   @override
   State<HomeFeedScreen> createState() => HomeFeedScreenState();
@@ -106,13 +110,12 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
     final listings = _listings.where((listing) {
       return _filterState.type == 'all' || listing.type.name == _filterState.type;
     }).toList()
-      ..sort((a, b) {
-        final featuredOrder = (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-        return featuredOrder != 0
-            ? featuredOrder
-            : b.createdAt.compareTo(a.createdAt);
-      });
-    final preview = listings.take(_maxPreviewCards).toList();
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // Admin's own curated picks only — not padded out with whatever's
+    // newest once there are fewer than 6, and capped at 6 to match what
+    // the admin side keeps enforced.
+    final featured = listings.where((listing) => listing.featured).take(_maxPreviewCards).toList();
+    final preview = featured;
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -178,19 +181,8 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
               sliver: SliverToBoxAdapter(
                 child: SectionHeader(
                   title: 'home.featured_listings_title'.tr(),
-                  subtitle: 'home.listings_available'.tr(args: ['${listings.length}']),
-                  icon: Icons.auto_awesome_outlined,
-                  actionLabel: listings.length > _maxPreviewCards ? 'home.view_all'.tr() : null,
-                  onAction: listings.length > _maxPreviewCards
-                      ? () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => AllListingsScreen(
-                                typeFilter: _filterState.type,
-                                allListings: _listings,
-                              ),
-                            ),
-                          )
-                      : null,
+                  subtitle: 'home.listings_available'.tr(args: ['${preview.length}']),
+                  centered: true,
                 ),
               ),
             ),
@@ -200,7 +192,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
               SliverToBoxAdapter(child: _ListingsError(message: _error!, onRetry: _loadListings))
             else if (preview.isEmpty)
               SliverToBoxAdapter(child: _EmptyListings(onReset: _resetFilter))
-            else
+            else ...[
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverLayoutBuilder(
@@ -224,6 +216,21 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                   },
                 ),
               ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: TextButton(
+                      onPressed: widget.onViewMap,
+                      child: Text(
+                        'home.view_more'.tr(),
+                        style: TextStyle(color: palette.primary, fontSize: 12.5, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 32, 20, 13),
               sliver: SliverToBoxAdapter(

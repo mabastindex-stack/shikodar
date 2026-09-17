@@ -36,7 +36,7 @@ class _HomeShellState extends State<HomeShell> {
   late final _screens = <Widget>[
     SearchMapScreen(key: _searchMapKey),
     ReelsScreen(key: _reelsKey),
-    HomeFeedScreen(key: _homeFeedKey),
+    HomeFeedScreen(key: _homeFeedKey, onViewMap: () => _select(_searchIndex)),
     const ProjectsListScreen(),
     const ProfileScreen(),
   ];
