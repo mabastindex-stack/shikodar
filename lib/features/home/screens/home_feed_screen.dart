@@ -112,10 +112,12 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
     }).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     // Admin's own curated picks only — not padded out with whatever's
-    // newest once there are fewer than 6, and capped at 6 to match what
-    // the admin side keeps enforced.
-    final featured = listings.where((listing) => listing.featured).take(_maxPreviewCards).toList();
-    final preview = featured;
+    // newest once there are fewer than 6, capped at 6 to match what the
+    // admin side keeps enforced, and shown in the admin's chosen rank
+    // order (featuredPosition), not creation date.
+    final featured = listings.where((listing) => listing.featured).toList()
+      ..sort((a, b) => (a.featuredPosition ?? 999).compareTo(b.featuredPosition ?? 999));
+    final preview = featured.take(_maxPreviewCards).toList();
 
     return Scaffold(
       backgroundColor: palette.background,

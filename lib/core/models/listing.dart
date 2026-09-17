@@ -149,6 +149,7 @@ class Listing {
   final double? lng;
   final Agency agency;
   final bool featured;
+  final int? featuredPosition;
   final DateTime createdAt;
   final String description;
   final String? phone;
@@ -177,6 +178,7 @@ class Listing {
     this.lng,
     required this.agency,
     this.featured = false,
+    this.featuredPosition,
     required this.createdAt,
     this.description = '',
     this.phone,
@@ -214,6 +216,7 @@ class Listing {
         lng: lng,
         agency: agency,
         featured: featured ?? this.featured,
+        featuredPosition: featuredPosition,
         createdAt: createdAt,
         description: description ?? this.description,
         phone: phone ?? this.phone,
@@ -249,6 +252,7 @@ class Listing {
         lng: (json['lng'] as num?)?.toDouble(),
         agency: Agency.fromJson(json['agency'] ?? const {}),
         featured: json['featured'] ?? false,
+        featuredPosition: json['featured_position'] as int?,
         createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
         description: json['description'] ?? '',
         phone: json['phone'],
