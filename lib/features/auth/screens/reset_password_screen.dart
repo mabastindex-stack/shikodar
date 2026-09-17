@@ -35,6 +35,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final List<FocusNode> _codeNodes = List.generate(6, (_) => FocusNode());
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  final _passwordFieldKey = GlobalKey();
+  final _confirmFieldKey = GlobalKey();
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
   bool _isSubmitting = false;
@@ -72,15 +74,44 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (value.isNotEmpty && index < 5) _codeNodes[index + 1].requestFocus();
       return;
     }
-    for (var i = 0; i < value.length && index + i < 6; i++) {
-      _codeControllers[index + i].text = value[i];
-    }
-    final lastFilled = (index + value.length - 1).clamp(0, 5);
-    if (lastFilled < 5) {
-      _codeNodes[lastFilled + 1].requestFocus();
-    } else {
-      _codeNodes[lastFilled].unfocus();
-    }
+    // Deferred to the next frame: writing to this box's own controller
+    // synchronously, from inside its own onChanged, races the platform text
+    // input finishing its own update to that same controller — the paste
+    // could otherwise get silently overwritten right back to a single
+    // character a moment later.
+    final pasted = value;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (var i = 0; i < pasted.length && index + i < 6; i++) {
+        _codeControllers[index + i].text = pasted[i];
+      }
+      final lastFilled = (index + pasted.length - 1).clamp(0, 5);
+      if (lastFilled < 5) {
+        _codeNodes[lastFilled + 1].requestFocus();
+      } else {
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
+    });
+  }
+
+  /// resizeToAvoidBottomInset is false on this screen (needed to keep the
+  /// decorative background circle from tearing during resize), so nothing
+  /// automatically scrolls a newly-focused field above the keyboard once it
+  /// finishes animating in. Flutter's own focus->scroll behavior fires once,
+  /// right as focus changes — before the keyboard has actually grown to its
+  /// final height — so it undershoots. Re-run it after a short delay, once
+  /// the keyboard (and the ScrollView's matching bottom padding) has caught up.
+  void _scrollFieldIntoView(GlobalKey key) {
+    Future.delayed(const Duration(milliseconds: 260), () {
+      final fieldContext = key.currentContext;
+      if (!mounted || fieldContext == null) return;
+      Scrollable.ensureVisible(
+        fieldContext,
+        alignment: 0.15,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   String get _formattedCountdown {
@@ -325,39 +356,55 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 ),
                     ).entrance(index: 3),
                     const SizedBox(height: 26),
-                    AuthTextFormField(
-                      controller: _passwordController,
-                      label: 'auth.new_password'.tr(),
-                      icon: Icons.lock_outline_rounded,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.newPassword],
-                      validator: _validatePassword,
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: palette.textSecondary,
-                          size: 20,
+                    Focus(
+                      onFocusChange: (hasFocus) {
+                        if (hasFocus) _scrollFieldIntoView(_passwordFieldKey);
+                      },
+                      child: KeyedSubtree(
+                        key: _passwordFieldKey,
+                        child: AuthTextFormField(
+                          controller: _passwordController,
+                          label: 'auth.new_password'.tr(),
+                          icon: Icons.lock_outline_rounded,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.newPassword],
+                          validator: _validatePassword,
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: palette.textSecondary,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ),
                     ).entrance(base: 500.ms),
                     const SizedBox(height: 13),
-                    AuthTextFormField(
-                      controller: _confirmController,
-                      label: 'auth.confirm_new_password'.tr(),
-                      icon: Icons.lock_reset_rounded,
-                      obscureText: _obscureConfirmation,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.newPassword],
-                      validator: _validateConfirmation,
-                      onFieldSubmitted: (_) => _submit(),
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscureConfirmation = !_obscureConfirmation),
-                        icon: Icon(
-                          _obscureConfirmation ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: palette.textSecondary,
-                          size: 20,
+                    Focus(
+                      onFocusChange: (hasFocus) {
+                        if (hasFocus) _scrollFieldIntoView(_confirmFieldKey);
+                      },
+                      child: KeyedSubtree(
+                        key: _confirmFieldKey,
+                        child: AuthTextFormField(
+                          controller: _confirmController,
+                          label: 'auth.confirm_new_password'.tr(),
+                          icon: Icons.lock_reset_rounded,
+                          obscureText: _obscureConfirmation,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.newPassword],
+                          validator: _validateConfirmation,
+                          onFieldSubmitted: (_) => _submit(),
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscureConfirmation = !_obscureConfirmation),
+                            icon: Icon(
+                              _obscureConfirmation ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: palette.textSecondary,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ),
                     ).entrance(base: 560.ms),
