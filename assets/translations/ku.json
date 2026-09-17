@@ -39,6 +39,7 @@
     "confirm_new_password": "دووپاتکردنەوەی وشەی نهێنی نوێ",
     "reset_password_button": "نوێکردنەوەی وشەی نهێنی",
     "reset_password_success": "وشەی نهێنیت بە سەرکەوتوویی نوێکرایەوە",
+    "reset_password_success_subtitle": "ئێستا دەتوانیت بەردەوام بیت لە هەژمارەکەت",
     "otp_expires_in": "کۆدەکە کاردەکات بۆ {}",
     "resend_code": "کۆدەکە نەگەیشت؟ دووبارە بینێرەوە",
     "otp_resent": "کۆدێکی نوێ نێردرایەوە بۆ ئیمەیلەکەت",

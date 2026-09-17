@@ -39,6 +39,7 @@
     "confirm_new_password": "Yeni Şifreyi Onayla",
     "reset_password_button": "Şifreyi Güncelle",
     "reset_password_success": "Şifren başarıyla güncellendi",
+    "reset_password_success_subtitle": "Indi hasabyňyzy ulanmagy dowam etdirip bilersiňiz",
     "otp_expires_in": "Kod {} wagt geçerli",
     "resend_code": "Kod gelmedimi? Gaýtadan iber",
     "otp_resent": "Täze kod e-poçtaňyza iberildi",

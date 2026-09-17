@@ -276,7 +276,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       FavoritesStore.loadFromServer(context.read<FavoriteRepository>());
       context.read<PushRepository>().registerDevice();
 
-      showAppSnackBar(context, message: 'auth.reset_password_success'.tr());
+      await _showSuccessCelebration();
+      if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -284,6 +285,79 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// A brief, dedicated celebration instead of the same generic snackbar
+  /// used for every other success message in the app — this one moment
+  /// (account recovered) earns something more deliberate. Dismisses itself
+  /// and hands control back once its own beat has played out.
+  Future<void> _showSuccessCelebration() async {
+    if (!mounted) return;
+    final palette = context.palette;
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'success',
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (dialogContext, _, __) {
+        Future.delayed(const Duration(milliseconds: 1800), () {
+          if (Navigator.of(dialogContext).canPop()) Navigator.of(dialogContext).pop();
+        });
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 44),
+            padding: const EdgeInsets.fromLTRB(28, 34, 28, 30),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(color: palette.shadow.withOpacity(0.45), blurRadius: 34, offset: const Offset(0, 18)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.emeraldLight, AppColors.emerald, AppColors.emeraldDark],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 44),
+                ).animate().scale(begin: const Offset(0.3, 0.3), end: const Offset(1, 1), duration: 480.ms, curve: Curves.elasticOut).fadeIn(duration: 200.ms),
+                const SizedBox(height: 22),
+                Text(
+                  'auth.reset_password_success'.tr(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: palette.textPrimary, fontSize: 17, fontWeight: FontWeight.w800),
+                ).entrance(index: 1),
+                const SizedBox(height: 8),
+                Text(
+                  'auth.reset_password_success_subtitle'.tr(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: palette.textSecondary, fontSize: 12.5, height: 1.5),
+                ).entrance(index: 2),
+              ],
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, __, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 
   @override

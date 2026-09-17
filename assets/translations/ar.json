@@ -39,6 +39,7 @@
     "confirm_new_password": "تأكيد كلمة المرور الجديدة",
     "reset_password_button": "تحديث كلمة المرور",
     "reset_password_success": "تم تحديث كلمة المرور بنجاح",
+    "reset_password_success_subtitle": "يمكنك الآن متابعة استخدام حسابك",
     "otp_expires_in": "الرمز صالح لمدة {}",
     "resend_code": "لم يصلك الرمز؟ أعد الإرسال",
     "otp_resent": "تم إرسال رمز جديد إلى بريدك الإلكتروني",

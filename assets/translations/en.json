@@ -39,6 +39,7 @@
     "confirm_new_password": "Confirm New Password",
     "reset_password_button": "Update Password",
     "reset_password_success": "Your password was updated successfully",
+    "reset_password_success_subtitle": "You're all set to continue using your account",
     "otp_expires_in": "Code expires in {}",
     "resend_code": "Didn't get the code? Resend",
     "otp_resent": "A new code was sent to your email",
