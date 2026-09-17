@@ -134,18 +134,28 @@ class AuthRepository {
     }
   }
 
-  /// Verifies the OTP (keyed by email) and sets a new password in one step.
-  /// Logs the user straight in, mirroring what verifyOtp() does for a
-  /// fresh registration.
+  /// Checks the OTP (keyed by email) on its own, before the new-password
+  /// step is shown — the server marks it verified without touching the
+  /// account yet. Throws ApiException on a wrong/expired code.
+  Future<void> verifyResetCode({required String email, required String code}) async {
+    try {
+      await _client.dio.post('/auth/password/verify-code', data: {'email': email, 'code': code});
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// Sets a new password once the code has already been confirmed via
+  /// verifyResetCode() above (still within its original expiry). Logs the
+  /// user straight in, mirroring what verifyOtp() does for a fresh
+  /// registration.
   Future<AuthResult> resetPassword({
     required String email,
-    required String code,
     required String newPassword,
   }) async {
     try {
       final response = await _client.dio.post('/auth/password/reset', data: {
         'email': email,
-        'code': code,
         'new_password': newPassword,
       });
       return _saveAuthResult(response.data);

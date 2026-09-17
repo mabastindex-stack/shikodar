@@ -40,6 +40,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
   bool _isSubmitting = false;
+  bool _codeVerified = false;
+  bool _verifyingCode = false;
 
   static const _otpValiditySeconds = 300; // 5 minutes, matches the email's own stated validity.
   int _secondsRemaining = _otpValiditySeconds;
@@ -68,10 +70,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   /// A single typed digit just advances focus, same as before. Anything
   /// longer — a long-press paste of the full 6-digit code copied straight
   /// out of the email — gets spread across this box and the ones after it
-  /// instead of being silently truncated to one character.
+  /// instead of being silently truncated to one character. Either way, once
+  /// all 6 boxes are filled the code is checked automatically.
   void _handleCodeChanged(int index, String value) {
     if (value.length <= 1) {
       if (value.isNotEmpty && index < 5) _codeNodes[index + 1].requestFocus();
+      _maybeAutoVerify();
       return;
     }
     // Deferred to the next frame: writing to this box's own controller
@@ -91,7 +95,44 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       } else {
         FocusManager.instance.primaryFocus?.unfocus();
       }
+      _maybeAutoVerify();
     });
+  }
+
+  void _maybeAutoVerify() {
+    if (_codeVerified || _verifyingCode) return;
+    final code = _codeControllers.map((c) => c.text).join();
+    if (code.length == 6) _verifyCode(code);
+  }
+
+  void _clearCode() {
+    for (final controller in _codeControllers) {
+      controller.clear();
+    }
+    _codeNodes.first.requestFocus();
+  }
+
+  /// Confirms the code on its own, before the new-password fields ever
+  /// appear — a wrong code here just clears the boxes for another try,
+  /// without the visitor having to fill in a password first only to be
+  /// told afterward that the code they typed was wrong.
+  Future<void> _verifyCode(String code) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _verifyingCode = true);
+    try {
+      await context.read<AuthRepository>().verifyResetCode(email: widget.email, code: code);
+      if (!mounted) return;
+      _countdownTimer?.cancel();
+      setState(() {
+        _codeVerified = true;
+        _verifyingCode = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _verifyingCode = false);
+      showAppSnackBar(context, message: e.message, isError: true);
+      _clearCode();
+    }
   }
 
   /// resizeToAvoidBottomInset is false on this screen (needed to keep the
@@ -164,8 +205,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   Future<void> _submit() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final code = _codeControllers.map((controller) => controller.text).join();
-    if (code.length != 6) {
+    if (!_codeVerified) {
       showAppSnackBar(context, message: 'auth.otp_incomplete'.tr(), isError: true);
       return;
     }
@@ -175,7 +215,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       final result = await context.read<AuthRepository>().resetPassword(
             email: widget.email,
-            code: code,
             newPassword: _passwordController.text,
           );
       if (!mounted) return;
@@ -327,6 +366,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 controller: _codeControllers[index],
                                 node: _codeNodes[index],
                                 isLast: index == 5,
+                                verified: _codeVerified,
                                 onChanged: (value) => _handleCodeChanged(index, value),
                               ).entrance(index: index, delay: 40.ms, base: 260.ms),
                             ),
@@ -336,85 +376,109 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     const SizedBox(height: 14),
                     Center(
-                      child: _secondsRemaining > 0
-                          ? Text(
-                              'auth.otp_expires_in'.tr(args: [_formattedCountdown]),
-                              style: TextStyle(color: palette.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600),
+                      child: _codeVerified
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle_rounded, size: 15, color: AppColors.success),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'auth.otp_verified'.tr(),
+                                  style: const TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              ],
                             )
-                          : _isResending
+                          : _verifyingCode
                               ? SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: palette.primary),
                                 )
-                              : GestureDetector(
-                                  onTap: _resendCode,
-                                  child: Text(
-                                    'auth.resend_code'.tr(),
-                                    style: TextStyle(color: palette.primary, fontSize: 12.5, fontWeight: FontWeight.w800),
-                                  ),
-                                ),
+                              : _secondsRemaining > 0
+                                  ? Text(
+                                      'auth.otp_expires_in'.tr(args: [_formattedCountdown]),
+                                      style: TextStyle(color: palette.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600),
+                                    )
+                                  : _isResending
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: palette.primary),
+                                        )
+                                      : GestureDetector(
+                                          onTap: _resendCode,
+                                          child: Text(
+                                            'auth.resend_code'.tr(),
+                                            style: TextStyle(color: palette.primary, fontSize: 12.5, fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
                     ).entrance(index: 3),
-                    const SizedBox(height: 26),
-                    Focus(
-                      onFocusChange: (hasFocus) {
-                        if (hasFocus) _scrollFieldIntoView(_passwordFieldKey);
-                      },
-                      child: KeyedSubtree(
-                        key: _passwordFieldKey,
-                        child: AuthTextFormField(
-                          controller: _passwordController,
-                          label: 'auth.new_password'.tr(),
-                          icon: Icons.lock_outline_rounded,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.newPassword],
-                          validator: _validatePassword,
-                          suffixIcon: IconButton(
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: palette.textSecondary,
-                              size: 20,
+                    // The new-password fields only exist once the code above
+                    // is confirmed — there's nothing to submit before that,
+                    // and it keeps the visitor from filling in a password
+                    // only to be told afterward that the code was wrong.
+                    if (_codeVerified) ...[
+                      const SizedBox(height: 26),
+                      Focus(
+                        onFocusChange: (hasFocus) {
+                          if (hasFocus) _scrollFieldIntoView(_passwordFieldKey);
+                        },
+                        child: KeyedSubtree(
+                          key: _passwordFieldKey,
+                          child: AuthTextFormField(
+                            controller: _passwordController,
+                            label: 'auth.new_password'.tr(),
+                            icon: Icons.lock_outline_rounded,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.newPassword],
+                            validator: _validatePassword,
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: palette.textSecondary,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ).entrance(base: 500.ms),
-                    const SizedBox(height: 13),
-                    Focus(
-                      onFocusChange: (hasFocus) {
-                        if (hasFocus) _scrollFieldIntoView(_confirmFieldKey);
-                      },
-                      child: KeyedSubtree(
-                        key: _confirmFieldKey,
-                        child: AuthTextFormField(
-                          controller: _confirmController,
-                          label: 'auth.confirm_new_password'.tr(),
-                          icon: Icons.lock_reset_rounded,
-                          obscureText: _obscureConfirmation,
-                          textInputAction: TextInputAction.done,
-                          autofillHints: const [AutofillHints.newPassword],
-                          validator: _validateConfirmation,
-                          onFieldSubmitted: (_) => _submit(),
-                          suffixIcon: IconButton(
-                            onPressed: () => setState(() => _obscureConfirmation = !_obscureConfirmation),
-                            icon: Icon(
-                              _obscureConfirmation ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: palette.textSecondary,
-                              size: 20,
+                      ).animate().fadeIn(duration: 320.ms, curve: AppMotion.enter).slideY(begin: 0.08, end: 0, duration: 320.ms, curve: AppMotion.enter),
+                      const SizedBox(height: 13),
+                      Focus(
+                        onFocusChange: (hasFocus) {
+                          if (hasFocus) _scrollFieldIntoView(_confirmFieldKey);
+                        },
+                        child: KeyedSubtree(
+                          key: _confirmFieldKey,
+                          child: AuthTextFormField(
+                            controller: _confirmController,
+                            label: 'auth.confirm_new_password'.tr(),
+                            icon: Icons.lock_reset_rounded,
+                            obscureText: _obscureConfirmation,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [AutofillHints.newPassword],
+                            validator: _validateConfirmation,
+                            onFieldSubmitted: (_) => _submit(),
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(() => _obscureConfirmation = !_obscureConfirmation),
+                              icon: Icon(
+                                _obscureConfirmation ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: palette.textSecondary,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ).entrance(base: 560.ms),
-                    const SizedBox(height: 26),
-                    AuthPrimaryButton(
-                      label: 'auth.reset_password_button'.tr(),
-                      icon: Icons.verified_rounded,
-                      onPressed: _submit,
-                      loading: _isSubmitting,
-                    ).entrance(base: 620.ms),
+                      ).animate(delay: 60.ms).fadeIn(duration: 320.ms, curve: AppMotion.enter).slideY(begin: 0.08, end: 0, duration: 320.ms, curve: AppMotion.enter),
+                      const SizedBox(height: 26),
+                      AuthPrimaryButton(
+                        label: 'auth.reset_password_button'.tr(),
+                        icon: Icons.verified_rounded,
+                        onPressed: _submit,
+                        loading: _isSubmitting,
+                      ).animate(delay: 120.ms).fadeIn(duration: 320.ms, curve: AppMotion.enter).slideY(begin: 0.08, end: 0, duration: 320.ms, curve: AppMotion.enter),
+                    ],
                   ],
                 ),
               ),
@@ -427,23 +491,29 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 }
 
 class _CodeBox extends StatelessWidget {
-  const _CodeBox({required this.width, required this.controller, required this.node, required this.isLast, required this.onChanged});
+  const _CodeBox({required this.width, required this.controller, required this.node, required this.isLast, required this.verified, required this.onChanged});
 
   final double width;
   final TextEditingController controller;
   final FocusNode node;
   final bool isLast;
+  final bool verified;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final borderColor = verified ? AppColors.success : palette.divider;
     return SizedBox(
       width: width,
       height: 58,
       child: TextField(
         controller: controller,
         focusNode: node,
+        // Locked once verified — nothing left to correct, and re-editing a
+        // digit here has no effect on the reset anymore anyway.
+        readOnly: verified,
+        showCursor: !verified,
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
@@ -456,22 +526,22 @@ class _CodeBox extends StatelessWidget {
           LengthLimitingTextInputFormatter(6),
         ],
         style: TextStyle(
-          color: palette.textPrimary,
+          color: verified ? AppColors.success : palette.textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w800,
         ),
         decoration: InputDecoration(
           counterText: '',
           filled: true,
-          fillColor: palette.surface,
+          fillColor: verified ? AppColors.success.withOpacity(0.08) : palette.surface,
           contentPadding: EdgeInsets.zero,
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: palette.divider),
+            borderSide: BorderSide(color: borderColor, width: verified ? 1.5 : 1),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: palette.primary, width: 1.5),
+            borderSide: BorderSide(color: verified ? AppColors.success : palette.primary, width: 1.5),
           ),
         ),
         onChanged: onChanged,

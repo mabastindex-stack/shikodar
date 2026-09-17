@@ -42,6 +42,7 @@
     "otp_expires_in": "Kod {} wagt geçerli",
     "resend_code": "Kod gelmedimi? Gaýtadan iber",
     "otp_resent": "Täze kod e-poçtaňyza iberildi",
+    "otp_verified": "Kod tassyklandy",
     "welcome_back": "Tekrar hoş geldiniz",
     "login_subtitle": "MULK'a girmek için telefon numaranızı ve şifrenizi yazın.",
     "trust_note": "Güvenilir emlak pazarı",
