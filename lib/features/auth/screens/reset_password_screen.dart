@@ -43,6 +43,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _codeVerified = false;
   bool _verifyingCode = false;
 
+  // The box-by-box reveal after a verify response comes back: _waveIndex
+  // boxes (0-6) have already picked up _waveResult's color, one at a time,
+  // before the big result icon shows.
+  int _waveIndex = -1;
+  bool? _waveResult;
+  bool _showResultIcon = false;
+
   static const _otpValiditySeconds = 300; // 5 minutes, matches the email's own stated validity.
   int _secondsRemaining = _otpValiditySeconds;
   Timer? _countdownTimer;
@@ -115,24 +122,54 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   /// Confirms the code on its own, before the new-password fields ever
   /// appear — a wrong code here just clears the boxes for another try,
   /// without the visitor having to fill in a password first only to be
-  /// told afterward that the code they typed was wrong.
+  /// told afterward that the code they typed was wrong. The result plays
+  /// out as a box-by-box wave (green for right, red for wrong) followed by
+  /// a big result icon, before moving on.
   Future<void> _verifyCode(String code) async {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _verifyingCode = true);
+    bool success;
+    String? errorMessage;
     try {
       await context.read<AuthRepository>().verifyResetCode(email: widget.email, code: code);
-      if (!mounted) return;
-      _countdownTimer?.cancel();
-      setState(() {
-        _codeVerified = true;
-        _verifyingCode = false;
-      });
+      success = true;
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _verifyingCode = false);
-      showAppSnackBar(context, message: e.message, isError: true);
+      success = false;
+      errorMessage = e.message;
+    }
+    if (!mounted) return;
+    setState(() => _verifyingCode = false);
+    await _playResultWave(success);
+    if (!mounted) return;
+    if (success) {
+      _countdownTimer?.cancel();
+      setState(() => _codeVerified = true);
+    } else {
+      if (errorMessage != null) showAppSnackBar(context, message: errorMessage, isError: true);
       _clearCode();
     }
+  }
+
+  Future<void> _playResultWave(bool success) async {
+    setState(() {
+      _waveResult = success;
+      _waveIndex = 0;
+    });
+    for (var i = 0; i < 6; i++) {
+      await Future.delayed(const Duration(milliseconds: 80));
+      if (!mounted) return;
+      setState(() => _waveIndex = i + 1);
+    }
+    await Future.delayed(const Duration(milliseconds: 140));
+    if (!mounted) return;
+    setState(() => _showResultIcon = true);
+    await Future.delayed(const Duration(milliseconds: 650));
+    if (!mounted) return;
+    setState(() {
+      _showResultIcon = false;
+      _waveIndex = -1;
+      _waveResult = null;
+    });
   }
 
   /// resizeToAvoidBottomInset is false on this screen (needed to keep the
@@ -366,7 +403,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 controller: _codeControllers[index],
                                 node: _codeNodes[index],
                                 isLast: index == 5,
-                                verified: _codeVerified,
+                                status: _codeVerified
+                                    ? _BoxStatus.success
+                                    : (index < _waveIndex && _waveResult != null)
+                                        ? (_waveResult! ? _BoxStatus.success : _BoxStatus.error)
+                                        : _BoxStatus.none,
+                                locked: _codeVerified || _waveIndex >= 0 || _verifyingCode,
                                 onChanged: (value) => _handleCodeChanged(index, value),
                               ).entrance(index: index, delay: 40.ms, base: 260.ms),
                             ),
@@ -376,7 +418,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     const SizedBox(height: 14),
                     Center(
-                      child: _codeVerified
+                      child: _showResultIcon
+                          ? Icon(
+                              _waveResult == true ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                              key: ValueKey(_waveResult),
+                              size: 46,
+                              color: _waveResult == true ? AppColors.success : palette.error,
+                            )
+                              .animate()
+                              .scale(begin: const Offset(0.4, 0.4), end: const Offset(1, 1), duration: 340.ms, curve: Curves.elasticOut)
+                              .fadeIn(duration: 160.ms)
+                          : _codeVerified
                           ? Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -490,61 +542,97 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 }
 
+enum _BoxStatus { none, success, error }
+
 class _CodeBox extends StatelessWidget {
-  const _CodeBox({required this.width, required this.controller, required this.node, required this.isLast, required this.verified, required this.onChanged});
+  const _CodeBox({
+    required this.width,
+    required this.controller,
+    required this.node,
+    required this.isLast,
+    required this.status,
+    required this.locked,
+    required this.onChanged,
+  });
 
   final double width;
   final TextEditingController controller;
   final FocusNode node;
   final bool isLast;
-  final bool verified;
+  final _BoxStatus status;
+  final bool locked;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final borderColor = verified ? AppColors.success : palette.divider;
+    final statusColor = switch (status) {
+      _BoxStatus.success => AppColors.success,
+      _BoxStatus.error => palette.error,
+      _BoxStatus.none => null,
+    };
+    // A single 0-1 progress value drives every color lerp below — always
+    // between two concrete (never-null) colors, so easing back to "no
+    // status" lands cleanly on the normal palette colors instead of fading
+    // toward transparent (which a null tween target would do, leaving the
+    // digits nearly invisible on a retry).
     return SizedBox(
       width: width,
       height: 58,
-      child: TextField(
-        controller: controller,
-        focusNode: node,
-        // Locked once verified — nothing left to correct, and re-editing a
-        // digit here has no effect on the reset anymore anyway.
-        readOnly: verified,
-        showCursor: !verified,
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
-        // No maxLength here — a long-press paste of the full 6-digit code
-        // lands in whichever box is focused, and onChanged (wired to the
-        // parent's _handleCodeChanged) spreads it across the remaining
-        // boxes instead of a hard 1-char cap silently discarding it.
-        inputFormatters: <TextInputFormatter>[
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(6),
-        ],
-        style: TextStyle(
-          color: verified ? AppColors.success : palette.textPrimary,
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-        ),
-        decoration: InputDecoration(
-          counterText: '',
-          filled: true,
-          fillColor: verified ? AppColors.success.withOpacity(0.08) : palette.surface,
-          contentPadding: EdgeInsets.zero,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: borderColor, width: verified ? 1.5 : 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: verified ? AppColors.success : palette.primary, width: 1.5),
-          ),
-        ),
-        onChanged: onChanged,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: statusColor != null ? 1.0 : 0.0),
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        builder: (context, t, child) {
+          final activeColor = statusColor ?? palette.textPrimary;
+          final borderColor = Color.lerp(palette.divider, activeColor, t)!;
+          final fillColor = Color.lerp(palette.surface, activeColor.withOpacity(0.08), t)!;
+          final textColor = Color.lerp(palette.textPrimary, activeColor, t)!;
+          return AnimatedScale(
+            scale: 1.0 + 0.06 * t,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: TextField(
+              controller: controller,
+              focusNode: node,
+              // Locked once verified (or mid-result-wave/mid-check) — nothing
+              // left to correct at that point.
+              readOnly: locked,
+              showCursor: !locked,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+              // No maxLength here — a long-press paste of the full 6-digit
+              // code lands in whichever box is focused, and onChanged (wired
+              // to the parent's _handleCodeChanged) spreads it across the
+              // remaining boxes instead of a hard 1-char cap discarding it.
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              style: TextStyle(
+                color: textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                filled: true,
+                fillColor: fillColor,
+                contentPadding: EdgeInsets.zero,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: borderColor, width: 1 + (0.5 * t)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: t > 0 ? borderColor : palette.primary, width: 1.5),
+                ),
+              ),
+              onChanged: onChanged,
+            ),
+          );
+        },
       ),
     );
   }
