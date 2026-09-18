@@ -1,15 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
-import '../../../core/models/project.dart';
-import '../../../core/network/project_repository.dart';
+import '../../../core/models/video_tour.dart';
+import '../../../core/network/home_placement_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/widgets/listing_image.dart';
 
 /// Premium video showcase — fully automatic: each project's video autoplays
 /// muted the moment it's shown, and the carousel advances to the next one
@@ -25,14 +23,14 @@ class _HomeVideoShowcaseState extends State<HomeVideoShowcase> {
   final _controller = PageController();
   Timer? _autoTimer;
   int _index = 0;
-  List<Project> _videos = [];
+  List<VideoTour> _videos = [];
 
   @override
   void initState() {
     super.initState();
-    context.read<ProjectRepository>().fetchAll().then((projects) {
+    context.read<HomePlacementRepository>().fetchVideoTours().then((videoTours) {
       if (!mounted) return;
-      setState(() => _videos = projects.where((p) => p.videoUrl.isNotEmpty).toList());
+      setState(() => _videos = videoTours);
     });
     _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!mounted || _videos.length <= 1) return;
@@ -61,7 +59,7 @@ class _HomeVideoShowcaseState extends State<HomeVideoShowcase> {
         itemCount: videos.length,
         itemBuilder: (_, i) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: _VideoCard(project: videos[i], isActive: i == _index),
+          child: _VideoCard(videoTour: videos[i], isActive: i == _index),
         ),
       ),
     );
@@ -69,9 +67,9 @@ class _HomeVideoShowcaseState extends State<HomeVideoShowcase> {
 }
 
 class _VideoCard extends StatefulWidget {
-  final Project project;
+  final VideoTour videoTour;
   final bool isActive;
-  const _VideoCard({required this.project, required this.isActive});
+  const _VideoCard({required this.videoTour, required this.isActive});
 
   @override
   State<_VideoCard> createState() => _VideoCardState();
@@ -88,7 +86,7 @@ class _VideoCardState extends State<_VideoCard> {
   }
 
   Future<void> _init() async {
-    final c = VideoPlayerController.networkUrl(Uri.parse(widget.project.videoUrl));
+    final c = VideoPlayerController.networkUrl(Uri.parse(widget.videoTour.videoUrl));
     _video = c;
     try {
       await c.initialize();
@@ -117,7 +115,7 @@ class _VideoCardState extends State<_VideoCard> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final p = widget.project;
+    final p = widget.videoTour;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.emeraldDark,
@@ -136,13 +134,9 @@ class _VideoCardState extends State<_VideoCard> {
           children: [
             if (_ready && _video != null)
               FittedBox(fit: BoxFit.cover, child: SizedBox(width: _video!.value.size.width, height: _video!.value.size.height, child: VideoPlayer(_video!)))
-            else if (p.images.isEmpty)
-              Container(decoration: const BoxDecoration(gradient: AppColors.brandGradient))
-            else if (!isNetworkImage(p.images.first))
-              Image.file(File(p.images.first), fit: BoxFit.cover)
             else
               CachedNetworkImage(
-                imageUrl: p.images.first,
+                imageUrl: p.image,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(color: palette.surfaceElevated),
                 errorWidget: (_, __, ___) => Container(
@@ -175,7 +169,7 @@ class _VideoCardState extends State<_VideoCard> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(p.agencyName, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700))),
+                  Expanded(child: Text(p.agencyName ?? p.title, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700))),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(20)),
@@ -191,15 +185,17 @@ class _VideoCardState extends State<_VideoCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(p.name, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 12, color: Colors.white70),
-                      const SizedBox(width: 3),
-                      Text(p.zone, style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
-                    ],
-                  ),
+                  Text(p.title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  if (p.zone != null && p.zone!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 12, color: Colors.white70),
+                        const SizedBox(width: 3),
+                        Text(p.zone!, style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
